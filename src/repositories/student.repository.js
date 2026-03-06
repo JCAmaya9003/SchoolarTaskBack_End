@@ -1,4 +1,5 @@
 import Student from "../models/student-model.js";
+import { getPaginationParams, getPaginationMeta } from "../utils/pagination-helper.js";
 
 export const findStudentByUserId = async (userId) => {
     return await Student.findOne({usuario: userId }).populate([
@@ -25,43 +26,54 @@ export const findStudentByUserId = async (userId) => {
     ]);
   };
     
-    export const findAllStudents = async () =>{
-      return await Student.find().populate([
-        {
-            path: 'usuario', 
-            select: 'nombre apellido email rol', 
-            populate: {
-                path: 'rol', 
-                select: 'nombre',
-            },
-        },
-        {
-            path: 'padre', 
-            select: 'usuario telefono telefono_trabajo lugar_trabajo profesion domicilio nacionalidad',
-            populate: {
+    export const findAllStudents = async (page, limit) =>{
+      const { skip, limit: validLimit, page: validPage } = getPaginationParams(page, limit);
+
+      const [students, total] = await Promise.all([
+        Student.find()
+          .skip(skip)
+          .limit(validLimit)
+          .populate([
+            {
                 path: 'usuario',
                 select: 'nombre apellido email rol',
                 populate: {
                     path: 'rol',
-                    select: 'nombre'
+                    select: 'nombre',
+                },
+            },
+            {
+                path: 'padre',
+                select: 'usuario telefono telefono_trabajo lugar_trabajo profesion domicilio nacionalidad',
+                populate: {
+                    path: 'usuario',
+                    select: 'nombre apellido email rol',
+                    populate: {
+                        path: 'rol',
+                        select: 'nombre'
+                    }
                 }
-            }
-        },
-        {
-            path: 'grado_seccion', 
-            select: 'grado seccion materias',
-            populate: {
-                path: 'materias',
-                select: 'nombre',
-            }
-        },
-    ]);
+            },
+            {
+                path: 'grado_seccion',
+                select: 'grado seccion materias',
+                populate: {
+                    path: 'materias',
+                    select: 'nombre',
+                }
+            },
+          ]),
+        Student.countDocuments(),
+      ]);
+
+      return {
+        data: students,
+        pagination: getPaginationMeta(validPage, validLimit, total),
+      };
     }
     
     export const createStudent = async (studentData) => {
       const student = new Student(studentData);
-
-      /*return await (await parent.save()).populate('usuario', 'nombre', 'apellido', 'email');*/
       const savedStudent = await student.save();
       return await savedStudent.populate([
         {

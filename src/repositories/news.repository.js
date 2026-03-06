@@ -1,4 +1,5 @@
 import News from "../models/news.model.js";
+import { getPaginationParams, getPaginationMeta } from "../utils/pagination-helper.js";
 
 export const findNewsByUserId = async (userId) =>{
     return await News.find({usuario: userId}).populate([
@@ -12,8 +13,8 @@ export const findNewsByUserId = async (userId) =>{
         }]);
 };
 
-export const findNewsByUserIdAndTittle = async (userId, tittle) =>{
-    return await News.findOne({usuario: userId, titulo: tittle}).populate([
+export const findNewsByUserIdAndTitle = async (userId, title) =>{
+    return await News.findOne({usuario: userId, titulo: title}).populate([
         {
             path: 'usuario', 
             select: 'nombre apellido email rol', 
@@ -23,16 +24,30 @@ export const findNewsByUserIdAndTittle = async (userId, tittle) =>{
             },
         }]);
 };
-export const findAllNews = async () =>{
-    return await News.find().populate([
-        {
-            path: 'usuario', 
-            select: 'nombre apellido email rol', 
-            populate: {
-                path: 'rol', 
-                select: 'nombre',
-            },
-        }]);
+export const findAllNews = async (page, limit) =>{
+    const { skip, limit: validLimit, page: validPage } = getPaginationParams(page, limit);
+
+    const [news, total] = await Promise.all([
+      News.find()
+        .skip(skip)
+        .limit(validLimit)
+        .sort({ createdAt: -1 }) // Ordenar por fecha de creación descendente
+        .populate([
+          {
+              path: 'usuario',
+              select: 'nombre apellido email rol',
+              populate: {
+                  path: 'rol',
+                  select: 'nombre',
+              },
+          }]),
+      News.countDocuments(),
+    ]);
+
+    return {
+      data: news,
+      pagination: getPaginationMeta(validPage, validLimit, total),
+    };
   };
   
   export const createNews = async (newsData) => {

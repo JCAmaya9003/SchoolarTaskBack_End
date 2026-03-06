@@ -15,7 +15,6 @@ export const newGradeSection = async (grado, seccion, materias = []) => {
         const validSubjects = [];
         for (const subjectName of materias) {
             const subject = await subjectService.searchSubjectByName(subjectName);
-            console.log(`Materia buscada: ${subjectName}, Resultado: ${subject}`);
 
             if (subject) {
                 validSubjects.push(subject._id); 
@@ -24,13 +23,13 @@ export const newGradeSection = async (grado, seccion, materias = []) => {
             }
         }
 
-        const newGrade_section = await gradeSectionRepository.createGradeAndSection({
+        const newGradeSection = await gradeSectionRepository.createGradeAndSection({
             grado,
             seccion,
             materias: validSubjects,
         });
 
-        return newGrade_section;
+        return newGradeSection;
     } else {
         throw new Error("Grado y sección existentes");
     }
@@ -61,8 +60,7 @@ export const updateGradeAndSectionById = async (grado, seccion, nuevoGrado, nuev
         const validSubjects = [];
         for (const subjectName of materias) {
             const subject = await subjectService.searchSubjectByName(subjectName);
-            console.log(`Materia buscada: ${subjectName}, Resultado: ${subject}`);
-            
+
             if (subject) {
                 validSubjects.push(subject._id); 
             } else {
@@ -102,7 +100,6 @@ export const eraseGradeAndSectionById = async (grado, seccion) => {
  * @returns {Promise<Object>} - Grado y sección encontrados.
  */
 export const getGradeAndSection = async (grado, seccion) => {
-    console.log("enviado: " + grado,seccion)
     const GradeSectionExists = await gradeSectionRepository.findGradeAndSection(grado, seccion);
     if (GradeSectionExists) {
         return GradeSectionExists;
@@ -134,9 +131,8 @@ export const addSubjectsToGradeSection = async (grado, seccion, materias = []) =
     const validSubjects = [];
         for (const subjectName of materias) {
             const subject = await subjectService.searchSubjectByName(subjectName);
-            console.log(`Materia buscada: ${subjectName}, Resultado: ${subject}`);
             if (subject) {
-                validSubjects.push(subject._id); 
+                validSubjects.push(subject._id);
             } else {
                 throw new Error(`Materia inválida: ${subjectName}`);
             }
@@ -160,9 +156,8 @@ export const removeSubjectsFromGradeSection = async (grado, seccion, materias = 
     const validSubjects = [];
         for (const subjectName of materias) {
             const subject = await subjectService.searchSubjectByName(subjectName);
-            console.log(`Materia buscada: ${subjectName}, Resultado: ${subject}`);
             if (subject) {
-                validSubjects.push(subject._id); 
+                validSubjects.push(subject._id);
             } else {
                 throw new Error(`Materia inválida: ${subjectName}`);
             }

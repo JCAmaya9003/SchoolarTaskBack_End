@@ -1,15 +1,18 @@
 import express from 'express';
 import { body } from 'express-validator';
 import * as teacherController from '../controllers/teacher.controller.js';
+import { validateToken, checkRole } from '../middlewares/auth-middleware.js';
 
 const router = express.Router();
 
-// Ruta para obtener todos los profesores
-router.get('/', teacherController.getAllTeachers);
+// Ruta para obtener todos los profesores - requiere autenticación
+router.get('/', validateToken, checkRole(['admin']), teacherController.getAllTeachers);
 
-// Ruta para crear un profesor
+// Ruta para crear un profesor - solo ADMIN
 router.post(
     '/',
+    validateToken,
+    checkRole(['admin']),
     [
         body('nombre').isString().matches(/^[A-Za-z\s]+$/).withMessage('Nombre inválido, no use caracteres especiales.'),
         body('apellido').isString().matches(/^[A-Za-z\s]+$/).withMessage('Apellido inválido, no use caracteres especiales.'),
@@ -32,9 +35,11 @@ router.post(
     teacherController.createTeacher
 );
 
-// Ruta para actualizar un profesor
+// Ruta para actualizar un profesor - solo ADMIN
 router.put(
     '/',
+    validateToken,
+    checkRole(['admin']),
     [
         body('email').isEmail().withMessage('Email inválido.'),
         body('asignaciones').isArray().withMessage('Asignaciones debe ser un arreglo.'),
@@ -49,17 +54,18 @@ router.put(
     teacherController.updateTeacher
 );
 
-// Ruta para eliminar un profesor
+// Ruta para eliminar un profesor - solo ADMIN
 router.delete(
     '/',
+    validateToken,
+    checkRole(['admin']),
     [
         body('email').isEmail().withMessage('Email inválido.'),
     ],
     teacherController.deleteTeacher
 );
 
-router.get('/get-teacherInfo', teacherController.getTeacherSubjectInfo)
-
-//router.post('/get-teacherInfo', teacherController.getTeacherSubjectInfo)
+// Obtener información del profesor y sus materias - requiere autenticación teacher
+router.get('/get-teacherInfo', validateToken, checkRole(['teacher']), teacherController.getTeacherSubjectInfo);
 
 export default router;

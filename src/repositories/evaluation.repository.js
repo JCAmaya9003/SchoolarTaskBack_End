@@ -1,16 +1,30 @@
 import Evaluation from "../models/evaluation-model.js";
+import { getPaginationParams, getPaginationMeta } from "../utils/pagination-helper.js";
 
 export const findEvaluationByNameAndSubject = async (materia, nombre) => {
     return await Evaluation.findOne({materia: materia, nombre: nombre }).populate('materia', 'nombre');
   };
   
-  export const findAllEvaluations = async () =>{
-    return await Evaluation.find().populate('materia', 'nombre');
+  export const findAllEvaluations = async (page, limit) =>{
+    const { skip, limit: validLimit, page: validPage } = getPaginationParams(page, limit);
+
+    const [evaluations, total] = await Promise.all([
+      Evaluation.find()
+        .skip(skip)
+        .limit(validLimit)
+        .populate('materia', 'nombre'),
+      Evaluation.countDocuments(),
+    ]);
+
+    return {
+      data: evaluations,
+      pagination: getPaginationMeta(validPage, validLimit, total),
+    };
   }
   
-  export const createEvaluation = async (userData) => {
-    const user = new Evaluation(userData);
-    return await (await user.save()).populate('materia', 'nombre');
+  export const createEvaluation = async (evaluationData) => {
+    const evaluation = new Evaluation(evaluationData);
+    return await (await evaluation.save()).populate('materia', 'nombre');
   };
   
   export const updateEvaluationById = async (id, updates) => {
@@ -22,8 +36,14 @@ export const findEvaluationByNameAndSubject = async (materia, nombre) => {
   };
 
   export const findEvaluationsBySubject = async (materia) => {
-    console.log("Buscando evaluaciones para la materia:", materia);
     const evaluations = await Evaluation.find({ materia: materia });
-    console.log("Evaluaciones encontradas:", evaluations);
+    return evaluations;
+};
+
+// Optimización: Obtener evaluaciones de múltiples materias de una vez
+export const findEvaluationsBySubjects = async (materiaIds) => {
+    const evaluations = await Evaluation.find({
+      materia: { $in: materiaIds }
+    }).populate('materia', 'nombre');
     return evaluations;
 };

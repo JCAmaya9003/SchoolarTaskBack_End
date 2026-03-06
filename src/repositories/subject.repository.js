@@ -1,7 +1,7 @@
 import Subject from "../models/subject-model.js";
 
 export const findSubjectbyId = async (id) => {
-    return await Subject.find({id});
+    return await Subject.findById(id);
 };
 export const findSubjectByName = async (nombre) => {
     return await Subject.findOne({nombre});

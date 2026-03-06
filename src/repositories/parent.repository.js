@@ -1,4 +1,5 @@
 import Parent from "../models/parent-model.js";
+import { getPaginationParams, getPaginationMeta } from "../utils/pagination-helper.js";
 
 export const findParentByUserId = async (userId) => {
   return await Parent.findOne({usuario: userId }).populate({
@@ -15,28 +16,39 @@ export const deleteParentById = async (id) => {
   return await Parent.findByIdAndDelete(id);
 };
   
-  export const findAllParents = async () =>{
-    return await Parent.find().populate({
-      path: 'usuario', 
-      select: 'nombre apellido email rol', 
-      populate: {
-        path: 'rol', 
-        select: 'nombre', 
-      },
-    });
+  export const findAllParents = async (page, limit) =>{
+    const { skip, limit: validLimit, page: validPage } = getPaginationParams(page, limit);
+
+    const [parents, total] = await Promise.all([
+      Parent.find()
+        .skip(skip)
+        .limit(validLimit)
+        .populate({
+          path: 'usuario',
+          select: 'nombre apellido email rol',
+          populate: {
+            path: 'rol',
+            select: 'nombre',
+          },
+        }),
+      Parent.countDocuments(),
+    ]);
+
+    return {
+      data: parents,
+      pagination: getPaginationMeta(validPage, validLimit, total),
+    };
   }
   
   export const createParent = async (parentData) => {
     const parent = new Parent(parentData);
-    console.log("llego al repo")
-    /*return await (await parent.save()).populate('usuario', 'nombre', 'apellido', 'email');*/
     const savedParent = await parent.save();
     return await savedParent.populate({
-      path: 'usuario', 
-      select: 'nombre apellido email rol', 
+      path: 'usuario',
+      select: 'nombre apellido email rol',
       populate: {
-        path: 'rol', 
-        select: 'nombre', 
+        path: 'rol',
+        select: 'nombre',
       },
   });
 

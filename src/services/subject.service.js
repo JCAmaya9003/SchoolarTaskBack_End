@@ -30,10 +30,10 @@ export const eraseSubject = async (nombre)=>{
         if(deletedSubject){
             return deletedSubject;
         }else{
-            throw new Error("Datos invalidos para eliminar el Materia")
+            throw new Error("Datos invalidos para eliminar la materia")
         }
     }else{
-        throw new Error("Materia existente");
+        throw new Error("Materia inexistente");
     }
 };
 

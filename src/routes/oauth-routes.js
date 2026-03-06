@@ -1,9 +1,10 @@
 import express from 'express';
 import { generateAuthUrl, handleOAuthCallback } from '../controllers/oauth-controller.js';
+import { authLimiter } from '../middlewares/rate-limiter.js';
 
 const router = express.Router();
 
-router.post('/', generateAuthUrl);
-router.get('/', handleOAuthCallback);
+router.post('/', authLimiter, generateAuthUrl);
+router.get('/', authLimiter, handleOAuthCallback);
 
 export default router;

@@ -1,6 +1,6 @@
 import Academic_place from "../models/academic_place.model.js";
 
-export const findPlacebyId = async (id) => {
+export const findPlaceById = async (id) => {
     return await Academic_place.findById(id);
 };
 export const findPlaceByName = async (lugar) => {

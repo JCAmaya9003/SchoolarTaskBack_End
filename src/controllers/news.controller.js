@@ -10,11 +10,10 @@ export const createNews = async (req, res) =>{
     const { email, titulo, contenido } = req.body;
     try {
         const createdNews = await newsService.createNews({ email, titulo, contenido });
-        console.log("createdNews " + createdNews);
 
         if(createdNews){
             return res.status(200).json({
-                message: 'Usuario creado con éxito',
+                message: 'Noticia creada con éxito',
                 Nombre: createdNews.usuario.nombre,
                 Apellido: createdNews.usuario.apellido,
                 Email: createdNews.usuario.email,
@@ -26,7 +25,7 @@ export const createNews = async (req, res) =>{
         }
         
     } catch (error) {
-        res.status(500).json({ message: 'Error al crear notica', error: error.message });
+        res.status(500).json({ message: 'Error al crear noticia', error: error.message });
     }
 };
 
@@ -37,20 +36,10 @@ export const updateNews = async (req, res)=>{
       }
   
       try {
-  
-        /*const userRoleId = req.user.rol;
-  
-        const userRole = await roleService.searchRoleById(userRoleId);
-  
-        if (userRole) {
-          if (userRole.permisos.admin) {*/
-  
+
           const { email, titulo, nuevoTitulo, contenido } = req.body;
-          console.log(email, titulo, nuevoTitulo, contenido);
-          
-          //const updatedUser = await userService.editUser(email, { nombre, apellido, email, password, fecha_nacimiento, rol });
+
           const updatedNews = await newsService.editNews({email, titulo, nuevoTitulo,  contenido} );
-            console.log("updatedNews " + updatedNews);
           if (updatedNews) {
             return res.status(200).json({
               message: 'Noticia editada con éxito',
@@ -63,13 +52,7 @@ export const updateNews = async (req, res)=>{
           }else{
             return res.status(404).json({ message: 'El usuario y/o noticia especificado no existe' });
           }
-        /*}else{
-            return res.status(403).json({ message: 'No tienes permisos para realizar esta acción.' });
-          }
-        }else{
-          return res.status(403).json({ message: 'No se encontró el rol del usuario.' });
-        }*/
-        
+
       } catch (e) {
         res.status(500).json({ message: 'Error al editar la noticia.', error: e.message });
       }
@@ -81,11 +64,6 @@ export const updateNews = async (req, res)=>{
           return res.status(400).json({message: "Error al intentar eliminar la noticia!", errors: errors.array() });
       }
       try{
-      /*const userRoleId = req.user.rol;
-  
-      const userRole = await roleService.searchRoleById(userRoleId); 
-      if (userRole) {
-        if (userRole.permisos.admin) {*/
           const {email, titulo} = req.body;
           if(email && titulo){
             const erasedNews = await newsService.eraseNews({email, titulo});
@@ -104,16 +82,8 @@ export const updateNews = async (req, res)=>{
           }else{
             return res.status(400).json({ message: 'El email del usuario y titulo de la noticia es obligatorio.' });
           }
-  
-      
-        /*}else{
-          return res.status(403).json({ message: 'No tienes permisos para realizar esta acción.' });
-        }
-      }else{
-        return res.status(403).json({ message: 'No se encontró el rol del usuario.' });
-      }*/
+
       }catch(e){
-        console.error(e);
           res.status(500).json({ message: 'Error al eliminar la noticia.', error: e.message });
       }
   };
@@ -124,19 +94,9 @@ export const updateNews = async (req, res)=>{
         return res.status(400).json({message: "Error al intentar mostrar las noticias!", errors: errors.array() });
     }
     try {
-        /*const userRoleId = req.user.rol;
-
-      const userRole = await roleService.searchRoleById(userRoleId); 
-      if (userRole) {
-        if (userRole.permisos.admin) {*/
-          const allNews = await newsService.getNews();
-          res.json(allNews);
-        /*}else{
-          return res.status(403).json({ message: 'No tienes permisos para realizar esta acción.' });
-        }
-      }else{
-        return res.status(403).json({ message: 'No se encontró el rol del usuario.' });
-      }*/
+          const { page, limit } = req.query;
+          const result = await newsService.getNews(page, limit);
+          res.json(result);
     } catch (e) {
       res.status(500).json({ message: 'Error al mostrar las noticias', error: e.message });
     }
@@ -148,21 +108,10 @@ export const updateNews = async (req, res)=>{
         return res.status(400).json({message: "Error al intentar mostrar las noticias!", errors: errors.array() });
     }
     try {
-        /*const userRoleId = req.user.rol;
-
-      const userRole = await roleService.searchRoleById(userRoleId); 
-      if (userRole) {
-        if (userRole.permisos.admin) {*/
             const {email} = req.body;
 
             const filteredNews = await newsService.getNewsByUser(email);
             res.json(filteredNews);
-        /*}else{
-          return res.status(403).json({ message: 'No tienes permisos para realizar esta acción.' });
-        }
-      }else{
-        return res.status(403).json({ message: 'No se encontró el rol del usuario.' });
-      }*/
     } catch (e) {
       res.status(500).json({ message: 'Error al mostrar las noticias', error: e.message });
     }

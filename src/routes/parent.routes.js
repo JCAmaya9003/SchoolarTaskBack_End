@@ -1,14 +1,18 @@
 import express from 'express';
 import { body } from 'express-validator';
 import * as parentController from '../controllers/parent.controller.js';
+import { validateToken, checkRole } from '../middlewares/auth-middleware.js';
 
 const router = express.Router();
 
-router.get('/', parentController.getAllParents);
+// Obtener todos los padres - solo ADMIN
+router.get('/', validateToken, checkRole(['admin']), parentController.getAllParents);
 
-
+// Crear padre - solo ADMIN
 router.post(
     '/',
+    validateToken,
+    checkRole(['admin']),
     [
         body('nombre').isString().matches(/^[A-Za-z\s]+$/).withMessage('Nombre Invalido! No use caracteres especiales!'),
         body('apellido').isString().matches(/^[A-Za-z\s]+$/).withMessage('Apellido Invalido! No use caracteres especiales!'),
@@ -27,7 +31,11 @@ router.post(
     ],
     parentController.createParent
   );
-router.put('/' ,
+
+// Actualizar padre - solo ADMIN
+router.put('/',
+    validateToken,
+    checkRole(['admin']),
     [
         body('email').isEmail().withMessage('Email inválido'),
         body('telefono').isString().matches(/^\+?[1-9]\d{1,14}$/).withMessage('Teléfono inválido. Debe incluir el prefijo del país y ser un número válido (e.g., +50312345678).'),
@@ -36,15 +44,21 @@ router.put('/' ,
         body('profesion').isString().matches(/^[A-Za-z\s]+$/).withMessage('Profesion Incorrecta! No use caracteres especiales!'),
         
     ],
-parentController.updateParent);
+    parentController.updateParent);
 
+// Eliminar padre - solo ADMIN
 router.delete('/',
+    validateToken,
+    checkRole(['admin']),
     [
         body('email').isEmail().withMessage('Email inválido'),
     ],
     parentController.deleteParent);
 
+// Eliminar padre por ID - solo ADMIN
 router.delete('/id',
+    validateToken,
+    checkRole(['admin']),
     [
         body('id').isString().withMessage('Id inválido'),
     ],

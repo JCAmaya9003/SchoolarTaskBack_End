@@ -22,7 +22,6 @@ export const createEvaluationGrade = async ({ email, nombreMateria, nombreEvalua
 
     // Verificar si ya existe una nota para este estudiante y evaluación
     const nota = await evaluationGradeRepository.findEvaluationGradeByStudentIdAndEvaluation(student.id, evaluation.id);
-    console.log("nota: ", nota); // Ahora mostrará el resultado de la consulta, no una promesa
 
     if (!nota) {
         // Crear la calificación
@@ -77,9 +76,7 @@ export const getEvaluationGradesByEvaluation = async (nombreEvaluacion, nombreMa
  * @returns {Promise<Object>} - Registro de calificación actualizado.
  */
 export const updateEvaluationGradeByStudentAndEvaluation = async ({email, nombreMateria, nombreEvaluacion, calificacion}) => {
-    console.log(email);
     const student = await studentService.getStudentByUserIdAndEmail(email);
-    console.log(student);
     if(student){
         
         const evaluation = await evaluationService.searchEvaluationbyNameAndSubject(nombreEvaluacion, nombreMateria);
@@ -100,7 +97,7 @@ export const updateEvaluationGradeByStudentAndEvaluation = async ({email, nombre
 /**
  * Eliminar una calificación por ID.
  * @param {String} id - ID de la calificación.
- * @returns {Promise<Object>} - Registro de calificación eliminado. AQUI ME QUEDE
+ * @returns {Promise<Object>} - Registro de calificación eliminado.
  */
 export const deleteEvaluationGradeById = async (email, nombreMateria, nombreEvaluacion) => {
     const student = await studentService.getStudentByUserIdAndEmail(email);
@@ -111,7 +108,6 @@ export const deleteEvaluationGradeById = async (email, nombreMateria, nombreEval
             throw new Error(`Evaluacion no encontrada`);
         }
         const nota = await evaluationGradeRepository.findEvaluationGradeByStudentIdAndEvaluation(student, evaluacion);
-        console.log(nota);
         if(nota){
             return await evaluationGradeRepository.deleteEvaluationGradeById(nota.id);
         }else{

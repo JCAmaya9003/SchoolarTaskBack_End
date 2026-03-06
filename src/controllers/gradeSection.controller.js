@@ -12,13 +12,13 @@ export const createGradeSection = async (req, res) => {
 
     const { grado, seccion, materias } = req.body;
     try {
-        const newGrade_section = await gradeSectionService.newGradeSection(grado, seccion, materias);
+        const newGradeSection = await gradeSectionService.newGradeSection(grado, seccion, materias);
 
         return res.status(200).json({
             message: 'Grado y sección creado con éxito',
-            grado: newGrade_section.grado,
-            seccion: newGrade_section.seccion,
-            materias: newGrade_section.materias,
+            grado: newGradeSection.grado,
+            seccion: newGradeSection.seccion,
+            materias: newGradeSection.materias,
         });
     } catch (error) {
         res.status(500).json({ message: 'Error al crear grado y sección', error: error.message });

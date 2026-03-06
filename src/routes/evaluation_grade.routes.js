@@ -1,11 +1,17 @@
 import express from 'express';
-import { body, param } from 'express-validator';
+import { body, query } from 'express-validator';
 import * as evaluation_gradeController from '../controllers/evaluation_grade.controller.js';
+import { validateToken, checkRole } from '../middlewares/auth-middleware.js';
+import { verifyTeacherSubject, verifyOwnResource, enrichUserContext } from '../middlewares/authorization-middleware.js';
 
 const router = express.Router();
 
 router.post(
     '/',
+    validateToken,
+    enrichUserContext,
+    checkRole(['admin', 'teacher']),
+    verifyTeacherSubject,
     [
         body('email').isEmail().withMessage('El email debe ser válido.'),
         body('nombreMateria').isString().withMessage('El nombre de la materia debe ser una cadena válida.'),
@@ -16,13 +22,17 @@ router.post(
 );
 
 // Ruta para obtener todas las calificaciones de evaluación
-router.get('/all', evaluation_gradeController.getAllEvaluationGrades);
+router.get('/all', validateToken, checkRole(['admin', 'teacher']), evaluation_gradeController.getAllEvaluationGrades);
 
 // Ruta para obtener calificaciones de un estudiante por email
 router.get(
     '/by-student',
+    validateToken,
+    enrichUserContext,
+    checkRole(['admin', 'teacher', 'student']),
+    verifyOwnResource('query'),
     [
-        param('email').isEmail().withMessage('El email debe ser válido.'),
+        query('email').isEmail().withMessage('El email debe ser válido.'),
     ],
     evaluation_gradeController.getEvaluationGradesByStudent
 );
@@ -30,9 +40,13 @@ router.get(
 // Ruta para obtener calificaciones de una evaluación por su nombre y materia
 router.get(
     '/by-evaluation',
+    validateToken,
+    enrichUserContext,
+    checkRole(['admin', 'teacher']),
+    verifyTeacherSubject,
     [
-        param('nombre').isString().withMessage('El nombre de la evaluación debe ser una cadena válida.'),
-        param('nombreMateria').isString().withMessage('El nombre de la materia debe ser una cadena válida.'),
+        query('nombre').isString().withMessage('El nombre de la evaluación debe ser una cadena válida.'),
+        query('nombreMateria').isString().withMessage('El nombre de la materia debe ser una cadena válida.'),
     ],
     evaluation_gradeController.getEvaluationGradesByEvaluation
 );
@@ -40,6 +54,10 @@ router.get(
 // Ruta para actualizar una calificación por ID
 router.put(
     '/',
+    validateToken,
+    enrichUserContext,
+    checkRole(['admin', 'teacher']),
+    verifyTeacherSubject,
     [
         body('email').isEmail().withMessage('El email debe ser válido.'),
         body('nombreMateria').isString().withMessage('El nombre de la materia debe ser una cadena válida.'),
@@ -52,6 +70,10 @@ router.put(
 // Ruta para eliminar una calificación por email, materia y evaluación
 router.delete(
     '/',
+    validateToken,
+    enrichUserContext,
+    checkRole(['admin', 'teacher']),
+    verifyTeacherSubject,
     [
         body('email').isEmail().withMessage('El email debe ser válido.'),
         body('nombreMateria').isString().withMessage('El nombre de la materia debe ser una cadena válida.'),

@@ -1,8 +1,10 @@
 import * as parentRepository from '../repositories/parent.repository.js'
 import * as userService from '../services/user-service.js'
+import { hardDeleteUserById } from '../repositories/user-repository.js';
+import logger from '../config/logger.js';
 
-export const getParents = async () =>{
-    return await parentRepository.findAllParents();
+export const getParents = async (page, limit) =>{
+    return await parentRepository.findAllParents(page, limit);
 };
 
 export const createParent = async ({nombre, apellido, email, password, fecha_nacimiento, rolNombre,genero, domicilio, nacionalidad, telefono, telefono_trabajo, lugar_trabajo, profesion}) =>{
@@ -11,32 +13,34 @@ export const createParent = async ({nombre, apellido, email, password, fecha_nac
 
     if (!userExists) {
         const user = await userService.registerUser({
-            nombre, 
-            apellido, 
-            email, 
-            password, 
-            fecha_nacimiento, 
+            nombre,
+            apellido,
+            email,
+            password,
+            fecha_nacimiento,
             rolNombre,
             genero,
             domicilio,
             nacionalidad
         });
 
-        const parentExists = await parentRepository.findParentByUserId(user.id);
-        if(!parentExists){
-
-            console.log("exite: " + parentExists);
-
-            return await parentRepository.createParent({
-                usuario: user,
-                telefono,
-                telefono_trabajo,
-                lugar_trabajo,
-                profesion, 
-            });
-
-        }else{
-            throw new Error("Padre ya existente");
+        try {
+            const parentExists = await parentRepository.findParentByUserId(user.id);
+            if(!parentExists){
+                return await parentRepository.createParent({
+                    usuario: user,
+                    telefono,
+                    telefono_trabajo,
+                    lugar_trabajo,
+                    profesion,
+                });
+            }else{
+                throw new Error("Padre ya existente");
+            }
+        } catch (error) {
+            await hardDeleteUserById(user._id);
+            logger.warn(`Rollback: Usuario ${email} eliminado tras fallo en creación de padre`);
+            throw error;
         }
     }else{
         throw new Error("Usuario ya existente");
@@ -45,15 +49,12 @@ export const createParent = async ({nombre, apellido, email, password, fecha_nac
 
 export const updateParent = async ({email, telefono, telefono_trabajo, lugar_trabajo, profesion}) =>{
     const parentUser = await userService.searchUserByEmail(email);
-    console.log("parentuser: " + parentUser);
 
     if(parentUser){
         const parentExists = await parentRepository.findParentByUserId(parentUser.id);
-        console.log("parentexiste: " + parentExists);
 
         if(parentExists){
-            console.log("si existe asi que puede editarse");
-            return await parentRepository.updateParentByUserId(parentExists.id, {telefono, 
+            return await parentRepository.updateParentByUserId(parentExists.id, {telefono,
                 telefono_trabajo, lugar_trabajo, profesion
                 });
         }else{
@@ -66,7 +67,6 @@ export const updateParent = async ({email, telefono, telefono_trabajo, lugar_tra
 
 export const deleteParent = async (email) =>{
     const parentUser = await userService.searchUserByEmail(email);
-    console.log(parentUser);
     if(parentUser){
         const parentExists = await parentRepository.findParentByUserId(parentUser.id);
 
@@ -92,6 +92,5 @@ export const getParentByUserIdAndEmail = async (email) =>{
 
 export const deleteWithId = async ({id}) =>{
     const deleted = await parentRepository.deleteParentById(id);
-    console.log(deleted);
     return deleted;
 };

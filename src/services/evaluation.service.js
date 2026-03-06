@@ -25,7 +25,6 @@ export const createEvaluation = async ({nombre, nombreMateria, descripcion, fech
 
 export const getEvaluationsBySubject = async (subjectNombre) => {
     const materia = await subjectService.searchSubjectByName(subjectNombre);
-    console.log("materia: " + materia);
     return await evaluationRepository.findEvaluationsBySubject(materia);
 };
 
@@ -33,7 +32,6 @@ export const editEvaluation = async ({nombre, nuevoNombre, nombreMateria, nuevaM
 
     const materia = await subjectService.searchSubjectByName(nombreMateria);
     const newMateria = await subjectService.searchSubjectByName(nuevaMateria);
-    console.log(materia, newMateria, nombreMateria, nuevaMateria);
     if(materia){
         if(newMateria){
             const evaluacionExiste = await evaluationRepository.findEvaluationByNameAndSubject(materia, nombre);
@@ -60,10 +58,8 @@ export const editEvaluation = async ({nombre, nuevoNombre, nombreMateria, nuevaM
 
 export const deleteEvaluation = async ({nombre, nombreMateria}) =>{
     const materia = await subjectService.searchSubjectByName(nombreMateria);
-    console.log("materia: " + materia);
     if(materia){
         const evaluacionExiste = await evaluationRepository.findEvaluationByNameAndSubject(materia, nombre);
-        console.log(evaluacionExiste);
         if(evaluacionExiste){
             const deletedEvaluation = await evaluationRepository.deleteEvaluationById(evaluacionExiste.id);
             return deletedEvaluation;
@@ -89,6 +85,6 @@ export const searchEvaluationbyNameAndSubject = async (nombre, nombreMateria) =>
     };
 };
 
-export const getAllEvaluations = async () =>{
-    return await evaluationRepository.findAllEvaluations();
+export const getAllEvaluations = async (page, limit) =>{
+    return await evaluationRepository.findAllEvaluations(page, limit);
 }

@@ -20,7 +20,6 @@ export const createNewSubject = async (req, res)=>{
             return res.status(400).json({ message: 'Materia ya creada' });
           }
     }catch (e) {
-        console.error(e);
         res.status(500).json({ message: 'Error al crear la materia.', error: e.message });
     };
 };
@@ -45,7 +44,6 @@ export const editSubject = async (req, res) =>{
             return res.status(404).json({ message: 'La materia especificado no existe!' });
           }
     }catch (e) {
-        console.error(e);
         res.status(500).json({ message: 'Error al editar la materia.', error: e.message });
     }
 };
@@ -70,7 +68,6 @@ export const deleteSubject = async (req, res) =>{
             return res.status(404).json({ message: 'La materia especificada no existe!' });
           }
     }catch (e) {
-        console.error(e);
         res.status(500).json({ message: 'Error al eliminar la materia.', error: e.message });
     }
 };
@@ -86,7 +83,6 @@ export const getAllSubjects = async (req, res) =>{
         const subjects =  await subjectService.getSubjects();
         res.json(subjects);
     }catch (e) {
-        console.error(e);
         res.status(500).json({ message: 'Error al mostrar las materias.', error: e.message });
     }
 };
@@ -111,7 +107,6 @@ export const getSubjectByname = async (req, res) =>{
             return res.status(404).json({ message: 'La materia especificada no existe!' });
           }
     }catch (e) {
-        console.error(e);
         res.status(500).json({ message: 'Error al mostrar la materia.', error: e.message });
     }
 };

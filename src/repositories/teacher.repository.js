@@ -1,4 +1,5 @@
 import Teacher from "../models/teacher-model.js";
+import { getPaginationParams, getPaginationMeta } from "../utils/pagination-helper.js";
 
 /**
  * Buscar un profesor por el ID de usuario.
@@ -29,22 +30,36 @@ export const findTeacherByUserId = async (userId) => {
 
 /**
  * Buscar todos los profesores.
- * @returns {Promise<Array>} - Lista de profesores.
+ * @param {number} page - Número de página
+ * @param {number} limit - Elementos por página
+ * @returns {Promise<Object>} - Objeto con data y pagination
  */
-export const findAllTeachers = async () => {
-    return await Teacher.find()
-        .populate({
-            path: 'usuario',
-            select: 'nombre apellido email',
-        })
-        .populate({
-            path: 'grado_encargado.materias',
-            select: 'nombre',
-        })
-        .populate({
-            path: 'grado_encargado.grado_secciones',
-            select: 'grado seccion',
-        });
+export const findAllTeachers = async (page, limit) => {
+    const { skip, limit: validLimit, page: validPage } = getPaginationParams(page, limit);
+
+    const [teachers, total] = await Promise.all([
+        Teacher.find()
+            .skip(skip)
+            .limit(validLimit)
+            .populate({
+                path: 'usuario',
+                select: 'nombre apellido email',
+            })
+            .populate({
+                path: 'grado_encargado.materias',
+                select: 'nombre',
+            })
+            .populate({
+                path: 'grado_encargado.grado_secciones',
+                select: 'grado seccion',
+            }),
+        Teacher.countDocuments(),
+    ]);
+
+    return {
+        data: teachers,
+        pagination: getPaginationMeta(validPage, validLimit, total),
+    };
 };
 
 /**
@@ -121,26 +136,4 @@ export const deleteTeacherByUserId = async (id) => {
 export const deleteTeacherById = async (id) => {
     return await Teacher.findByIdAndDelete(id);
 };
-
-export const findStudentsByGradeSection = async (gradeSectionId) => {
-    return await Student.find({ grado_seccion: gradeSectionId }).populate([
-        {
-            path: 'usuario',
-            select: 'nombre apellido email rol',
-            populate: {
-                path: 'rol',
-                select: 'nombre',
-            },
-        },
-        {
-            path: 'grado_seccion',
-            select: 'grado seccion materias',
-            populate: {
-                path: 'materias',
-                select: 'nombre',
-            },
-        },
-    ]);
-};
-
 

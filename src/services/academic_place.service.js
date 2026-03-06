@@ -54,7 +54,7 @@ export const getPlaces = async () =>{
 };
 
 export const getPlaceById = async(id) =>{
-    const place = await academic_placeRepository.findPlacebyId(id);
+    const place = await academic_placeRepository.findPlaceById(id);
     if(place){
         return place;
     }else{

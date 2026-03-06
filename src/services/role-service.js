@@ -1,17 +1,11 @@
 import * as roleRepository from '../repositories/role-repository.js';
 
-export const newRole = async (nombre, permisos) =>{
+export const newRole = async (nombre) =>{
     const role = await roleRepository.findRoleByName(nombre);
 
     if(!role){
         const newRole = await roleRepository.createRole({
             nombre: nombre,
-            permisos: {
-                student: permisos.student,
-                parent: permisos.parent,
-                teacher: permisos.teacher,
-                admin: permisos.admin,
-            },
         });
         return newRole;
     }else{
@@ -22,7 +16,7 @@ export const newRole = async (nombre, permisos) =>{
 export const updateRole = async (nombre, updates) =>{
     const role = await roleRepository.findRoleByName(nombre);
     if(role){
-        const allowedUpdates = ['nombre', 'permisos'];
+        const allowedUpdates = ['nombre'];
         const isValidUpdate = Object.keys(updates).every((key) => allowedUpdates.includes(key));
         
         if(isValidUpdate){
@@ -43,7 +37,7 @@ export const eraseRole = async (nombre)=>{
         if(deletedRole){
             return deletedRole;
         }else{
-            throw new Error("Datos invaliddos para eliminar el rol")
+            throw new Error("Datos inválidos para eliminar el rol")
         }
     }else{
         throw new Error("El rol no existe");

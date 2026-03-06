@@ -22,7 +22,6 @@ export const createReservation = async (req, res) => {
             data: nuevaReserva,
         });
     } catch (error) {
-        console.error("Error al crear la reserva:", error.message);
         return res.status(500).json({ message: 'Error al crear la reserva', error: error.message });
     }
 };

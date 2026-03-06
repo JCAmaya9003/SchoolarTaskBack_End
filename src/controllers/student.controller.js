@@ -1,6 +1,7 @@
 import { validationResult } from 'express-validator';
 import * as studentService from '../services/student.service.js';
-import  * as parentservice from '../services/parent.service.js'
+import * as parentService from '../services/parent.service.js';
+import * as userService from '../services/user-service.js';
 
 
 export const getAllStudents = async (req, res) =>{
@@ -9,8 +10,9 @@ export const getAllStudents = async (req, res) =>{
         return res.status(400).json({message: "Error al intentar mostrar los estudiantes!", errors: errors.array() });
     }
     try {
-        const estudiantes = await studentService.getStudents();
-        res.json(estudiantes);
+        const { page, limit } = req.query;
+        const result = await studentService.getStudents(page, limit);
+        res.json(result);
     } catch (e) {
         res.status(500).json({ message: 'Error al mostrar los estudiantes', error: e.message });
     }
@@ -22,16 +24,10 @@ export const createStudent = async (req, res) =>{
         return res.status(400).json({ errors: errors.array() });
     }
     const { nombre, apellido, email, password, fecha_nacimiento, rolNombre,
-            genero, domicilio, nacionalidad, //datos para el user
+            genero, domicilio, nacionalidad,
             email_padre,
             grado, seccion,
             alergias, condiciones_medicas, contacto_emergencia } = req.body;
-            
-    console.log(nombre, apellido, email, password, fecha_nacimiento, rolNombre,
-                genero, domicilio, nacionalidad, //datos para el user
-                email_padre,//padre
-                grado, seccion, //grado y seccion
-                alergias, condiciones_medicas, contacto_emergencia );
 
     try {
         const newStudent = await studentService.createStudent({
@@ -48,16 +44,15 @@ export const createStudent = async (req, res) =>{
             Apellido: newStudent.usuario.apellido,
             Email: newStudent.usuario.email,
             genero: newStudent.usuario.genero,
-            domicilio: newStudent.usuario.domicilio, 
+            domicilio: newStudent.usuario.domicilio,
             nacionalidad: newStudent.usuario.nacionalidad,
-            userPassw: newStudent.usuario.password,
             userFecha: newStudent.usuario.fecha_nacimiento,
             userRol: newStudent.usuario.rol,
             userParent: newStudent.padre,
             userGradeSection: newStudent.grado_seccion,
             alergias: newStudent.alergias,
-            condiciones_medicas: newStudent.condiciones_medicas, 
-            contacto_emergencia: newStudent.contacto_emergencia, 
+            condiciones_medicas: newStudent.condiciones_medicas,
+            contacto_emergencia: newStudent.contacto_emergencia,
         }); 
     }catch (error) {
         res.status(500).json({ message: 'Error al crear el estudiante', error: error.message });
@@ -73,11 +68,8 @@ export const deleteStudent = async (req, res) =>{
     try {
         if(email){
             const studentDeleted = await studentService.deleteStudent(email);
-            console.log("studentdeleted: " + studentDeleted);
 
-            /*const userDeleted =*/ 
             if(studentDeleted){
-
                 await userService.eraseUser(email);
 
                 return res.status(200).json({
@@ -86,16 +78,15 @@ export const deleteStudent = async (req, res) =>{
                         Apellido: studentDeleted.usuario.apellido,
                         Email: studentDeleted.usuario.email,
                         genero: studentDeleted.usuario.genero,
-                        domicilio: studentDeleted.usuario.domicilio, 
+                        domicilio: studentDeleted.usuario.domicilio,
                         nacionalidad: studentDeleted.usuario.nacionalidad,
-                        userPassw: studentDeleted.usuario.password,
                         userFecha: studentDeleted.usuario.fecha_nacimiento,
                         userRol: studentDeleted.usuario.rol,
                         userParentnombre: studentDeleted.padre,
                         userGradeSection: studentDeleted.grado_seccion,
                         alergias: studentDeleted.alergias,
-                        condiciones_medicas: studentDeleted.condiciones_medicas, 
-                        contacto_emergencia: studentDeleted.contacto_emergencia, 
+                        condiciones_medicas: studentDeleted.condiciones_medicas,
+                        contacto_emergencia: studentDeleted.contacto_emergencia,
                 });
             }else{
                 return res.status(409).json({ message: 'Datos Invalidos para eliminar el estudiante' });
@@ -113,22 +104,16 @@ export const updateStudent = async (req, res) =>{
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
     }
-    const { email, //datos para el user
+    const { email,
             grado, seccion,
             alergias, condiciones_medicas, contacto_emergencia} = req.body;
-            
-    console.log(email,
-            grado, seccion,
-            alergias, condiciones_medicas, contacto_emergencia);
 
 try {
-
         const editedStudent = await studentService.updateStudent({
             email,
             grado, seccion,
             alergias, condiciones_medicas, contacto_emergencia
         });
-        console.log("editedStudent: " + editedStudent);
         if(editedStudent){
             return res.status(200).json({
                 message: 'Estudiante editado con éxito',
@@ -136,16 +121,15 @@ try {
                 Apellido: editedStudent.usuario.apellido,
                 Email: editedStudent.usuario.email,
                 genero: editedStudent.usuario.genero,
-                domicilio: editedStudent.usuario.domicilio, 
+                domicilio: editedStudent.usuario.domicilio,
                 nacionalidad: editedStudent.usuario.nacionalidad,
-                userPassw: editedStudent.usuario.password,
                 userFecha: editedStudent.usuario.fecha_nacimiento,
                 userRol: editedStudent.usuario.rol,
                 userParent: editedStudent.padre,
                 userGradeSection: editedStudent.grado_seccion,
                 alergias: editedStudent.alergias,
-                condiciones_medicas: editedStudent.condiciones_medicas, 
-                contacto_emergencia: editedStudent.contacto_emergencia,  
+                condiciones_medicas: editedStudent.condiciones_medicas,
+                contacto_emergencia: editedStudent.contacto_emergencia,
             });
     }else{
         return res.status(409).json({ message: 'Datos Invalidos para editar el estudiante' });
@@ -160,10 +144,8 @@ export const deleteById= async(req, res) =>{
         return res.status(400).json({ errors: errors.array() });
     }
     const { id } = req.body;
-    console.log(id);
 
 try {
-
         const deleted = await studentService.deleteWithId({
             id
         });
@@ -185,48 +167,23 @@ try {
 
 export const getStudentGradesInfoToken = async (req, res) => {
     try {
-        const token = req.cookies.token;
-        if (!token) {
-            return res.status(401).json({ message: "No se proporcionó un token de autenticación" });
-        }
+        const { email } = req.user;
 
-        // Decodificar el token
-        const decoded = jwt.decode(token);
-        if (!decoded || !decoded.email) {
-            return res.status(400).json({ message: "Token inválido. No se encontró un email." });
-        }
-
-        const { email } = decoded;
-        
         // Obtener estudiante
         const response =  await studentService.getStudentGradesInfo(email);
         res.json(response);
 
     } catch (error) {
-        console.error(error);
         res.status(500).json({ error: "Error al obtener las notas del estudiante: " + error.message });
     }
 };
 
 export const getStudentGradesInfoParent = async (req, res) => {
     try {
-        const token = req.cookies.token;
-        if (!token) {
-            return res.status(401).json({ message: "No se proporcionó un token de autenticación" });
-        }
-
-        // Decodificar el token
-        const decoded = jwt.decode(token);
-        if (!decoded || !decoded.email) {
-            return res.status(400).json({ message: "Token inválido. No se encontró un email." });
-        }
-
-        const { email } = decoded;
-
-        //const {email} = req.body;
+        const { email } = req.user;
 
         // Verificar si el padre existe
-        const parent = await parentservice.getParentByUserIdAndEmail(email);
+        const parent = await parentService.getParentByUserIdAndEmail(email);
         if (!parent) {
             return res.status(404).json({ message: "Padre no encontrado" });
         }
@@ -236,8 +193,6 @@ export const getStudentGradesInfoParent = async (req, res) => {
         if (!students.length) {
             return res.status(404).json({ message: "No se encontraron estudiantes asociados al padre" });
         }
-
-        console.log("Estudiantes relacionados:", students);
 
         // Preparar la respuesta
         const response = [];
@@ -262,7 +217,6 @@ export const getStudentGradesInfoParent = async (req, res) => {
             data: response,
         });
     } catch (error) {
-        console.error("Error al obtener las notas de los estudiantes:", error);
         res.status(500).json({ error: "Error al obtener las notas de los estudiantes: " + error.message });
     }
 };
@@ -277,7 +231,6 @@ export const getStudentGradesInfo = async (req, res) => {
 
         res.json(response);
     } catch (error) {
-        console.error(error);
         res.status(500).json({ error: "Error al obtener las notas del estudiante: " + error.message });
     }
 };
@@ -289,15 +242,12 @@ export const getStudentsByParentEmail = async (req, res) => {
         // Verificar si el padre existe
         const students = await studentService.getStudentsByParentEmail(email);
 
-        console.log("Estudiantes relacionados:", students);
-
         // Enviar respuesta
         res.status(200).json({
             message: "Estudiantes relacionados con el padre encontrados",
             estudiantes: students,
         });
     } catch (error) {
-        console.error("Error al obtener estudiantes relacionados con el padre:", error);
         res.status(500).json({ error: "Error al obtener estudiantes relacionados con el padre: " + error.message });
     }
 };

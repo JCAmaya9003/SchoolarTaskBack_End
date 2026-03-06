@@ -16,8 +16,9 @@ export const getAllTeachers = async (req, res) => {
         return res.status(400).json({ message: "Error al intentar mostrar los profesores!", errors: errors.array() });
     }
     try {
-        const teachers = await teacherService.getTeachers();
-        res.json(teachers);
+        const { page, limit } = req.query;
+        const result = await teacherService.getTeachers(page, limit);
+        res.json(result);
     } catch (e) {
         res.status(500).json({ message: 'Error al mostrar los profesores', error: e.message });
     }
@@ -38,9 +39,6 @@ export const createTeacher = async (req, res) => {
         genero, domicilio, nacionalidad, // Datos para el usuario
         asignaciones, telefono, especialidad // Datos para el profesor
     } = req.body;
-
-    console.log(nombre, apellido, email, password, fecha_nacimiento, rolNombre,
-        genero, domicilio, nacionalidad, asignaciones, telefono, especialidad);
 
     try {
         const newTeacher = await teacherService.createTeacher({
@@ -79,8 +77,6 @@ export const updateTeacher = async (req, res) => {
 
     const { email, asignaciones, telefono, especialidad } = req.body;
 
-    console.log(email, asignaciones, telefono, especialidad);
-
     try {
         const updatedTeacher = await teacherService.updateTeacher({
             email,
@@ -102,7 +98,6 @@ export const updateTeacher = async (req, res) => {
             return res.status(400).json({ message: 'No se pudo actualizar el profesor' });
         }
     } catch (error) {
-        console.error(error);
         return res.status(500).json({ message: 'Error al actualizar el profesor', error: error.message });
     }
 };
@@ -119,8 +114,6 @@ export const deleteTeacher = async (req, res) => {
     }
 
     const { email } = req.body;
-
-    console.log(`Eliminando profesor con email: ${email}`);
 
     try {
         const deletedTeacher = await teacherService.deleteTeacher(email);
@@ -141,27 +134,13 @@ export const deleteTeacher = async (req, res) => {
             return res.status(400).json({ message: 'No se pudo eliminar el profesor o el usuario' });
         }
     } catch (error) {
-        console.error(error);
         return res.status(500).json({ message: 'Error al eliminar el profesor', error: error.message });
     }
 };
 
 export const getTeacherSubjectInfo = async (req, res) => {
     try {
-        const token = req.cookies.token;
-        if (!token) {
-            return res.status(401).json({ message: "No se proporcionó un token de autenticación" });
-        }
-
-        // Decodificar el token
-        const decoded = jwt.decode(token);
-        if (!decoded || !decoded.email) {
-            return res.status(400).json({ message: "Token inválido. No se encontró un email." });
-        }
-
-        const { email } = decoded;
-
-        //const { email } = req.body;
+        const { email } = req.user;
 
         // Obtener materias relacionadas con el profesor
         const subjects = await teacherService.getSubjectsByTeacherEmail(email);
@@ -170,14 +149,11 @@ export const getTeacherSubjectInfo = async (req, res) => {
             return res.status(404).json({ message: "No se encontraron materias asociadas al profesor" });
         }
 
-        console.log("Materias relacionadas:", subjects);
-
         // Preparar la respuesta
         const response = [];
 
         for (const subject of subjects) {
             if (!subject || !subject.nombre) {
-                console.warn("Materia no válida encontrada:", subject);
                 continue; // Salta si el subject es inválido
             }
 
@@ -195,14 +171,12 @@ export const getTeacherSubjectInfo = async (req, res) => {
 
             for (const student of students) {
                 if (!student || !student.usuario) {
-                    console.warn("Estudiante no válido encontrado:", student);
                     continue; // Salta si el student es inválido
                 }
 
                 const studentEvaluations = await Promise.all(
                     evaluations.map(async (evaluation) => {
                         if (!evaluation || !evaluation.nombre) {
-                            console.warn("Evaluación no válida encontrada:", evaluation);
                             return null; // Devuelve null si la evaluación es inválida
                         }
                         const grade = await evaluationGradeService.getEvaluationGradesByStudentAndEvaluation(student._id, evaluation._id);
@@ -232,7 +206,6 @@ export const getTeacherSubjectInfo = async (req, res) => {
             data: response,
         });
     } catch (error) {
-        console.error("Error al obtener la información del profesor:", error);
         res.status(500).json({ error: "Error al obtener la información del profesor: " + error.message });
     }
 };

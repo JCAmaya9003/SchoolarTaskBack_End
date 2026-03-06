@@ -8,8 +8,9 @@ export const getAllParents = async (req, res) =>{
         return res.status(400).json({message: "Error al intentar mostrar los padres!", errors: errors.array() });
     }
     try {
-        const padres = await parentService.getParents();
-        res.json(padres);
+        const { page, limit } = req.query;
+        const result = await parentService.getParents(page, limit);
+        res.json(result);
     } catch (e) {
         res.status(500).json({ message: 'Error al mostrar los padres', error: e.message });
     }
@@ -24,9 +25,6 @@ export const createParent = async (req, res) =>{
             genero, domicilio, nacionalidad, //datos para el user
             telefono, telefono_trabajo, lugar_trabajo, profesion} = req.body;
 
-    console.log(nombre, apellido, email, password, fecha_nacimiento, rolNombre,
-        telefono, telefono_trabajo, lugar_trabajo, profesion, domicilio, nacionalidad);
-
     try {
         const newParent = await parentService.createParent({
             nombre, apellido, email, password, fecha_nacimiento, rolNombre,
@@ -40,15 +38,14 @@ export const createParent = async (req, res) =>{
             Apellido: newParent.usuario.apellido,
             Email: newParent.usuario.email,
             genero: newParent.usuario.genero,
-            domicilio: newParent.usuario.domicilio, 
+            domicilio: newParent.usuario.domicilio,
             nacionalidad: newParent.usuario.nacionalidad,
-            userPassw: newParent.usuario.password,
             userFecha: newParent.usuario.fecha_nacimiento,
             userRol: newParent.usuario.rol,
             telefono: newParent.telefono,
-            telefono_trabajo: newParent.telefono_trabajo, 
-            lugar_trabajo: newParent.lugar_trabajo, 
-            profesion: newParent.profesion, 
+            telefono_trabajo: newParent.telefono_trabajo,
+            lugar_trabajo: newParent.lugar_trabajo,
+            profesion: newParent.profesion,
         });
                 
     }catch (error) {
@@ -65,7 +62,6 @@ export const deleteParent = async (req, res) =>{
     try {
         if(email){
             const parentDeleted = await parentService.deleteParent(email);
-            console.log(parentDeleted);
             await userService.eraseUser(email);
 
             if(parentDeleted){
@@ -74,7 +70,6 @@ export const deleteParent = async (req, res) =>{
                     userPadreNombre: parentDeleted.usuario.nombre,
                     userPadreApellido: parentDeleted.usuario.apellido,
                     userPadreEmail: parentDeleted.usuario.email,
-                    userPadrePassw: parentDeleted.usuario.password,
                     domicilio: parentDeleted.domicilio,
                     genero: parentDeleted.usuario.genero,
                     nacionalidad: parentDeleted.usuario.nacionalidad,
@@ -102,8 +97,6 @@ export const updateParent = async (req, res) =>{
     }
     const { email, //datos para el user
         telefono, telefono_trabajo, lugar_trabajo, profesion} = req.body;
-    console.log(email,
-        telefono, telefono_trabajo, lugar_trabajo, profesion);
 
 try {
         const editedParent = await parentService.updateParent({
@@ -119,16 +112,15 @@ try {
             Nombre: editedParent.usuario.nombre,
             Apellido: editedParent.usuario.apellido,
             Email: editedParent.usuario.email,
-            userPassw: editedParent.usuario.password,
             genero: editedParent.usuario.genero,
-            domicilio: editedParent.usuario.domicilio, 
+            domicilio: editedParent.usuario.domicilio,
             nacionalidad: editedParent.usuario.nacionalidad,
             userFecha: editedParent.usuario.fecha_nacimiento,
             userRol: editedParent.usuario.rol,
             telefono: editedParent.telefono,
-            telefono_trabajo: editedParent.telefono_trabajo, 
-            lugar_trabajo: editedParent.lugar_trabajo, 
-            profesion: editedParent.profesion, 
+            telefono_trabajo: editedParent.telefono_trabajo,
+            lugar_trabajo: editedParent.lugar_trabajo,
+            profesion: editedParent.profesion,
           });
     }else{
         return res.status(409).json({ message: 'Datos Invalidos para editar el padre' });
@@ -144,7 +136,6 @@ export const deleteById= async(req, res) =>{
         return res.status(400).json({ errors: errors.array() });
     }
     const { id } = req.body;
-    console.log(id);
 
 try {
 

@@ -2,13 +2,17 @@ import * as teacherRepository from '../repositories/teacher.repository.js';
 import * as gradeSectionService from '../services/gradeSection.service.js';
 import * as subjectService from '../services/subject.service.js';
 import * as userService from '../services/user-service.js';
+import { hardDeleteUserById } from '../repositories/user-repository.js';
+import logger from '../config/logger.js';
 
 /**
  * Obtener todos los profesores.
- * @returns {Promise<Array>} - Lista de profesores.
+ * @param {number} page - Número de página
+ * @param {number} limit - Elementos por página
+ * @returns {Promise<Object>} - Objeto con data y pagination
  */
-export const getTeachers = async () => {
-    return await teacherRepository.findAllTeachers();
+export const getTeachers = async (page, limit) => {
+    return await teacherRepository.findAllTeachers(page, limit);
 };
 
 /**
@@ -26,7 +30,6 @@ export const createTeacher = async ({ nombre, apellido, email, password, fecha_n
             const validSubjects = [];
             for (const subjectName of materias) {
                 const subject = await subjectService.searchSubjectByName(subjectName);
-                console.log(`Materia buscada: ${subjectName}, Resultado: ${subject}`);
                 if (subject) {
                     validSubjects.push(subject._id);
                 } else {
@@ -38,7 +41,6 @@ export const createTeacher = async ({ nombre, apellido, email, password, fecha_n
             const validGradeSections = [];
             for (const { grado, seccion } of grado_secciones) {
                 const gradeSection = await gradeSectionService.getGradeAndSection(grado, seccion);
-                console.log(`Grado y sección buscados: Grado=${grado}, Sección=${seccion}, Resultado: ${gradeSection}`);
                 if (gradeSection) {
                     validGradeSections.push(gradeSection._id);
                 } else {
@@ -48,8 +50,6 @@ export const createTeacher = async ({ nombre, apellido, email, password, fecha_n
 
             validAssignments.push({ materias: validSubjects, grado_secciones: validGradeSections });
         }
-
-        console.log("Asignaciones validadas:", validAssignments);
 
         const userExists = await userService.searchUserByEmail(email);
 
@@ -65,12 +65,18 @@ export const createTeacher = async ({ nombre, apellido, email, password, fecha_n
                 domicilio,
                 nacionalidad
             });
-            return await teacherRepository.createTeacher({
-                usuario: user,
-                grado_encargado: validAssignments,
-                telefono,
-                especialidad,
-            });
+            try {
+                return await teacherRepository.createTeacher({
+                    usuario: user,
+                    grado_encargado: validAssignments,
+                    telefono,
+                    especialidad,
+                });
+            } catch (error) {
+                await hardDeleteUserById(user._id);
+                logger.warn(`Rollback: Usuario ${email} eliminado tras fallo en creación de profesor`);
+                throw error;
+            }
         } else {
             throw new Error("Usuario ya existente!");
         };
@@ -87,11 +93,9 @@ export const createTeacher = async ({ nombre, apellido, email, password, fecha_n
  */
 export const updateTeacher = async ({ email, asignaciones, telefono, especialidad }) => {
     const userExists = await userService.searchUserByEmail(email);
-    console.log("userExists: " + userExists);
 
     if (userExists) {
         const teacherExists = await teacherRepository.findTeacherByUserId(userExists.id);
-        console.log("teacherExists: " + teacherExists);
 
         if (teacherExists) {
             const validAssignments = [];
@@ -139,12 +143,10 @@ export const updateTeacher = async ({ email, asignaciones, telefono, especialida
  */
 export const deleteTeacher = async (email) => {
     const teacherUser = await userService.searchUserByEmail(email);
-    console.log("teacherUser: " + teacherUser);
     if (teacherUser) {
         const teacherExists = await teacherRepository.findTeacherByUserId(teacherUser.id);
 
         if (teacherExists) {
-            console.log("teacher existe: " + teacherExists);
             return await teacherRepository.deleteTeacherById(teacherExists.id);
         } else {
             throw new Error("No existe el profesor");
@@ -176,7 +178,6 @@ export const getTeacherByUserIdAndEmail = async (email) => {
  */
 export const deleteWithId = async ({ id }) => {
     const deleted = await teacherRepository.deleteTeacherById(id);
-    console.log(deleted);
     return deleted;
 };
 

@@ -10,20 +10,29 @@ const ParentSchema = new mongoose.Schema({
       type: String,
       required: true,
       unique: true,
+      trim: true,
     },
     telefono_trabajo: {
-      required: true,
       type: String,
+      required: true,
+      trim: true,
     },
     lugar_trabajo: {
-      required: true,
       type: String,
+      required: true,
+      trim: true,
     },
     profesion: {
-      required: true,
       type: String,
+      required: true,
+      trim: true,
     },
+  }, {
+    timestamps: true,
   });
-  
+
+// Índice para optimizar búsquedas por usuario
+ParentSchema.index({ usuario: 1 });
+
 const Parent = mongoose.model('Parent', ParentSchema);
 export default Parent;

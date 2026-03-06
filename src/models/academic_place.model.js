@@ -4,7 +4,10 @@ const Academic_placeSchema = new mongoose.Schema({
     lugar: {
       type: String,
       required: true,
-    } 
+      trim: true,
+    }
+  }, {
+    timestamps: true,
   });
   
 const Academic_place = mongoose.model('Academic_place', Academic_placeSchema);

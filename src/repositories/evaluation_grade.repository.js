@@ -38,23 +38,6 @@ export const updateEvaluationGradeById = async (id, updates) => {
  * @param {String} id - ID del registro de calificación.
  * @returns {Promise<Object|null>} - Registro eliminado o null si no se encontró.
  */
-/*export const deleteEvaluationGradeByEmail = async (id) => {
-    return await EvaluationGrade.findByIdAndDelete(id).populate({
-        path: 'estudiante',
-        select: 'usuario grado_seccion',
-        populate: { path: 'usuario', select: 'nombre apellido email' },
-    })
-    .populate({
-        path: 'evaluacion',
-        select: 'nombre materia fecha',
-    });;
-};*/
-
-/**
- * Eliminar un registro de calificación por ID.
- * @param {String} id - ID del registro de calificación.
- * @returns {Promise<Object|null>} - Registro eliminado o null si no se encontró.
- */
 export const deleteEvaluationGradeById = async (id) => {
     return await EvaluationGrade.findByIdAndDelete(id);
 };
@@ -85,8 +68,6 @@ export const findAllEvaluationGrades = async () => {
  * @returns {Promise<Object|null>} - Registro de calificación encontrado o null.
  */
 export const findEvaluationGradeByStudentIdAndEvaluation = async (studentId, evaluationId) => {
-    console.log("estudiante: " + studentId);
-    console.log("evaluacion: " + evaluationId);
     return await EvaluationGrade.findOne({estudiante: studentId, evaluacion: evaluationId})
         .populate({
             path: 'estudiante',

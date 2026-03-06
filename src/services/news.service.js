@@ -3,12 +3,10 @@ import * as userService from '../services/user-service.js';
 
 export const createNews = async ({email, titulo, contenido}) =>{
     const userExists = await userService.searchUserByEmail(email);
-    console.log(userExists);
-
+    
     if (userExists) {
-        const newsExists = await newsRepository.findNewsByUserIdAndTittle(userExists.id, titulo);
-        console.log("newsExists " + newsExists);
-        if(!newsExists){
+        const newsExists = await newsRepository.findNewsByUserIdAndTitle(userExists.id, titulo);
+                if(!newsExists){
             return await newsRepository.createNews({usuario: userExists, titulo, contenido});
         }else{
             throw new Error("La noticia ya existe");
@@ -20,15 +18,12 @@ export const createNews = async ({email, titulo, contenido}) =>{
 
 export const editNews = async ({email, titulo, nuevoTitulo, contenido}) =>{
     const userExists = await userService.searchUserByEmail(email);
-    console.log(userExists);
-
+    
     if (userExists) {
-        const newsExists = await newsRepository.findNewsByUserIdAndTittle(userExists.id, titulo);
-        console.log("newsExists " + newsExists);
-
+        const newsExists = await newsRepository.findNewsByUserIdAndTitle(userExists.id, titulo);
+        
         if(newsExists){
-            console.log("si entro")
-            return await newsRepository.updateNewsById(newsExists.id, {titulo: nuevoTitulo, contenido});
+                        return await newsRepository.updateNewsById(newsExists.id, {titulo: nuevoTitulo, contenido});
         }else{
             throw new Error("La noticia no existe");
         }
@@ -39,12 +34,10 @@ export const editNews = async ({email, titulo, nuevoTitulo, contenido}) =>{
 
 export const eraseNews = async ({email, titulo}) =>{
     const userExists = await userService.searchUserByEmail(email);
-    console.log(userExists);
-
+    
     if (userExists) {
-        const newsExists = await newsRepository.findNewsByUserIdAndTittle(userExists.id, titulo);
-        console.log(newsExists);
-        if(newsExists){
+        const newsExists = await newsRepository.findNewsByUserIdAndTitle(userExists.id, titulo);
+                if(newsExists){
             return await newsRepository.deleteNewsById(newsExists.id);
         }else{
             throw new Error("La noticia no existe");
@@ -54,14 +47,13 @@ export const eraseNews = async ({email, titulo}) =>{
     }
 };
 
-export const getNews = async () =>{
-    return await newsRepository.findAllNews();
+export const getNews = async (page, limit) =>{
+    return await newsRepository.findAllNews(page, limit);
 };
 
 export const getNewsByUser = async (email) =>{
     const userExists = await userService.searchUserByEmail(email);
-    console.log(userExists);
-
+    
     if (userExists) {
         return await newsRepository.findNewsByUserId(userExists.id);
     }else{

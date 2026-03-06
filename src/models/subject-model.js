@@ -4,8 +4,12 @@ const SubjectSchema = new mongoose.Schema({
     nombre: {
       type: String,
       required: true,
-    } 
+      unique: true,
+      trim: true,
+    }
+  }, {
+    timestamps: true,
   });
-  
+
 const Subject = mongoose.model('Subject', SubjectSchema);
 export default Subject;

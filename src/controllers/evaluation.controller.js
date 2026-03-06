@@ -74,9 +74,9 @@ export const eraseEvaluation = async (req, res) =>{
     const evaluationDeleted = await evaluationService.deleteEvaluation({nombre, nombreMateria});
     
     if (evaluationDeleted) {
-      
+
       return res.json({
-        message: 'Evaluacion editada con exito',
+        message: 'Evaluacion eliminada con exito',
         evaluationNombre: evaluationDeleted.nombre,
         evaluationMateria: evaluationDeleted.materia.nombre,
         evaluationDescripcion: evaluationDeleted.descripcion,
@@ -101,12 +101,12 @@ export const searchEvaluationByNameAndSubject = async (req, res) =>{
 
   const { nombre, nombreMateria} = req.body;
   try {
-    const evaluation = await evaluationService.searchEvaluationbyNameAndSubject({nombre, nombreMateria});
+    const evaluation = await evaluationService.searchEvaluationbyNameAndSubject(nombre, nombreMateria);
     
     if (evaluation) {
-      
+
       return res.json({
-        message: 'Evaluacion editada con exito',
+        message: 'Evaluacion encontrada con exito',
         evaluationNombre: evaluation.nombre,
         evaluationMateria: evaluation.materia.nombre,
         evaluationDescripcion: evaluation.descripcion,
@@ -124,14 +124,15 @@ export const searchEvaluationByNameAndSubject = async (req, res) =>{
 
 export const getEvaluations = async (req, res) =>{
     const errors = validationResult(req);
-  
+
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
   try {
-    const evaluations = await evaluationService.getAllEvaluations();
-      
-    res.json(evaluations);
+    const { page, limit } = req.query;
+    const result = await evaluationService.getAllEvaluations(page, limit);
+
+    res.json(result);
 
   } catch (error) {
     res.status(500).json({ message: 'Error al obtener las evaluaciones: ', error: error.message });

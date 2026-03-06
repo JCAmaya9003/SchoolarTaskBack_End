@@ -1,12 +1,15 @@
 import express from 'express';
 import { body, query } from 'express-validator';
 import * as reservationController from '../controllers/reservation.controller.js';
+import { validateToken, checkRole } from '../middlewares/auth-middleware.js';
 
 const router = express.Router();
 
 // Ruta para crear una nueva reserva
 router.post(
     '/create',
+    validateToken,
+    checkRole(['admin', 'teacher']),
     [
         body('lugar').isString().withMessage('El lugar debe ser una cadena válida.'),
         body('usuarioEmail').isEmail().withMessage('El email del profesor debe ser válido.'),
@@ -20,6 +23,8 @@ router.post(
 // Ruta para actualizar una reserva
 router.put(
     '/',
+    validateToken,
+    checkRole(['admin', 'teacher']),
     [
         body('lugar').isString().withMessage('El lugar debe ser una cadena válida.'),
         body('nuevoLugar').isString().withMessage('El nuevo lugar debe ser una cadena válida.'),
@@ -34,6 +39,8 @@ router.put(
 // Ruta para eliminar una reserva
 router.delete(
     '/',
+    validateToken,
+    checkRole(['admin', 'teacher']),
     [
         body('lugar').isString().withMessage('El lugar debe ser una cadena válida.'),
         body('usuarioEmail').isEmail().withMessage('El email del profesor debe ser válido.'),
@@ -42,11 +49,13 @@ router.delete(
 );
 
 // Ruta para obtener todas las reservas
-router.get('/all',reservationController.getAllReservations);
+router.get('/all', validateToken, checkRole(['admin', 'teacher']), reservationController.getAllReservations);
 
 // Ruta para obtener reservas en un rango de tiempo
 router.get(
     '/by-time-range',
+    validateToken,
+    checkRole(['admin', 'teacher']),
     [
         query('fecha_inicio').isISO8601().withMessage('La fecha de inicio debe ser una fecha válida.'),
         query('fecha_fin').isISO8601().withMessage('La fecha de fin debe ser una fecha válida.'),
@@ -57,6 +66,8 @@ router.get(
 // Ruta para obtener una reserva por profesor y lugar
 router.get(
     '/by-teacher-and-place',
+    validateToken,
+    checkRole(['admin', 'teacher']),
     [
         query('usuarioEmail').isEmail().withMessage('El email del profesor debe ser válido.'),
         query('lugar').isString().withMessage('El lugar debe ser una cadena válida.'),
@@ -67,12 +78,14 @@ router.get(
 // Ruta para obtener todas las reservas realizadas por un profesor
 router.get(
     '/by-teacher',
+    validateToken,
+    checkRole(['admin', 'teacher']),
     [
         query('usuarioEmail').isEmail().withMessage('El email del profesor debe ser válido.'),
     ],
     reservationController.getReservationsByUser
 );
 
-router.post('/get-nombre', reservationController.getReservationNameById);
+router.post('/get-nombre', validateToken, checkRole(['admin', 'teacher']), reservationController.getReservationNameById);
 
 export default router;

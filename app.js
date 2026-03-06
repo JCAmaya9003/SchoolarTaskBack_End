@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import mongoSanitize from 'express-mongo-sanitize';
 import userRoutes from './src/routes/user-routes.js';
 import oauthRoutes from './src/routes/oauth-routes.js';
 import { conexionDB } from './src/config/database.js';
@@ -16,10 +17,18 @@ import evaluation_gradeRouter from './src/routes/evaluation_grade.routes.js'
 import academic_placeRouter from './src/routes/academic_place.routes.js'
 import reservartionRouter from './src/routes/reservation.routes.js'
 import {config} from './src/config/config.js'
+import { errorHandler, notFound } from './src/middlewares/error-middleware.js';
+import logger from './src/config/logger.js';
+import swaggerUi from 'swagger-ui-express';
+import swaggerSpec from './src/config/swagger.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-conexionDB();
+
+// Solo conectar a la BD si no estamos en modo test
+if (process.env.NODE_ENV !== 'test') {
+  conexionDB();
+}
 
 app.use(cors({
     origin: config.frontUrl,
@@ -28,6 +37,11 @@ app.use(cors({
 
 app.use(cookieParser());
 app.use(express.json());
+app.use(mongoSanitize()); // Sanitiza inputs para prevenir NoSQL injection
+
+// Documentación Swagger - disponible en /api-docs
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
 app.use('/api/users', userRoutes);
 app.use('/oauth', oauthRoutes);
 app.use('/api/roles', roleRoutes);
@@ -42,4 +56,18 @@ app.use('/api/evaluation_grades', evaluation_gradeRouter);
 app.use('/api/academic_places', academic_placeRouter);
 app.use('/api/reservations', reservartionRouter);
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Middleware de rutas no encontradas (404)
+app.use(notFound);
+
+// Middleware global de manejo de errores (debe ser el ÚLTIMO)
+app.use(errorHandler);
+
+// Solo iniciar el servidor si no estamos en modo test
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    logger.info(`Servidor corriendo en puerto ${PORT}`);
+    logger.info(`Entorno: ${process.env.NODE_ENV || 'development'}`);
+  });
+}
+
+export default app;

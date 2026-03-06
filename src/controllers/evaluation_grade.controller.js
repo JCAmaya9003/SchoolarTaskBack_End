@@ -39,7 +39,6 @@ export const getAllEvaluationGrades = async (req, res) => {
 export const getEvaluationGradesByStudent = async (req, res) => {
     try {
         const { email } = req.query;
-        console.log(email);
         const grades = await evaluationGradeService.getEvaluationGradesByStudent(email);
 
         return res.status(200).json(grades);
@@ -70,7 +69,6 @@ export const getEvaluationGradesByEvaluation = async (req, res) => {
 export const updateEvaluationGradeById = async (req, res) => {
     try {
         const { email, nombreMateria, nombreEvaluacion, calificacion } = req.body;
-        console.log(email, nombreMateria, nombreEvaluacion, calificacion)
         const updatedGrade = await evaluationGradeService.updateEvaluationGradeByStudentAndEvaluation( {email, nombreMateria, nombreEvaluacion, calificacion});
 
         if (!updatedGrade) {

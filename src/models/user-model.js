@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import softDeletePlugin from '../utils/soft-delete-plugin.js';
 
 const UserSchema = new mongoose.Schema({
     nombre: {
@@ -19,7 +20,15 @@ const UserSchema = new mongoose.Schema({
     },
     password: {
       type: String,
-      required: true,
+      required: function() {
+        // Password es requerido solo si NO hay googleId
+        return !this.googleId;
+      },
+    },
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true, // Permite nulls pero únicos si existen
     },
     rol: {
       type: mongoose.Schema.Types.ObjectId,
@@ -32,10 +41,10 @@ const UserSchema = new mongoose.Schema({
     },
     genero: {
       type: String,
-      enum: ['Masculino', 'Femenino'], // Enum para valores controlados
+      enum: ['Masculino', 'Femenino'],
       required: true,
     },
-      nacionalidad: {
+    nacionalidad: {
       type: String,
       required: true,
     },
@@ -43,7 +52,21 @@ const UserSchema = new mongoose.Schema({
       required: true,
       type: String,
     },
-  });
-  
+    resetPasswordToken: {
+      type: String,
+      default: null,
+    },
+    resetPasswordExpires: {
+      type: Date,
+      default: null,
+    },
+  },
+  {
+    timestamps: true, // Agrega createdAt y updatedAt
+  }
+);
+
+UserSchema.plugin(softDeletePlugin);
+
 const User = mongoose.model('User', UserSchema);
 export default User;

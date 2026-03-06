@@ -1,7 +1,8 @@
 import * as userService from '../services/user-service.js';
 import { config } from '../config/config.js';
 import { OAuth2Client } from 'google-auth-library';
-import { generateToken } from '../middlewares/auth-middleware.js'; // Assume this function generates JWTs
+import { generateToken } from '../middlewares/auth-middleware.js';
+import logger from '../config/logger.js';
 
 const CLIENT_ID = config.googleClientId;
 const client = new OAuth2Client(config.googleClientId, config.googleClientSecret, config.googleRedirectUrl);
@@ -21,7 +22,7 @@ export const generateAuthUrl = async (req, res) => {
 
     res.json({ url: authorizeUrl });
   } catch (error) {
-    console.error("Error generating auth URL:", error);
+    logger.error("Error generando URL de autenticación OAuth:", { error: error.message });
     res.status(500).json({ error: "Failed to generate Google auth URL" });
   }
 };
@@ -69,16 +70,15 @@ export const handleOAuthCallback = async (req, res) => {
     // Set the token in a cookie
     res.cookie("token", jwtToken, {
       httpOnly: true,
-      secure: false, 
+      secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
       maxAge:   60 * 60 * 1000, //1 hour
     });
-      res
-     
+
   const frontendUrl = `${config.frontUrl}/googleload`;
-   return res.redirect(frontendUrl);
+    return res.redirect(frontendUrl);
   } catch (error) {
-    console.error("Error during Google OAuth callback:", error);
+    logger.error("Error durante callback de OAuth:", { error: error.message });
     res.status(500).json({ error: "Internal server error" });
   }
 };

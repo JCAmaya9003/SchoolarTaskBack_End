@@ -27,12 +27,19 @@ const TeacherSchema = new mongoose.Schema({
   telefono: {
     type: String,
     required: true,
+    trim: true,
   },
   especialidad: {
     type: String,
     required: true,
+    trim: true,
   },
+}, {
+  timestamps: true,
 });
+
+// Índice para optimizar búsquedas por usuario
+TeacherSchema.index({ usuario: 1 });
 
 const Teacher = mongoose.model('Teacher', TeacherSchema);
 export default Teacher;

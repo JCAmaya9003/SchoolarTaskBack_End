@@ -4,30 +4,24 @@ import * as parentService from '../services/parent.service.js'
 import * as gradeSectionService from '../services/gradeSection.service.js'
 import * as evaluationGradeService from '../services/evaluation_grade.service.js';
 import * as evaluationService from '../services/evaluation.service.js';
+import { hardDeleteUserById } from '../repositories/user-repository.js';
+import logger from '../config/logger.js';
 
-export const getStudents = async () =>{
-    return await studentRepository.findAllStudents();
+export const getStudents = async (page, limit) =>{
+    return await studentRepository.findAllStudents(page, limit);
 };
 
 export const createStudent = async ({nombre, apellido, email, password, fecha_nacimiento, rolNombre, genero, domicilio, nacionalidad, 
     email_padre, grado, seccion, alergias, condiciones_medicas, contacto_emergencia}) => {
 
     const parentExists = await parentService.getParentByUserIdAndEmail(email_padre);
-    console.log(parentExists);
 
     if (parentExists) {
-        console.log("grado y seccion van " + grado, seccion);
         const gradeSectionExists = await gradeSectionService.getGradeAndSection(grado, seccion);
-        console.log(gradeSectionExists);
 
         if (gradeSectionExists) {
-            // Cambiar subjectService a roleService
-            console.log(rolNombre);
-
                 const userExists = await userService.searchUserByEmail(email);
-                console.log(userExists);
                 if (!userExists) {
-                    console.log("si entro");
                     const user = await userService.registerUser({
                         nombre,
                         apellido,
@@ -40,22 +34,29 @@ export const createStudent = async ({nombre, apellido, email, password, fecha_na
                         nacionalidad
                     });
 
-                    const studentExists = await studentRepository.findStudentByUserId(user.id);
+                    try {
+                        const studentExists = await studentRepository.findStudentByUserId(user.id);
 
-                    if (!studentExists) {
-                        return await studentRepository.createStudent({
-                            usuario: user,
-                            padre: parentExists,
-                            grado_seccion: gradeSectionExists,
-                            alergias,
-                            condiciones_medicas,
-                            contacto_emergencia: {
-                                nombre: contacto_emergencia.nombre,
-                                telefono: contacto_emergencia.telefono,
-                            },
-                        });
-                    } else {
-                        throw new Error("El estudiante ya existe");
+                        if (!studentExists) {
+                            return await studentRepository.createStudent({
+                                usuario: user,
+                                padre: parentExists,
+                                grado_seccion: gradeSectionExists,
+                                alergias,
+                                condiciones_medicas,
+                                contacto_emergencia: {
+                                    nombre: contacto_emergencia.nombre,
+                                    telefono: contacto_emergencia.telefono,
+                                },
+                            });
+                        } else {
+                            throw new Error("El estudiante ya existe");
+                        }
+                    } catch (error) {
+                        // Rollback: eliminar el usuario creado si falla la creación del estudiante
+                        await hardDeleteUserById(user._id);
+                        logger.warn(`Rollback: Usuario ${email} eliminado tras fallo en creación de estudiante`);
+                        throw error;
                     }
                 } else {
                     throw new Error("El usuario ya existe");
@@ -71,15 +72,12 @@ export const createStudent = async ({nombre, apellido, email, password, fecha_na
 
 export const updateStudent = async ({email, grado, seccion, alergias, condiciones_medicas, contacto_emergencia}) =>{
     const userExists = await userService.searchUserByEmail(email);
-    console.log("userExists: " + userExists);
 
     if(userExists){
         const studentExists = await studentRepository.findStudentByUserId(userExists.id);
-        console.log("studentExists: " + studentExists);
 
         if(studentExists){
             const gradeSection = await gradeSectionService.getGradeAndSection(grado, seccion);
-            console.log(gradeSection);
 
             if(gradeSection){
                 return await studentRepository.updateStudentByUserId(studentExists.id, 
@@ -97,7 +95,6 @@ export const updateStudent = async ({email, grado, seccion, alergias, condicione
 
 export const deleteStudent = async (email) =>{
     const studentUser = await userService.searchUserByEmail(email);
-    console.log("studentUser: " + studentUser);
     if(studentUser){
         const studentExists = await studentRepository.findStudentByUserId(studentUser.id);
 
@@ -123,7 +120,6 @@ export const getStudentByUserIdAndEmail = async (email) =>{
 
 export const deleteWithId = async ({id}) =>{
     const deleted = await studentRepository.deleteStudentById(id);
-    console.log(deleted);
     return deleted;
 };
 
@@ -145,42 +141,48 @@ export const getStudentGradesInfo = async (email) => {
     }
 
     // Obtener las materias del grado y sección
-    console.log("grado y seccion a enviar: " + gradeSection.grado, gradeSection.seccion);
     const subjects = await gradeSectionService.getSubjectsByGradeAndSection(gradeSection.grado, gradeSection.seccion);
     if (!subjects.length) {
         throw new Error("No se encontraron materias para el grado y sección del estudiante");
     }
 
+    // OPTIMIZACIÓN: Obtener todas las evaluaciones de todas las materias en una sola consulta
+    const subjectIds = subjects.map(s => s._id);
+    const evaluationRepository = await import('../repositories/evaluation.repository.js');
+    const allEvaluations = await evaluationRepository.findEvaluationsBySubjects(subjectIds);
+
+    // OPTIMIZACIÓN: Obtener todas las calificaciones del estudiante en una sola consulta
+    const evaluationGradeRepository = await import('../repositories/evaluation_grade.repository.js');
+    const allGrades = await evaluationGradeRepository.findEvaluationGradesByStudent(student._id);
+
+    // Crear un Map de calificaciones para búsqueda O(1)
+    const gradesMap = new Map(allGrades.map(g => [g.evaluacion._id.toString(), g.calificacion]));
+
+    // Agrupar evaluaciones por materia
+    const evaluationsBySubject = allEvaluations.reduce((acc, evaluation) => {
+        const subjectId = evaluation.materia._id.toString();
+        if (!acc[subjectId]) {
+            acc[subjectId] = [];
+        }
+        acc[subjectId].push(evaluation);
+        return acc;
+    }, {});
+
     // Preparar la respuesta
-    const response = [];
+    const response = subjects.map(subject => {
+        const subjectEvaluations = evaluationsBySubject[subject._id.toString()] || [];
 
-    console.log("Estudiante encontrado:", student);
-    console.log("Grado y sección del estudiante:", gradeSection);
-    console.log("Materias obtenidas:", subjects);
+        const evaluationData = subjectEvaluations.map(evaluation => ({
+            evaluacion: evaluation.nombre,
+            nota: gradesMap.get(evaluation._id.toString()) || null,
+            peso: evaluation.peso,
+        }));
 
-    for (const subject of subjects) {
-        console.log("Materia actual:", subject);
-        const evaluations = await evaluationService.getEvaluationsBySubject(subject.nombre);
-        console.log("Evaluaciones para la materia:", evaluations);
-
-        // Crear un arreglo de objetos con evaluaciones, notas y pesos
-        const evaluationData = await Promise.all(
-            evaluations.map(async (evaluation) => {
-                const grade = await evaluationGradeService.getEvaluationGradesByStudentAndEvaluation(student._id, evaluation._id);
-                return {
-                    evaluacion: evaluation.nombre,
-                    nota: grade ? grade.calificacion : null,
-                    peso: evaluation.peso,
-                };
-            })
-        );
-
-        // Estructurar los datos para cada materia
-        response.push({
+        return {
             materia: subject.nombre,
-            evaluaciones: evaluationData, // Aquí estará el arreglo de objetos con evaluaciones, notas y pesos
-        });
-    }
+            evaluaciones: evaluationData,
+        };
+    });
 
     return response;
 };
@@ -192,8 +194,6 @@ export const getStudentsByParentEmail = async (email_padre) => {
     if (!parent) {
         throw new Error("Padre no encontrado");
     }
-
-    console.log("Padre encontrado:", parent);
 
     // Buscar estudiantes relacionados con el padre
     const students = await studentRepository.findStudentsByParentId(parent._id);

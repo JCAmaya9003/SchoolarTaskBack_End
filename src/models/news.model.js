@@ -8,14 +8,22 @@ const NewsSchema = new mongoose.Schema({
       },
     titulo: {
         type: String,
-        required: true, 
+        required: true,
+        trim: true,
     },
     contenido: {
         type: String,
-        required: true, 
+        required: true,
+        trim: true,
     },
 
+}, {
+    timestamps: true,
 });
-  
+
+// Índices para optimizar búsquedas y ordenamiento
+NewsSchema.index({ usuario: 1 });
+NewsSchema.index({ createdAt: -1 }); // -1 para orden descendente (noticias más recientes primero)
+
 const News = mongoose.model('News', NewsSchema);
 export default News;

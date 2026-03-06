@@ -1,33 +1,32 @@
 import express from 'express';
 import { body } from 'express-validator';
 import * as roleController from '../controllers/role-controller.js';
+import { validateToken, checkRole } from '../middlewares/auth-middleware.js';
 
 const router = express.Router();
 
-router.get('/all', roleController.getAllRoles);
+router.get('/all', validateToken, checkRole(['admin']), roleController.getAllRoles);
 router.post('/create',
+  validateToken,
+  checkRole(['admin']),
   [
     body('nombre').isString().withMessage('Nombre Invalido!'),
-    body('permisos.student').optional().isBoolean().withMessage('student debe ser un valor booleano.'),
-    body('permisos.parent').optional().isBoolean().withMessage('parent debe ser un valor booleano.'),
-    body('permisos.teacher').optional().isBoolean().withMessage('teacher debe ser un valor booleano.'),
-    body('permisos.admin').optional().isBoolean().withMessage('admin debe ser un valor booleano.'),
   ],
   roleController.createNewRole
 );
 
 router.put('/update',
+    validateToken,
+    checkRole(['admin']),
     [
       body('nombre').isString().withMessage('Nombre Invalido!'),
-      body('permisos.student').optional().isBoolean().withMessage('student debe ser un valor booleano.'),
-      body('permisos.parent').optional().isBoolean().withMessage('parent debe ser un valor booleano.'),
-      body('permisos.teacher').optional().isBoolean().withMessage('teacher debe ser un valor booleano.'),
-      body('permisos.admin').optional().isBoolean().withMessage('admin debe ser un valor booleano.'),
     ],
     roleController.editRole
 );
 
 router.delete('/delete',
+    validateToken,
+    checkRole(['admin']),
     [
         body('nombre').isString().withMessage('Nombre Invalido!'),
     ],

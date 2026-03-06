@@ -1,4 +1,3 @@
-import { ContextHandlerImpl } from 'express-validator/lib/chain/context-handler-impl.js';
 import * as roleService from '../services/role-service.js'
 import { validationResult } from 'express-validator';
 
@@ -9,36 +8,19 @@ export const createNewRole = async (req, res)=>{
     }
 
     try {
-      /*const userRoleId = req.user.rol;
+          const {nombre} = req.body;
 
-      const userRole = await roleService.searchRoleById(userRoleId);
-
-      if (userRole) {
-        if (userRole.permisos.admin) {*/
-
-          const {nombre, permisos } = req.body;
-        
-          const createdRole = await roleService.newRole(nombre, permisos);
+          const createdRole = await roleService.newRole(nombre);
 
           if(createdRole){
             return res.status(201).json({
               message: 'Rol creado con éxito!',
               roleName: createdRole.nombre,
-              roleAccess: createdRole.permisos,
             });
           }else{
             return res.status(400).json({ message: 'Rol ya creado' });
           }
-          
-        
-        /*}else{
-          return res.status(403).json({ message: 'No tienes permisos para realizar esta acción.' });
-        }*/
-      /*}else{
-        return res.status(403).json({ message: 'No se encontró el rol del usuario.' });
-      }*/
     }catch (e) {
-      console.error(e);
       res.status(500).json({ message: 'Error al crear el rol.', error: e.message });
     };
 };
@@ -48,36 +30,22 @@ export const editRole = async (req, res) =>{
     if (!errors.isEmpty()) {
         return res.status(400).json({message: "Error al intentar editar el rol!", errors: errors.array() });
     }
-    
+
     try {
-      /*const userRoleId = req.user.rol;
-
-      const userRole = await roleService.searchRoleById(userRoleId);
-
-      if (userRole) {
-        if (userRole.permisos.admin) {*/
-          const {nombre, permisos } = req.body;
-          const updatedRole = await roleService.updateRole(nombre, { nombre, permisos });
+          const {nombre} = req.body;
+          const updatedRole = await roleService.updateRole(nombre, { nombre });
 
           if (updatedRole) {
             return res.status(200).json({
               message: 'Rol actualizado con éxito',
               roleId: updatedRole.id,
               roleName: updatedRole.nombre,
-              roleAccess: updatedRole.permisos,
             });
           }else{
             return res.status(404).json({ message: 'El rol especificado no existe!' });
           }
-        /*}else{
-          return res.status(403).json({ message: 'No tienes permisos para realizar esta acción.' });
-        }
-      }else{
-        return res.status(403).json({ message: 'No se encontró el rol del usuario.' });
-      }*/
 
     }catch (e) {
-      console.error(e);
       res.status(500).json({ message: 'Error al editar el rol.', error: e.message });
     }
 };
@@ -88,11 +56,6 @@ export const deleteRole = async (req, res) =>{
         return res.status(400).json({message: "Error al intentar eliminar el rol!", errors: errors.array() });
     }
    try{
-    /*const userRoleId = req.user.rol;
-
-    const userRole = await roleService.searchRoleById(userRoleId); 
-    if (userRole) {
-      if (userRole.permisos.admin) {*/
         const { nombre} = req.body;
         if(nombre){
           const role = await roleService.searchRoleByName(nombre);
@@ -103,7 +66,6 @@ export const deleteRole = async (req, res) =>{
             return res.status(200).json({
               message: 'Rol eliminado con éxito',
               roleName: erasedRole.nombre,
-              roleAccess: erasedRole.permisos,
             });
           }else{
             return res.status(404).json({ message: 'El rol especificado no existe!' });
@@ -111,17 +73,7 @@ export const deleteRole = async (req, res) =>{
         }else{
           return res.status(400).json({ message: 'El nombre del rol es obligatorio.' });
         }
-        
-        
-
-      /*}else{
-        return res.status(403).json({ message: 'No tienes permisos para realizar esta acción.' });
-      }
-    }else{
-      return res.status(403).json({ message: 'No se encontró el rol del usuario.' });
-    }*/
   }catch(e){
-    console.error(e);
       res.status(500).json({ message: 'Error al eliminar el rol.', error: e.message });
   }
 };

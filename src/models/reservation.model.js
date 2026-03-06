@@ -13,6 +13,7 @@ const ReservationSchema = new mongoose.Schema({
       },
     descripcion: {
         type: String,
+        trim: true,
     },
     fecha_inicio: {
         type: Date,
@@ -22,7 +23,14 @@ const ReservationSchema = new mongoose.Schema({
         type: Date,
         required: true,
     },
+  }, {
+    timestamps: true,
   });
+
+// Índices para optimizar búsquedas y prevenir conflictos
+ReservationSchema.index({ lugar: 1, fecha_inicio: 1, fecha_fin: 1 });
+ReservationSchema.index({ usuario: 1 });
+ReservationSchema.index({ fecha_inicio: 1 });
 
 const Reservation = mongoose.model('Reservation', ReservationSchema);
 export default Reservation;

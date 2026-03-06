@@ -23,9 +23,7 @@ export const findGradeAndSection = async (grado, seccion) => {
 
 
 export const findSubjectsByGradeAndSection = async (grado, seccion) => {
-    console.log("Buscando grado:", grado, "sección:", seccion); // Verifica los valores de entrada
     const gradeSection = await GradeSection.findOne({ grado, seccion }).populate('materias', 'nombre');
-    console.log("Resultado encontrado:", gradeSection);
 
     if (!gradeSection) {
         throw new Error("No se encontró el grado y sección");

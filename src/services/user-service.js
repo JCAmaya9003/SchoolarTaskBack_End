@@ -1,6 +1,8 @@
-import {findUserByEmail, createUser, updateUserById, deleteUserById, findAllusers } from '../repositories/user-repository.js';
+import {findUserByEmail, createUser, updateUserById, deleteUserById, findAllusers, restoreUserById, findDeletedUserByEmail, saveResetToken, findUserByResetToken, resetUserPassword } from '../repositories/user-repository.js';
 import {hashPassword,verifyPassword} from '../middlewares/auth-middleware.js';
 import * as roleService from '../services/role-service.js'
+import crypto from 'crypto';
+import logger from '../config/logger.js';
 
 export const loginUser = async( {email, password} ) => {
     const user = await findUserByEmail(email);
@@ -9,11 +11,14 @@ export const loginUser = async( {email, password} ) => {
       const isPasswordValid = await verifyPassword(password, user.password);
 
       if (isPasswordValid) {
+        logger.info(`[AUTH] Login exitoso: ${email}`);
         return user;
       }else{
-        throw new Error("Contrasenia invalida");
+        logger.warn(`[AUTH] Login fallido (contraseña incorrecta): ${email}`);
+        throw new Error("Contraseña inválida");
       }
     }else{
+      logger.warn(`[AUTH] Login fallido (usuario inexistente): ${email}`);
       throw new Error("Usuario inexistente");
     } 
 };
@@ -22,14 +27,12 @@ export const registerUser = async ( {nombre, apellido, email, password, fecha_na
 
     const userExists = await findUserByEmail(email);
 
-    console.log(userExists);
     if (!userExists) {
       const rol = await roleService.searchRoleByName(rolNombre);
 
 
       if(rol){
         const hashedPassword = await hashPassword(password);
-        console.log(hashedPassword + " " + password);
 
         const newUser = await createUser({
           nombre,
@@ -40,9 +43,10 @@ export const registerUser = async ( {nombre, apellido, email, password, fecha_na
           fecha_nacimiento,
           rol,
           genero,
-          domicilio, 
+          domicilio,
           nacionalidad,
         });
+        logger.info(`[AUTH] Usuario registrado: ${email}, rol: ${rolNombre}`);
         return newUser;
       }else{
         throw new Error("El rol no existe!");
@@ -54,16 +58,17 @@ export const registerUser = async ( {nombre, apellido, email, password, fecha_na
 
 export const editUser = async (email, nombre, apellido, password, fecha_nacimiento, rolNombre, genero, domicilio, nacionalidad) => {
   const user = await findUserByEmail(email);
-  
+
   if(user){
     const rol = await roleService.searchRoleByName(rolNombre);
-    console.log(rol);
-      
-    if(rol){
-      const hashedPassword = await hashPassword(password);
-      console.log(hashedPassword + " " + password);
 
-      const updatedUser = updateUserById(user._id, {email, nombre, apellido, password: hashedPassword, fecha_nacimiento, rol, genero, domicilio, nacionalidad });
+    if(rol){
+      // Solo re-hashear si el password cambió (no es el hash actual)
+      const isSamePassword = await verifyPassword(password, user.password);
+      const finalPassword = isSamePassword ? user.password : await hashPassword(password);
+
+      const updatedUser = await updateUserById(user._id, {email, nombre, apellido, password: finalPassword, fecha_nacimiento, rol, genero, domicilio, nacionalidad });
+      logger.info(`[ADMIN] Usuario editado: ${email}, nuevo rol: ${rolNombre}`);
       return updatedUser;
     }else{
       throw new Error("Rol inexistente");
@@ -77,7 +82,8 @@ export const eraseUser = async (email) => {
   const user = await findUserByEmail(email);
 
   if(user){
-    const erasedUser = deleteUserById(user._id);
+    const erasedUser = await deleteUserById(user._id);
+    logger.info(`[ADMIN] Usuario eliminado (soft delete): ${email}`);
     return erasedUser;
   }else{
     throw new Error("Usuario no existe");
@@ -86,7 +92,6 @@ export const eraseUser = async (email) => {
 
 export const searchUserByEmail = async (email) => {
   const user = await findUserByEmail(email);
-  console.log("usuario encontrado: " + user);
   if(user){
     return user;
   }else{
@@ -96,4 +101,57 @@ export const searchUserByEmail = async (email) => {
 
 export const getUsers = async () =>{
   return await findAllusers();
+};
+
+export const restoreUser = async (email) => {
+  const deletedUser = await findDeletedUserByEmail(email);
+
+  if(deletedUser){
+    const restoredUser = await restoreUserById(deletedUser._id);
+    logger.info(`[ADMIN] Usuario restaurado: ${email}`);
+    return restoredUser;
+  }else{
+    throw new Error("No se encontró un usuario eliminado con ese email");
+  }
+};
+
+export const forgotPassword = async (email) => {
+  const user = await findUserByEmail(email);
+
+  if(!user){
+    throw new Error("No existe un usuario con ese email");
+  }
+
+  // Generar token aleatorio
+  const resetToken = crypto.randomBytes(32).toString('hex');
+
+  // Hashear el token antes de guardarlo en la BD
+  const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+  // Expira en 1 hora
+  const expires = new Date(Date.now() + 60 * 60 * 1000);
+
+  await saveResetToken(user._id, hashedToken, expires);
+
+  // En desarrollo, loguear el token para testing
+  logger.info(`[PASSWORD RESET] Token generado para ${email}: ${resetToken}`);
+
+  return resetToken;
+};
+
+export const resetPassword = async (token, newPassword) => {
+  // Hashear el token recibido para comparar con el guardado
+  const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+  const user = await findUserByResetToken(hashedToken);
+
+  if(!user){
+    throw new Error("Token inválido o expirado");
+  }
+
+  const hashedPassword = await hashPassword(newPassword);
+  await resetUserPassword(user._id, hashedPassword);
+
+  logger.info(`[AUTH] Contraseña restablecida para usuario: ${user.email}`);
+  return true;
 };

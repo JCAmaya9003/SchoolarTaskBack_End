@@ -1,7 +1,7 @@
 import Role from "../models/role-model.js";
 
-export const findRolebyId = async (id) => {
-    return await Role.find({id});
+export const findRoleById = async (id) => {
+    return await Role.findById(id);
 };
 export const findRoleByName = async (nombre) => {
     return await Role.findOne({nombre});
