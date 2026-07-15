@@ -140,9 +140,9 @@ describe('forgotPassword y resetPassword', () => {
     expect(token).toHaveLength(64); // 32 bytes en hex = 64 chars
   });
 
-  it('debe lanzar error si el email no existe', async () => {
-    await expect(userService.forgotPassword('noexiste@test.com'))
-      .rejects.toThrow('No existe un usuario con ese email');
+  it('debe devolver null si el email no existe (anti user-enumeration)', async () => {
+    const token = await userService.forgotPassword('noexiste@test.com');
+    expect(token).toBeNull();
   });
 
   it('debe restablecer la contraseña con un token válido', async () => {

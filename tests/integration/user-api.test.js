@@ -57,9 +57,9 @@ async function loginAsAdmin() {
     email: adminUser.email,
     password: adminUser.password,
   });
-  // Usar el token del body para construir la cookie
-  const token = res.body.token;
-  return `token=${token}`;
+  // El token ya no viaja en el body, solo en la cookie httpOnly
+  const [cookie] = res.headers['set-cookie'];
+  return cookie.split(';')[0];
 }
 
 describe('POST /api/users/register', () => {
@@ -94,7 +94,7 @@ describe('POST /api/users/login', () => {
     await request.post('/api/users/register').send(testUser);
   });
 
-  it('debe hacer login exitoso y retornar token - 200', async () => {
+  it('debe hacer login exitoso y setear cookie httpOnly - 200', async () => {
     const res = await request.post('/api/users/login').send({
       email: testUser.email,
       password: testUser.password,
@@ -102,8 +102,8 @@ describe('POST /api/users/login', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.message).toBe('Inicio de sesión exitoso');
-    expect(res.body.token).toBeDefined();
-    // Verificar que se setea la cookie
+    expect(res.body.token).toBeUndefined();
+    // El token viaja solo en la cookie, no en el body
     expect(res.headers['set-cookie']).toBeDefined();
   });
 
@@ -140,16 +140,18 @@ describe('POST /api/users/forgot-password', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.message).toContain('recuperación');
-    expect(res.body.resetToken).toBeDefined(); // Disponible en modo no-producción
-    expect(res.body.resetToken).toHaveLength(64);
+    expect(res.body.data.resetToken).toBeDefined(); // Disponible en modo no-producción
+    expect(res.body.data.resetToken).toHaveLength(64);
   });
 
-  it('debe fallar con email inexistente - 500', async () => {
+  it('debe responder igual con email inexistente (anti user-enumeration) - 200', async () => {
     const res = await request.post('/api/users/forgot-password').send({
       email: 'noexiste@test.com',
     });
 
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(200);
+    expect(res.body.message).toContain('recuperación');
+    expect(res.body.data.resetToken).toBeUndefined();
   });
 });
 
@@ -163,7 +165,7 @@ describe('POST /api/users/reset-password/:token', () => {
     const forgotRes = await request.post('/api/users/forgot-password').send({
       email: testUser.email,
     });
-    const resetToken = forgotRes.body.resetToken;
+    const resetToken = forgotRes.body.data.resetToken;
 
     // Resetear contraseña
     const resetRes = await request
@@ -205,6 +207,31 @@ describe('GET /api/users (admin)', () => {
 
   it('debe rechazar sin autenticación - 401', async () => {
     const res = await request.get('/api/users');
+
+    expect(res.status).toBe(401);
+  });
+});
+
+describe('GET /api/users/me', () => {
+  beforeEach(async () => {
+    await request.post('/api/users/register').send(testUser);
+  });
+
+  it('debe devolver el email del usuario autenticado - 200', async () => {
+    const loginRes = await request.post('/api/users/login').send({
+      email: testUser.email,
+      password: testUser.password,
+    });
+    const [cookie] = loginRes.headers['set-cookie'];
+
+    const res = await request.get('/api/users/me').set('Cookie', cookie.split(';')[0]);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.email).toBe(testUser.email);
+  });
+
+  it('debe rechazar sin autenticación - 401', async () => {
+    const res = await request.get('/api/users/me');
 
     expect(res.status).toBe(401);
   });
