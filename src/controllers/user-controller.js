@@ -24,7 +24,7 @@ export const login = async (req, res) => {
       sameSite: "strict",
     });
 
-    return res.json({ message: 'Inicio de sesión exitoso', token });
+    return res.json({ message: 'Inicio de sesión exitoso' });
 
   } catch (error) {
     if (error.message === "Contraseña inválida" || error.message === "Usuario inexistente") {
