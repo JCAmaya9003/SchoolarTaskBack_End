@@ -1,6 +1,6 @@
 import express from 'express';
 import { body, param } from 'express-validator';
-import { login, register, updateUser, deleteUser, getAllUsers, getUserRole, getUserInfo, restoreUser, forgotPassword, resetPassword } from '../controllers/user-controller.js';
+import { login, register, updateUser, deleteUser, getAllUsers, getUserRole, getUserInfo, restoreUser, forgotPassword, resetPassword, getMe } from '../controllers/user-controller.js';
 import { validateToken, checkRole } from '../middlewares/auth-middleware.js';
 import { authLimiter } from '../middlewares/rate-limiter.js';
 
@@ -153,6 +153,23 @@ router.post(
 );
 
 // Rutas protegidas (requieren autenticación)
+
+/**
+ * @swagger
+ * /users/me:
+ *   get:
+ *     summary: Obtener el usuario autenticado actual
+ *     tags: [Usuarios]
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Email del usuario autenticado
+ *       401:
+ *         description: No autenticado
+ */
+router.get('/me', validateToken, getMe);
+
 router.get('/get-role', validateToken, getUserRole);
 
 router.post('/get-info', 

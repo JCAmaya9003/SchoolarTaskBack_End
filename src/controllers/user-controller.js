@@ -5,8 +5,12 @@ import * as teacherService from '../services/teacher.service.js'
 import * as studentService from '../services/student.service.js'
 import * as parentService from '../services/parent.service.js'
 import * as roleService from '../services/role-service.js'
+import { InvalidCredentialsError } from '../errors/errors.js';
+import { sendSuccess } from '../utils/apiResponse.js';
 
-export const login = async (req, res) => {
+const LOGIN_COOKIE_MAX_AGE = 60 * 60 * 1000; // 1 hora, igual que la cookie de OAuth
+
+export const login = async (req, res, next) => {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
@@ -22,16 +26,21 @@ export const login = async (req, res) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
+      maxAge: LOGIN_COOKIE_MAX_AGE,
     });
 
-    return res.json({ message: 'Inicio de sesión exitoso', token });
+    return sendSuccess(res, 200, 'Inicio de sesión exitoso');
 
   } catch (error) {
     if (error.message === "Contraseña inválida" || error.message === "Usuario inexistente") {
-      return res.status(401).json({ message: 'Credenciales inválidas' });
+      return next(new InvalidCredentialsError());
     }
-    res.status(500).json({ message: 'Error al iniciar sesión', error: error.message });
+    next(error);
   }
+};
+
+export const getMe = (req, res) => {
+  return sendSuccess(res, 200, 'Usuario autenticado obtenido con éxito', { email: req.user.email });
 };
 
 export const register = async (req, res) => {
@@ -299,7 +308,7 @@ export const restoreUser = async (req, res) => {
   }
 };
 
-export const forgotPassword = async (req, res) => {
+export const forgotPassword = async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
@@ -308,21 +317,20 @@ export const forgotPassword = async (req, res) => {
     const { email } = req.body;
     const resetToken = await userService.forgotPassword(email);
 
-    const response = { message: 'Se ha generado un enlace de recuperación de contraseña' };
-
-    // En desarrollo, incluir el token en la respuesta para testing
-    if (process.env.NODE_ENV !== 'production') {
-      response.resetToken = resetToken;
-      response.resetUrl = `${process.env.FRONT_URL}/reset-password/${resetToken}`;
+    // Respuesta genérica siempre, exista o no el usuario (anti user-enumeration)
+    const data = {};
+    if (resetToken && process.env.NODE_ENV !== 'production') {
+      data.resetToken = resetToken;
+      data.resetUrl = `${process.env.FRONT_URL}/reset-password/${resetToken}`;
     }
 
-    return res.status(200).json(response);
+    return sendSuccess(res, 200, 'Se ha generado un enlace de recuperación de contraseña', data);
   } catch(e) {
-    res.status(500).json({ message: 'Error al procesar la solicitud.', error: e.message });
+    next(e);
   }
 };
 
-export const resetPassword = async (req, res) => {
+export const resetPassword = async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
@@ -333,8 +341,8 @@ export const resetPassword = async (req, res) => {
 
     await userService.resetPassword(token, password);
 
-    return res.status(200).json({ message: 'Contraseña actualizada con éxito' });
+    return sendSuccess(res, 200, 'Contraseña actualizada con éxito');
   } catch(e) {
-    res.status(400).json({ message: 'Error al restablecer la contraseña.', error: e.message });
+    next(e);
   }
 };
