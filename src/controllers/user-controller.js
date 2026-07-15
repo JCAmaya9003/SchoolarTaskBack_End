@@ -308,7 +308,7 @@ export const restoreUser = async (req, res) => {
   }
 };
 
-export const forgotPassword = async (req, res) => {
+export const forgotPassword = async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
@@ -317,21 +317,20 @@ export const forgotPassword = async (req, res) => {
     const { email } = req.body;
     const resetToken = await userService.forgotPassword(email);
 
-    const response = { message: 'Se ha generado un enlace de recuperación de contraseña' };
-
-    // En desarrollo, incluir el token en la respuesta para testing
-    if (process.env.NODE_ENV !== 'production') {
-      response.resetToken = resetToken;
-      response.resetUrl = `${process.env.FRONT_URL}/reset-password/${resetToken}`;
+    // Respuesta genérica siempre, exista o no el usuario (anti user-enumeration)
+    const data = {};
+    if (resetToken && process.env.NODE_ENV !== 'production') {
+      data.resetToken = resetToken;
+      data.resetUrl = `${process.env.FRONT_URL}/reset-password/${resetToken}`;
     }
 
-    return res.status(200).json(response);
+    return sendSuccess(res, 200, 'Se ha generado un enlace de recuperación de contraseña', data);
   } catch(e) {
-    res.status(500).json({ message: 'Error al procesar la solicitud.', error: e.message });
+    next(e);
   }
 };
 
-export const resetPassword = async (req, res) => {
+export const resetPassword = async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
@@ -342,8 +341,8 @@ export const resetPassword = async (req, res) => {
 
     await userService.resetPassword(token, password);
 
-    return res.status(200).json({ message: 'Contraseña actualizada con éxito' });
+    return sendSuccess(res, 200, 'Contraseña actualizada con éxito');
   } catch(e) {
-    res.status(400).json({ message: 'Error al restablecer la contraseña.', error: e.message });
+    next(e);
   }
 };

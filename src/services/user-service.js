@@ -3,6 +3,7 @@ import {hashPassword,verifyPassword} from '../middlewares/auth-middleware.js';
 import * as roleService from '../services/role-service.js'
 import crypto from 'crypto';
 import logger from '../config/logger.js';
+import { ValidationError } from '../errors/errors.js';
 
 export const loginUser = async( {email, password} ) => {
     const user = await findUserByEmail(email);
@@ -119,7 +120,9 @@ export const forgotPassword = async (email) => {
   const user = await findUserByEmail(email);
 
   if(!user){
-    throw new Error("No existe un usuario con ese email");
+    // No revelar si el email existe o no (anti user-enumeration)
+    logger.warn(`[PASSWORD RESET] Intento con email no registrado: ${email}`);
+    return null;
   }
 
   // Generar token aleatorio
@@ -146,7 +149,7 @@ export const resetPassword = async (token, newPassword) => {
   const user = await findUserByResetToken(hashedToken);
 
   if(!user){
-    throw new Error("Token inválido o expirado");
+    throw new ValidationError("Token inválido o expirado");
   }
 
   const hashedPassword = await hashPassword(newPassword);
