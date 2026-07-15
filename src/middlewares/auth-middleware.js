@@ -16,7 +16,6 @@ export const verifyPassword = async (password, hashedPassword) => {
     return await bcrypt.compare(password, hashedPassword);
 }; 
 
-// CORREGIDO: Solo valida, no envía respuesta
 export const validateToken = (req, res, next) => {
   const token = req.cookies?.token; 
 
@@ -27,7 +26,7 @@ export const validateToken = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, config.jwtSecret);
     req.user = decoded; 
-    next(); // CORREGIDO: ahora sí pasa al siguiente middleware
+    next();
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {
       return res.status(401).json({ message: 'El token ha expirado' });
@@ -40,7 +39,6 @@ export const validateToken = (req, res, next) => {
   }
 };
 
-// CORREGIDO: Retorna email correctamente
 export const getEmailFromToken = (req, res) => {
   const token = req.cookies?.token; 
 
@@ -65,7 +63,6 @@ export const getEmailFromToken = (req, res) => {
   }
 };
 
-// NUEVO: Middleware para verificar roles
 export const checkRole = (allowedRoles) => {
   return async (req, res, next) => {
     try {

@@ -5,6 +5,7 @@ import mongoSanitize from 'express-mongo-sanitize';
 import userRoutes from './src/routes/user-routes.js';
 import oauthRoutes from './src/routes/oauth-routes.js';
 import { conexionDB } from './src/config/database.js';
+import { seedRoles } from './src/config/seedRoles.js';
 import roleRoutes from './src/routes/role.routes.js'
 import parentRoutes from './src/routes/parent.routes.js'
 import gradeSectionRoutes from './src/routes/gradeSection.routes.js'
@@ -18,6 +19,7 @@ import academic_placeRouter from './src/routes/academic_place.routes.js'
 import reservartionRouter from './src/routes/reservation.routes.js'
 import {config} from './src/config/config.js'
 import { errorHandler, notFound } from './src/middlewares/error-middleware.js';
+import { apiLimiter } from './src/middlewares/rate-limiter.js';
 import logger from './src/config/logger.js';
 import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from './src/config/swagger.js';
@@ -27,7 +29,7 @@ const PORT = process.env.PORT || 3000;
 
 // Solo conectar a la BD si no estamos en modo test
 if (process.env.NODE_ENV !== 'test') {
-  conexionDB();
+  conexionDB().then(() => seedRoles());
 }
 
 app.use(cors({
@@ -41,6 +43,8 @@ app.use(mongoSanitize()); // Sanitiza inputs para prevenir NoSQL injection
 
 // Documentación Swagger - disponible en /api-docs
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+app.use('/api', apiLimiter);
 
 app.use('/api/users', userRoutes);
 app.use('/oauth', oauthRoutes);

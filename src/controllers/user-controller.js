@@ -162,7 +162,6 @@ export const getAllUsers = async (req, res)=>{
  * @param {Object} req - Objeto de la solicitud HTTP.
  * @param {Object} res - Objeto de la respuesta HTTP.
  */
-// REEMPLAZAR TODA LA FUNCIÓN getUserRole:
 export const getUserRole = async (req, res) => {
   try {
     const { email } = req.user;
@@ -178,7 +177,6 @@ export const getUserRole = async (req, res) => {
       return res.status(404).json({ message: "Rol no encontrado" });
     }
 
-    // CORREGIDO: Retorna el nombre del rol directamente
     const rolNombre = populatedUser.rol.nombre;
     return res.status(200).json({ rol: rolNombre });
   } catch (error) {
@@ -187,7 +185,6 @@ export const getUserRole = async (req, res) => {
   }
 };
 
-// REEMPLAZAR TODA LA FUNCIÓN getUserInfo:
 export const getUserInfo = async(req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -198,7 +195,6 @@ export const getUserInfo = async(req, res) => {
 
     const rol = await roleService.searchRoleByName(rolNombre);
     if(rol){
-      // CORREGIDO: Verificar por nombre de rol
       if(rol.nombre === 'student'){
         const user = await studentService.getStudentByUserIdAndEmail(email);
         if(user){
