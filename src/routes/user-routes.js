@@ -3,6 +3,7 @@ import { body, param } from 'express-validator';
 import { login, register, updateUser, deleteUser, getAllUsers, getUserRole, getUserInfo, restoreUser, forgotPassword, resetPassword, getMe } from '../controllers/user-controller.js';
 import { validateToken, checkRole } from '../middlewares/auth-middleware.js';
 import { authLimiter } from '../middlewares/rate-limiter.js';
+import { verifyOwnResource, enrichUserContext } from '../middlewares/authorization-middleware.js';
 
 const router = express.Router();
 
@@ -172,8 +173,10 @@ router.get('/me', validateToken, getMe);
 
 router.get('/get-role', validateToken, getUserRole);
 
-router.post('/get-info', 
+router.post('/get-info',
   validateToken,
+  enrichUserContext,
+  verifyOwnResource('body'),
   [
     body('email').isEmail().withMessage('Email inválido'),
     body('rolNombre').isString().withMessage('Rol requerido'),
