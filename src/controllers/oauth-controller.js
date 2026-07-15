@@ -3,12 +3,14 @@ import { config } from '../config/config.js';
 import { OAuth2Client } from 'google-auth-library';
 import { generateToken } from '../middlewares/auth-middleware.js';
 import logger from '../config/logger.js';
+import { sendSuccess } from '../utils/apiResponse.js';
+import { AppError, ValidationError, NotFoundError } from '../errors/errors.js';
 
 const CLIENT_ID = config.googleClientId;
 const client = new OAuth2Client(config.googleClientId, config.googleClientSecret, config.googleRedirectUrl);
 
 
-export const generateAuthUrl = async (req, res) => {
+export const generateAuthUrl = async (req, res, next) => {
   try {
     const authorizeUrl = client.generateAuthUrl({
       access_type: 'offline',
@@ -20,19 +22,19 @@ export const generateAuthUrl = async (req, res) => {
       prompt: 'consent',
     });
 
-    res.json({ url: authorizeUrl });
+    return sendSuccess(res, 200, 'URL de autenticación generada con éxito', { url: authorizeUrl });
   } catch (error) {
     logger.error("Error generando URL de autenticación OAuth:", { error: error.message });
-    res.status(500).json({ error: "Failed to generate Google auth URL" });
+    next(new AppError('Failed to generate Google auth URL', 500));
   }
 };
 
 
-export const handleOAuthCallback = async (req, res) => {
+export const handleOAuthCallback = async (req, res, next) => {
   const { code } = req.query;
 
   if (!code) {
-    return res.status(400).json({ error: "Authorization code is required" });
+    return next(new ValidationError('Authorization code is required'));
   }
 
   try {
@@ -41,7 +43,7 @@ export const handleOAuthCallback = async (req, res) => {
     const idToken = tokens.id_token;
 
     if (!idToken) {
-      return res.status(400).json({ error: "Failed to retrieve ID token" });
+      return next(new ValidationError('Failed to retrieve ID token'));
     }
 
     // Verify the ID token
@@ -54,14 +56,14 @@ export const handleOAuthCallback = async (req, res) => {
     const email = payload.email;
 
     if (!email) {
-      return res.status(400).json({ error: "Email not found in Google token" });
+      return next(new ValidationError('Email not found in Google token'));
     }
 
     // Match the email with the database
     const user = await userService.searchUserByEmail(email);
 
     if (!user) {
-      return res.status(404).json({ error: "User not found in local database" });
+      return next(new NotFoundError('User not found in local database'));
     }
 
     // Generate a JWT for the authenticated user
@@ -79,6 +81,6 @@ export const handleOAuthCallback = async (req, res) => {
     return res.redirect(frontendUrl);
   } catch (error) {
     logger.error("Error durante callback de OAuth:", { error: error.message });
-    res.status(500).json({ error: "Internal server error" });
+    next(new AppError('Internal server error', 500));
   }
 };
