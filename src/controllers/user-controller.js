@@ -7,6 +7,7 @@ import * as parentService from '../services/parent.service.js'
 import * as roleService from '../services/role-service.js'
 import { InvalidCredentialsError } from '../errors/errors.js';
 import { sendSuccess } from '../utils/apiResponse.js';
+import logger from '../config/logger.js';
 
 const LOGIN_COOKIE_MAX_AGE = 60 * 60 * 1000; // 1 hora, igual que la cookie de OAuth
 
@@ -189,9 +190,73 @@ export const getUserRole = async (req, res) => {
     const rolNombre = populatedUser.rol.nombre;
     return res.status(200).json({ rol: rolNombre });
   } catch (error) {
-    console.error("Error en getUserRole:", error);
+    logger.error('Error en getUserRole:', { error: error.message });
     return res.status(500).json({ message: "Error al obtener el rol del usuario", error: error.message });
   }
+};
+
+// Una estrategia por rol: cada una busca el detalle propio de ese rol y arma su respuesta.
+const ROLE_INFO_HANDLERS = {
+  student: async (email) => {
+    const user = await studentService.getStudentByUserIdAndEmail(email);
+    if (!user) return null;
+    return {
+      Nombre: user.usuario.nombre,
+      Apellido: user.usuario.apellido,
+      Email: user.usuario.email,
+      genero: user.usuario.genero,
+      domicilio: user.usuario.domicilio,
+      nacionalidad: user.usuario.nacionalidad,
+      userFecha: user.usuario.fecha_nacimiento,
+      userRol: user.usuario.rol,
+      userParent: user.padre,
+      userGradeSection: user.grado_seccion,
+      alergias: user.alergias,
+      condiciones_medicas: user.condiciones_medicas,
+      contacto_emergencia: user.contacto_emergencia,
+    };
+  },
+  parent: async (email) => {
+    const user = await parentService.getParentByUserIdAndEmail(email);
+    if (!user) return null;
+    return {
+      Nombre: user.usuario.nombre,
+      Apellido: user.usuario.apellido,
+      Email: user.usuario.email,
+      genero: user.usuario.genero,
+      domicilio: user.usuario.domicilio,
+      nacionalidad: user.usuario.nacionalidad,
+      userFecha: user.usuario.fecha_nacimiento,
+      userRol: user.usuario.rol,
+      telefono: user.telefono,
+      telefono_trabajo: user.telefono_trabajo,
+      lugar_trabajo: user.lugar_trabajo,
+      profesion: user.profesion,
+    };
+  },
+  teacher: async (email) => {
+    const user = await teacherService.getTeacherByUserIdAndEmail(email);
+    if (!user) return null;
+    return {
+      Nombre: user.usuario.nombre,
+      Apellido: user.usuario.apellido,
+      Email: user.usuario.email,
+      Genero: user.usuario.genero,
+      Domicilio: user.usuario.domicilio,
+      Nacionalidad: user.usuario.nacionalidad,
+      Telefono: user.telefono,
+      Direccion: user.direccion,
+      Especialidad: user.especialidad,
+      Materias: user.materias,
+      GradoSecciones: user.grados_secciones,
+    };
+  },
+};
+
+const ROLE_NOT_FOUND_MESSAGE = {
+  student: 'Estudiante no encontrado',
+  parent: 'Padre no encontrado',
+  teacher: 'Profesor no encontrado',
 };
 
 export const getUserInfo = async(req, res) => {
@@ -203,79 +268,21 @@ export const getUserInfo = async(req, res) => {
     const {email, rolNombre} = req.body;
 
     const rol = await roleService.searchRoleByName(rolNombre);
-    if(rol){
-      if(rol.nombre === 'student'){
-        const user = await studentService.getStudentByUserIdAndEmail(email);
-        if(user){
-          return res.status(200).json({
-            message: 'Datos Obtenido con Exito!',
-            Nombre: user.usuario.nombre,
-            Apellido: user.usuario.apellido,
-            Email: user.usuario.email,
-            genero: user.usuario.genero,
-            domicilio: user.usuario.domicilio,
-            nacionalidad: user.usuario.nacionalidad,
-            userFecha: user.usuario.fecha_nacimiento,
-            userRol: user.usuario.rol,
-            userParent: user.padre,
-            userGradeSection: user.grado_seccion,
-            alergias: user.alergias,
-            condiciones_medicas: user.condiciones_medicas,
-            contacto_emergencia: user.contacto_emergencia,
-          });
-        }else{
-          return res.status(404).json({ message: "Estudiante no encontrado" });
-        }
-
-      }else if(rol.nombre === 'parent'){
-        const user = await parentService.getParentByUserIdAndEmail(email);
-
-        if(user){
-          return res.status(200).json({
-            message: 'Datos Obtenido con Exito!',
-            Nombre: user.usuario.nombre,
-            Apellido: user.usuario.apellido,
-            Email: user.usuario.email,
-            genero: user.usuario.genero,
-            domicilio: user.usuario.domicilio,
-            nacionalidad: user.usuario.nacionalidad,
-            userFecha: user.usuario.fecha_nacimiento,
-            userRol: user.usuario.rol,
-            telefono: user.telefono,
-            telefono_trabajo: user.telefono_trabajo,
-            lugar_trabajo: user.lugar_trabajo,
-            profesion: user.profesion,
-          });
-        }else{
-          return res.status(404).json({ message: "Padre no encontrado" });
-        }
-
-      }else if(rol.nombre === 'teacher'){
-        const user = await teacherService.getTeacherByUserIdAndEmail(email);
-        if(user){
-          return res.status(200).json({
-            message: 'Datos Obtenido con Exito!',
-            Nombre: user.usuario.nombre,
-            Apellido: user.usuario.apellido,
-            Email: user.usuario.email,
-            Genero: user.usuario.genero,
-            Domicilio: user.usuario.domicilio, 
-            Nacionalidad: user.usuario.nacionalidad,
-            Telefono: user.telefono,
-            Direccion: user.direccion,
-            Especialidad: user.especialidad,
-            Materias: user.materias,
-            GradoSecciones: user.grados_secciones
-          });
-        }else{
-          return res.status(404).json({ message: "Profesor no encontrado" });
-        }
-      }else{
-        return res.status(403).json({ message: "Rol no tiene permisos para obtener información detallada" });
-      }
-    }else{
-      return res.status(404).json({ message: 'Rol no encontrado!'});
+    if (!rol) {
+      return res.status(404).json({ message: 'Rol no encontrado!' });
     }
+
+    const handler = ROLE_INFO_HANDLERS[rol.nombre];
+    if (!handler) {
+      return res.status(403).json({ message: "Rol no tiene permisos para obtener información detallada" });
+    }
+
+    const info = await handler(email);
+    if (!info) {
+      return res.status(404).json({ message: ROLE_NOT_FOUND_MESSAGE[rol.nombre] });
+    }
+
+    return res.status(200).json({ message: 'Datos Obtenido con Exito!', ...info });
   } catch (e) {
     res.status(500).json({ message: 'Error al mostrar los datos del usuario!', error: e.message });
   }
