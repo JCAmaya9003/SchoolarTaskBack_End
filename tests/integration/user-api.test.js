@@ -324,3 +324,56 @@ describe('GET /api/users/me', () => {
     expect(res.status).toBe(401);
   });
 });
+
+describe('Autorización: accesos cruzados no autorizados devuelven 403', () => {
+  it('POST /api/users/get-info: un estudiante no puede pedir info de otro usuario', async () => {
+    await request.post('/api/users/register').send(testUser);
+    const otherStudent = { ...testUser, email: 'otro-estudiante@test.com' };
+    await request.post('/api/users/register').send(otherStudent);
+
+    const loginRes = await request.post('/api/users/login').send({
+      email: testUser.email,
+      password: testUser.password,
+    });
+    const [cookie] = loginRes.headers['set-cookie'];
+
+    const res = await request
+      .post('/api/users/get-info')
+      .set('Cookie', cookie.split(';')[0])
+      .send({ email: otherStudent.email, rolNombre: 'student' });
+
+    expect(res.status).toBe(403);
+  });
+
+  it('POST /api/users/get-info: un admin sí puede pedir info de cualquier usuario', async () => {
+    await request.post('/api/users/register').send(testUser);
+    const cookies = await loginAsAdmin();
+
+    const res = await request
+      .post('/api/users/get-info')
+      .set('Cookie', cookies)
+      .send({ email: testUser.email, rolNombre: 'student' });
+
+    // No debe ser bloqueado por autorización (puede dar 404 si no tiene perfil de Student, pero nunca 403)
+    expect(res.status).not.toBe(403);
+  });
+
+  it('GET /api/news/get_user_news: un estudiante no puede pedir noticias de otro usuario', async () => {
+    await request.post('/api/users/register').send(testUser);
+    const otherStudent = { ...testUser, email: 'otro-estudiante-news@test.com' };
+    await request.post('/api/users/register').send(otherStudent);
+
+    const loginRes = await request.post('/api/users/login').send({
+      email: testUser.email,
+      password: testUser.password,
+    });
+    const [cookie] = loginRes.headers['set-cookie'];
+
+    const res = await request
+      .get('/api/news/get_user_news')
+      .set('Cookie', cookie.split(';')[0])
+      .send({ email: otherStudent.email });
+
+    expect(res.status).toBe(403);
+  });
+});
