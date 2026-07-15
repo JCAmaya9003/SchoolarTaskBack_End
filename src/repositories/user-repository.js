@@ -1,11 +1,22 @@
 import User from '../models/user-model.js';
+import { getPaginationParams, getPaginationMeta } from '../utils/pagination-helper.js';
 
 export const findUserByEmail = async (email) => {
   return await User.findOne({ email }).populate('rol', 'nombre');
 };
 
-export const findAllusers = async () =>{
-  return await User.find().populate('rol', 'nombre');
+export const findAllusers = async (page, limit) => {
+  const { skip, limit: validLimit, page: validPage } = getPaginationParams(page, limit);
+
+  const [users, total] = await Promise.all([
+    User.find().skip(skip).limit(validLimit).populate('rol', 'nombre'),
+    User.countDocuments(),
+  ]);
+
+  return {
+    data: users,
+    pagination: getPaginationMeta(validPage, validLimit, total),
+  };
 }
 
 export const createUser = async (userData) => {

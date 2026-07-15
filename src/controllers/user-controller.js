@@ -142,8 +142,9 @@ export const getAllUsers = async (req, res)=>{
         return res.status(400).json({message: "Error al intentar mostrar los usuarios!", errors: errors.array() });
     }
     try {
-          const users = await userService.getUsers();
-          return sendSuccess(res, 200, 'Usuarios obtenidos con éxito', users.map(formatUserResponse));
+          const { page, limit } = req.query;
+          const { data, pagination } = await userService.getUsers(page, limit);
+          return sendSuccess(res, 200, 'Usuarios obtenidos con éxito', { items: data.map(formatUserResponse), pagination });
     } catch (e) {
       res.status(500).json({ message: 'Error al mostrar los usuarios', error: e.message });
     }

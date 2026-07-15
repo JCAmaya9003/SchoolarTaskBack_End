@@ -100,8 +100,8 @@ export const searchUserByEmail = async (email) => {
   }
 };
 
-export const getUsers = async () =>{
-  return await findAllusers();
+export const getUsers = async (page, limit) =>{
+  return await findAllusers(page, limit);
 };
 
 export const restoreUser = async (email) => {
