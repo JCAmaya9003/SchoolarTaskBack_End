@@ -21,42 +21,46 @@ export const errorHandler = (err, req, res, next) => {
     ip: req.ip,
   });
 
-  // Error de validación de Mongoose
-  if (err.name === 'ValidationError') {
-    const message = Object.values(err.errors).map(val => val.message).join(', ');
-    error = new AppError(message, 400);
-  }
+  // Los errores ya tipados (AppError y subclases) ya traen su statusCode correcto;
+  // solo hace falta traducir errores "crudos" de librerías externas (Mongoose, JWT, express-validator).
+  if (!(err instanceof AppError)) {
+    // Error de validación de Mongoose
+    if (err.name === 'ValidationError' && err.errors) {
+      const message = Object.values(err.errors).map(val => val.message).join(', ');
+      error = new AppError(message, 400);
+    }
 
-  // Error de ObjectId inválido de Mongoose
-  if (err.name === 'CastError') {
-    const message = `Recurso no encontrado. ID inválido: ${err.value}`;
-    error = new AppError(message, 404);
-  }
+    // Error de ObjectId inválido de Mongoose
+    if (err.name === 'CastError') {
+      const message = `Recurso no encontrado. ID inválido: ${err.value}`;
+      error = new AppError(message, 404);
+    }
 
-  // Error de clave duplicada de MongoDB
-  if (err.code === 11000) {
-    const field = Object.keys(err.keyValue)[0];
-    const value = err.keyValue[field];
-    const message = `Ya existe un registro con ${field}: ${value}`;
-    error = new AppError(message, 409);
-  }
+    // Error de clave duplicada de MongoDB
+    if (err.code === 11000) {
+      const field = Object.keys(err.keyValue)[0];
+      const value = err.keyValue[field];
+      const message = `Ya existe un registro con ${field}: ${value}`;
+      error = new AppError(message, 409);
+    }
 
-  // Error de JWT inválido
-  if (err.name === 'JsonWebTokenError') {
-    const message = 'Token inválido. Por favor, inicia sesión de nuevo';
-    error = new AppError(message, 401);
-  }
+    // Error de JWT inválido
+    if (err.name === 'JsonWebTokenError') {
+      const message = 'Token inválido. Por favor, inicia sesión de nuevo';
+      error = new AppError(message, 401);
+    }
 
-  // Error de JWT expirado
-  if (err.name === 'TokenExpiredError') {
-    const message = 'Token expirado. Por favor, inicia sesión de nuevo';
-    error = new AppError(message, 401);
-  }
+    // Error de JWT expirado
+    if (err.name === 'TokenExpiredError') {
+      const message = 'Token expirado. Por favor, inicia sesión de nuevo';
+      error = new AppError(message, 401);
+    }
 
-  // Error de express-validator
-  if (err.array && typeof err.array === 'function') {
-    const message = err.array().map(e => e.msg).join(', ');
-    error = new AppError(message, 400);
+    // Error de express-validator
+    if (err.array && typeof err.array === 'function') {
+      const message = err.array().map(e => e.msg).join(', ');
+      error = new AppError(message, 400);
+    }
   }
 
   // Respuesta de error
