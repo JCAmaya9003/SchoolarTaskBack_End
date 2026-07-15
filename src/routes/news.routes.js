@@ -2,11 +2,19 @@ import express from 'express';
 import { body } from 'express-validator';
 import * as newsController from '../controllers/news.controller.js'
 import { validateToken, checkRole } from '../middlewares/auth-middleware.js';
+import { verifyOwnResource, enrichUserContext } from '../middlewares/authorization-middleware.js';
 
 const router = express.Router();
 
 router.get('/get_all_news', validateToken, checkRole(['admin', 'teacher', 'student']), newsController.getAllNews);
-router.get('/get_user_news', validateToken, checkRole(['admin', 'teacher', 'student']), newsController.getAllNewsFromUser);
+router.get(
+    '/get_user_news',
+    validateToken,
+    enrichUserContext,
+    checkRole(['admin', 'teacher', 'student']),
+    verifyOwnResource('body'),
+    newsController.getAllNewsFromUser
+);
 router.post('/create_news',
     validateToken,
     checkRole(['admin']),
