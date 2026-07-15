@@ -7,8 +7,21 @@ import * as parentService from '../services/parent.service.js'
 import * as roleService from '../services/role-service.js'
 import { InvalidCredentialsError } from '../errors/errors.js';
 import { sendSuccess } from '../utils/apiResponse.js';
+import logger from '../config/logger.js';
 
 const LOGIN_COOKIE_MAX_AGE = 60 * 60 * 1000; // 1 hora, igual que la cookie de OAuth
+
+// Forma consistente para exponer un usuario en las respuestas del CRUD (antes variaba: Nombre/userNombre/genero/Genero...)
+const formatUserResponse = (user) => ({
+  nombre: user.nombre,
+  apellido: user.apellido,
+  email: user.email,
+  fecha_nacimiento: user.fecha_nacimiento,
+  rol: user.rol,
+  genero: user.genero,
+  domicilio: user.domicilio,
+  nacionalidad: user.nacionalidad,
+});
 
 export const login = async (req, res, next) => {
   const errors = validationResult(req);
@@ -61,17 +74,7 @@ export const register = async (req, res) => {
 
     const newUser = await userService.registerUser({nombre, apellido, email, password, fecha_nacimiento, rolNombre, genero, domicilio, nacionalidad});
     if (newUser) {
-      return res.status(200).json({
-        message: 'Usuario creado con éxito',
-        Nombre: newUser.nombre,
-        Apellido: newUser.apellido,
-        Email: newUser.email,
-        userFecha: newUser.fecha_nacimiento,
-        userRol: newUser.rol,
-        userGenero: newUser.genero,
-        userDomicilio: newUser.domicilio,
-        userNacionalidad: newUser.nacionalidad
-      });
+      return sendSuccess(res, 201, 'Usuario creado con éxito', formatUserResponse(newUser));
     }else{
       return res.status(409).json({ message: 'Datos Invalidos para crear usuario' });
     }
@@ -101,17 +104,7 @@ export const updateUser = async (req, res)=>{
         const updatedUser = await userService.editUser(email, nombre, apellido, password, fecha_nacimiento, rolNombre, genero, domicilio, nacionalidad );
 
         if (updatedUser) {
-          return res.status(200).json({
-            message: 'Usuario actualizado con éxito',
-            userNombre: updatedUser.nombre,
-            userApellido: updatedUser.apellido,
-            userEmail: updatedUser.email,
-            userFecha: updatedUser.fecha_nacimiento,
-            userRol: updatedUser.rol,
-            userGenero: updatedUser.genero,
-            userDomicilio: updatedUser.domicilio,
-            userNacionalidad: updatedUser.nacionalidad
-          });
+          return sendSuccess(res, 200, 'Usuario actualizado con éxito', formatUserResponse(updatedUser));
         }else{
           return res.status(404).json({ message: 'El usuario y/o rol especificado no existe' });
         }
@@ -131,17 +124,7 @@ export const deleteUser = async (req, res) =>{
         if(email){
           const erasedUser = await userService.eraseUser(email);
           if(erasedUser){
-            return res.status(200).json({
-              message: 'Usuario eliminado con éxito',
-              userNombre: erasedUser.nombre,
-              userApellido: erasedUser.apellido,
-              userEmail: erasedUser.email,
-              userFecha: erasedUser.fecha_nacimiento,
-              userRol: erasedUser.rol,
-              userGenero: erasedUser.genero,
-              userDomicilio: erasedUser.domicilio,
-              userNacionalidad: erasedUser.nacionalidad
-            });
+            return sendSuccess(res, 200, 'Usuario eliminado con éxito', formatUserResponse(erasedUser));
           }else{
             return res.status(404).json({ message: 'El usuario especificado no existe!' });
           }
@@ -159,11 +142,12 @@ export const getAllUsers = async (req, res)=>{
         return res.status(400).json({message: "Error al intentar mostrar los usuarios!", errors: errors.array() });
     }
     try {
-          const users = await userService.getUsers();
-          res.json(users);
+          const { page, limit } = req.query;
+          const { data, pagination } = await userService.getUsers(page, limit);
+          return sendSuccess(res, 200, 'Usuarios obtenidos con éxito', { items: data.map(formatUserResponse), pagination });
     } catch (e) {
       res.status(500).json({ message: 'Error al mostrar los usuarios', error: e.message });
-    }  
+    }
 };
 
 /**
@@ -187,11 +171,75 @@ export const getUserRole = async (req, res) => {
     }
 
     const rolNombre = populatedUser.rol.nombre;
-    return res.status(200).json({ rol: rolNombre });
+    return sendSuccess(res, 200, 'Rol obtenido con éxito', { rol: rolNombre });
   } catch (error) {
-    console.error("Error en getUserRole:", error);
+    logger.error('Error en getUserRole:', { error: error.message });
     return res.status(500).json({ message: "Error al obtener el rol del usuario", error: error.message });
   }
+};
+
+// Una estrategia por rol: cada una busca el detalle propio de ese rol y arma su respuesta.
+const ROLE_INFO_HANDLERS = {
+  student: async (email) => {
+    const user = await studentService.getStudentByUserIdAndEmail(email);
+    if (!user) return null;
+    return {
+      nombre: user.usuario.nombre,
+      apellido: user.usuario.apellido,
+      email: user.usuario.email,
+      genero: user.usuario.genero,
+      domicilio: user.usuario.domicilio,
+      nacionalidad: user.usuario.nacionalidad,
+      fecha_nacimiento: user.usuario.fecha_nacimiento,
+      rol: user.usuario.rol,
+      padre: user.padre,
+      grado_seccion: user.grado_seccion,
+      alergias: user.alergias,
+      condiciones_medicas: user.condiciones_medicas,
+      contacto_emergencia: user.contacto_emergencia,
+    };
+  },
+  parent: async (email) => {
+    const user = await parentService.getParentByUserIdAndEmail(email);
+    if (!user) return null;
+    return {
+      nombre: user.usuario.nombre,
+      apellido: user.usuario.apellido,
+      email: user.usuario.email,
+      genero: user.usuario.genero,
+      domicilio: user.usuario.domicilio,
+      nacionalidad: user.usuario.nacionalidad,
+      fecha_nacimiento: user.usuario.fecha_nacimiento,
+      rol: user.usuario.rol,
+      telefono: user.telefono,
+      telefono_trabajo: user.telefono_trabajo,
+      lugar_trabajo: user.lugar_trabajo,
+      profesion: user.profesion,
+    };
+  },
+  teacher: async (email) => {
+    const user = await teacherService.getTeacherByUserIdAndEmail(email);
+    if (!user) return null;
+    return {
+      nombre: user.usuario.nombre,
+      apellido: user.usuario.apellido,
+      email: user.usuario.email,
+      genero: user.usuario.genero,
+      domicilio: user.usuario.domicilio,
+      nacionalidad: user.usuario.nacionalidad,
+      telefono: user.telefono,
+      direccion: user.direccion,
+      especialidad: user.especialidad,
+      materias: user.materias,
+      grados_secciones: user.grados_secciones,
+    };
+  },
+};
+
+const ROLE_NOT_FOUND_MESSAGE = {
+  student: 'Estudiante no encontrado',
+  parent: 'Padre no encontrado',
+  teacher: 'Profesor no encontrado',
 };
 
 export const getUserInfo = async(req, res) => {
@@ -203,79 +251,21 @@ export const getUserInfo = async(req, res) => {
     const {email, rolNombre} = req.body;
 
     const rol = await roleService.searchRoleByName(rolNombre);
-    if(rol){
-      if(rol.nombre === 'student'){
-        const user = await studentService.getStudentByUserIdAndEmail(email);
-        if(user){
-          return res.status(200).json({
-            message: 'Datos Obtenido con Exito!',
-            Nombre: user.usuario.nombre,
-            Apellido: user.usuario.apellido,
-            Email: user.usuario.email,
-            genero: user.usuario.genero,
-            domicilio: user.usuario.domicilio,
-            nacionalidad: user.usuario.nacionalidad,
-            userFecha: user.usuario.fecha_nacimiento,
-            userRol: user.usuario.rol,
-            userParent: user.padre,
-            userGradeSection: user.grado_seccion,
-            alergias: user.alergias,
-            condiciones_medicas: user.condiciones_medicas,
-            contacto_emergencia: user.contacto_emergencia,
-          });
-        }else{
-          return res.status(404).json({ message: "Estudiante no encontrado" });
-        }
-
-      }else if(rol.nombre === 'parent'){
-        const user = await parentService.getParentByUserIdAndEmail(email);
-
-        if(user){
-          return res.status(200).json({
-            message: 'Datos Obtenido con Exito!',
-            Nombre: user.usuario.nombre,
-            Apellido: user.usuario.apellido,
-            Email: user.usuario.email,
-            genero: user.usuario.genero,
-            domicilio: user.usuario.domicilio,
-            nacionalidad: user.usuario.nacionalidad,
-            userFecha: user.usuario.fecha_nacimiento,
-            userRol: user.usuario.rol,
-            telefono: user.telefono,
-            telefono_trabajo: user.telefono_trabajo,
-            lugar_trabajo: user.lugar_trabajo,
-            profesion: user.profesion,
-          });
-        }else{
-          return res.status(404).json({ message: "Padre no encontrado" });
-        }
-
-      }else if(rol.nombre === 'teacher'){
-        const user = await teacherService.getTeacherByUserIdAndEmail(email);
-        if(user){
-          return res.status(200).json({
-            message: 'Datos Obtenido con Exito!',
-            Nombre: user.usuario.nombre,
-            Apellido: user.usuario.apellido,
-            Email: user.usuario.email,
-            Genero: user.usuario.genero,
-            Domicilio: user.usuario.domicilio, 
-            Nacionalidad: user.usuario.nacionalidad,
-            Telefono: user.telefono,
-            Direccion: user.direccion,
-            Especialidad: user.especialidad,
-            Materias: user.materias,
-            GradoSecciones: user.grados_secciones
-          });
-        }else{
-          return res.status(404).json({ message: "Profesor no encontrado" });
-        }
-      }else{
-        return res.status(403).json({ message: "Rol no tiene permisos para obtener información detallada" });
-      }
-    }else{
-      return res.status(404).json({ message: 'Rol no encontrado!'});
+    if (!rol) {
+      return res.status(404).json({ message: 'Rol no encontrado!' });
     }
+
+    const handler = ROLE_INFO_HANDLERS[rol.nombre];
+    if (!handler) {
+      return res.status(403).json({ message: "Rol no tiene permisos para obtener información detallada" });
+    }
+
+    const info = await handler(email);
+    if (!info) {
+      return res.status(404).json({ message: ROLE_NOT_FOUND_MESSAGE[rol.nombre] });
+    }
+
+    return sendSuccess(res, 200, 'Datos obtenidos con éxito', info);
   } catch (e) {
     res.status(500).json({ message: 'Error al mostrar los datos del usuario!', error: e.message });
   }
@@ -291,12 +281,7 @@ export const restoreUser = async (req, res) => {
     if(email){
       const restoredUser = await userService.restoreUser(email);
       if(restoredUser){
-        return res.status(200).json({
-          message: 'Usuario restaurado con éxito',
-          userNombre: restoredUser.nombre,
-          userApellido: restoredUser.apellido,
-          userEmail: restoredUser.email,
-        });
+        return sendSuccess(res, 200, 'Usuario restaurado con éxito', formatUserResponse(restoredUser));
       }else{
         return res.status(404).json({ message: 'No se encontró un usuario eliminado con ese email' });
       }

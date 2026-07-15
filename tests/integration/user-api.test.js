@@ -63,12 +63,12 @@ async function loginAsAdmin() {
 }
 
 describe('POST /api/users/register', () => {
-  it('debe registrar un usuario nuevo - 200', async () => {
+  it('debe registrar un usuario nuevo - 201', async () => {
     const res = await request.post('/api/users/register').send(testUser);
 
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(201);
     expect(res.body.message).toBe('Usuario creado con éxito');
-    expect(res.body.Email).toBe('maria@test.com');
+    expect(res.body.data.email).toBe('maria@test.com');
   });
 
   it('debe rechazar registro duplicado - 500', async () => {
@@ -194,7 +194,7 @@ describe('POST /api/users/reset-password/:token', () => {
 });
 
 describe('GET /api/users (admin)', () => {
-  it('debe retornar todos los usuarios si es admin - 200', async () => {
+  it('debe retornar todos los usuarios paginados si es admin - 200', async () => {
     const cookies = await loginAsAdmin();
 
     const res = await request
@@ -202,13 +202,101 @@ describe('GET /api/users (admin)', () => {
       .set('Cookie', cookies);
 
     expect(res.status).toBe(200);
-    expect(Array.isArray(res.body)).toBe(true);
+    expect(Array.isArray(res.body.data.items)).toBe(true);
+    expect(res.body.data.pagination.currentPage).toBe(1);
   });
 
   it('debe rechazar sin autenticación - 401', async () => {
     const res = await request.get('/api/users');
 
     expect(res.status).toBe(401);
+  });
+});
+
+describe('PUT /api/users (admin)', () => {
+  it('debe actualizar un usuario - 200', async () => {
+    const cookies = await loginAsAdmin();
+    await request.post('/api/users/register').send(testUser);
+
+    const res = await request
+      .put('/api/users')
+      .set('Cookie', cookies)
+      .send({ ...testUser, nombre: 'MariaActualizada' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toBe('Usuario actualizado con éxito');
+    expect(res.body.data.nombre).toBe('MariaActualizada');
+  });
+
+  it('debe rechazar sin rol admin - 403', async () => {
+    await request.post('/api/users/register').send(testUser);
+    const loginRes = await request.post('/api/users/login').send({
+      email: testUser.email,
+      password: testUser.password,
+    });
+    const [cookie] = loginRes.headers['set-cookie'];
+
+    const res = await request
+      .put('/api/users')
+      .set('Cookie', cookie.split(';')[0])
+      .send({ ...testUser, nombre: 'Otro' });
+
+    expect(res.status).toBe(403);
+  });
+});
+
+describe('DELETE /api/users (admin, soft delete)', () => {
+  it('debe eliminar (soft delete) un usuario - 200', async () => {
+    const cookies = await loginAsAdmin();
+    await request.post('/api/users/register').send(testUser);
+
+    const res = await request
+      .delete('/api/users')
+      .set('Cookie', cookies)
+      .send({ email: testUser.email });
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toBe('Usuario eliminado con éxito');
+    expect(res.body.data.email).toBe(testUser.email);
+  });
+
+  it('debe fallar si el usuario no existe - 404', async () => {
+    const cookies = await loginAsAdmin();
+
+    const res = await request
+      .delete('/api/users')
+      .set('Cookie', cookies)
+      .send({ email: 'noexiste@test.com' });
+
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('PATCH /api/users/restore (admin)', () => {
+  it('debe restaurar un usuario eliminado - 200', async () => {
+    const cookies = await loginAsAdmin();
+    await request.post('/api/users/register').send(testUser);
+    await request.delete('/api/users').set('Cookie', cookies).send({ email: testUser.email });
+
+    const res = await request
+      .patch('/api/users/restore')
+      .set('Cookie', cookies)
+      .send({ email: testUser.email });
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toBe('Usuario restaurado con éxito');
+    expect(res.body.data.email).toBe(testUser.email);
+  });
+
+  it('debe fallar si no hay un usuario eliminado con ese email - 404', async () => {
+    const cookies = await loginAsAdmin();
+
+    const res = await request
+      .patch('/api/users/restore')
+      .set('Cookie', cookies)
+      .send({ email: 'noexiste@test.com' });
+
+    expect(res.status).toBe(404);
   });
 });
 

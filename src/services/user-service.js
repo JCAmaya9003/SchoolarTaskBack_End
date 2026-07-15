@@ -82,13 +82,13 @@ export const editUser = async (email, nombre, apellido, password, fecha_nacimien
 export const eraseUser = async (email) => {
   const user = await findUserByEmail(email);
 
-  if(user){
-    const erasedUser = await deleteUserById(user._id);
-    logger.info(`[ADMIN] Usuario eliminado (soft delete): ${email}`);
-    return erasedUser;
-  }else{
-    throw new Error("Usuario no existe");
+  if(!user){
+    return null;
   }
+
+  const erasedUser = await deleteUserById(user._id);
+  logger.info(`[ADMIN] Usuario eliminado (soft delete): ${email}`);
+  return erasedUser;
 };
 
 export const searchUserByEmail = async (email) => {
@@ -100,20 +100,20 @@ export const searchUserByEmail = async (email) => {
   }
 };
 
-export const getUsers = async () =>{
-  return await findAllusers();
+export const getUsers = async (page, limit) =>{
+  return await findAllusers(page, limit);
 };
 
 export const restoreUser = async (email) => {
   const deletedUser = await findDeletedUserByEmail(email);
 
-  if(deletedUser){
-    const restoredUser = await restoreUserById(deletedUser._id);
-    logger.info(`[ADMIN] Usuario restaurado: ${email}`);
-    return restoredUser;
-  }else{
-    throw new Error("No se encontró un usuario eliminado con ese email");
+  if(!deletedUser){
+    return null;
   }
+
+  const restoredUser = await restoreUserById(deletedUser._id);
+  logger.info(`[ADMIN] Usuario restaurado: ${email}`);
+  return restoredUser;
 };
 
 export const forgotPassword = async (email) => {

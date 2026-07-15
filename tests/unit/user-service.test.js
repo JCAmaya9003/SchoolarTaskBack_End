@@ -101,9 +101,9 @@ describe('eraseUser (soft delete)', () => {
     expect(notFound).toBeNull();
   });
 
-  it('debe lanzar error si el usuario no existe', async () => {
-    await expect(userService.eraseUser('noexiste@test.com'))
-      .rejects.toThrow('Usuario no existe');
+  it('debe devolver null si el usuario no existe', async () => {
+    const result = await userService.eraseUser('noexiste@test.com');
+    expect(result).toBeNull();
   });
 });
 
@@ -121,9 +121,9 @@ describe('restoreUser', () => {
     expect(found.email).toBe('juan@test.com');
   });
 
-  it('debe lanzar error si no hay usuario eliminado con ese email', async () => {
-    await expect(userService.restoreUser('noexiste@test.com'))
-      .rejects.toThrow('No se encontró un usuario eliminado con ese email');
+  it('debe devolver null si no hay usuario eliminado con ese email', async () => {
+    const result = await userService.restoreUser('noexiste@test.com');
+    expect(result).toBeNull();
   });
 });
 
