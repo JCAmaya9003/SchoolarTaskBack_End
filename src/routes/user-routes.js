@@ -1,7 +1,7 @@
 import express from 'express';
 import { body, param } from 'express-validator';
-import { login, register, updateUser, deleteUser, getAllUsers, getUserRole, getUserInfo, restoreUser, forgotPassword, resetPassword } from '../controllers/user-controller.js';
-import { validateToken, checkRole, getEmailFromToken } from '../middlewares/auth-middleware.js';
+import { login, register, updateUser, deleteUser, getAllUsers, getUserRole, getUserInfo, restoreUser, forgotPassword, resetPassword, getMe } from '../controllers/user-controller.js';
+import { validateToken, checkRole } from '../middlewares/auth-middleware.js';
 import { authLimiter } from '../middlewares/rate-limiter.js';
 
 const router = express.Router();
@@ -168,7 +168,7 @@ router.post(
  *       401:
  *         description: No autenticado
  */
-router.get('/me', getEmailFromToken);
+router.get('/me', validateToken, getMe);
 
 router.get('/get-role', validateToken, getUserRole);
 

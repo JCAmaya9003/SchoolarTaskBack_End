@@ -5,8 +5,12 @@ import * as teacherService from '../services/teacher.service.js'
 import * as studentService from '../services/student.service.js'
 import * as parentService from '../services/parent.service.js'
 import * as roleService from '../services/role-service.js'
+import { InvalidCredentialsError } from '../errors/errors.js';
+import { sendSuccess } from '../utils/apiResponse.js';
 
-export const login = async (req, res) => {
+const LOGIN_COOKIE_MAX_AGE = 60 * 60 * 1000; // 1 hora, igual que la cookie de OAuth
+
+export const login = async (req, res, next) => {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
@@ -22,16 +26,21 @@ export const login = async (req, res) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
+      maxAge: LOGIN_COOKIE_MAX_AGE,
     });
 
-    return res.json({ message: 'Inicio de sesión exitoso' });
+    return sendSuccess(res, 200, 'Inicio de sesión exitoso');
 
   } catch (error) {
     if (error.message === "Contraseña inválida" || error.message === "Usuario inexistente") {
-      return res.status(401).json({ message: 'Credenciales inválidas' });
+      return next(new InvalidCredentialsError());
     }
-    res.status(500).json({ message: 'Error al iniciar sesión', error: error.message });
+    next(error);
   }
+};
+
+export const getMe = (req, res) => {
+  return sendSuccess(res, 200, 'Usuario autenticado obtenido con éxito', { email: req.user.email });
 };
 
 export const register = async (req, res) => {

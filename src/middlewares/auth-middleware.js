@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/config.js';
 import logger from '../config/logger.js';
+import { UnauthorizedError } from '../errors/errors.js';
 
 export const generateToken = (user) => {
     return jwt.sign({ id: user.id, email: user.email }, config.jwtSecret, { expiresIn: '1h' });
@@ -17,49 +18,18 @@ export const verifyPassword = async (password, hashedPassword) => {
 }; 
 
 export const validateToken = (req, res, next) => {
-  const token = req.cookies?.token; 
+  const token = req.cookies?.token;
 
   if (!token) {
-    return res.status(401).json({ message: 'No se proporcionó token de autenticación' });
+    return next(new UnauthorizedError('No se proporcionó token de autenticación'));
   }
 
   try {
     const decoded = jwt.verify(token, config.jwtSecret);
-    req.user = decoded; 
+    req.user = decoded;
     next();
   } catch (error) {
-    if (error instanceof jwt.TokenExpiredError) {
-      return res.status(401).json({ message: 'El token ha expirado' });
-    }
-    if (error instanceof jwt.JsonWebTokenError) {
-      return res.status(401).json({ message: 'Token inválido' });
-    }
-    logger.error('Error validando token:', { error: error.message });
-    return res.status(500).json({ message: 'Error al validar el token' });
-  }
-};
-
-export const getEmailFromToken = (req, res) => {
-  const token = req.cookies?.token; 
-
-  if (!token) {
-    return res.status(401).json({ message: 'No se proporcionó token de autenticación' });
-  }
-
-  try {
-    const decoded = jwt.verify(token, config.jwtSecret);
-    return res.status(200).json({
-      email: decoded.email,
-    });
-  } catch (error) {
-    if (error instanceof jwt.TokenExpiredError) {
-      return res.status(401).json({ message: 'El token ha expirado' });
-    }
-    if (error instanceof jwt.JsonWebTokenError) {
-      return res.status(401).json({ message: 'Token inválido' });
-    }
-    logger.error('Error validando token:', { error: error.message });
-    return res.status(500).json({ message: 'Error al validar el token' });
+    next(error);
   }
 };
 
