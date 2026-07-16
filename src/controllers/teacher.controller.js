@@ -12,6 +12,10 @@ const formatTeacherResponse = (teacher) => ({
     nombre: teacher.usuario.nombre,
     apellido: teacher.usuario.apellido,
     email: teacher.usuario.email,
+    genero: teacher.usuario.genero,
+    domicilio: teacher.usuario.domicilio,
+    nacionalidad: teacher.usuario.nacionalidad,
+    rol: teacher.usuario.rol,
     telefono: teacher.telefono,
     especialidad: teacher.especialidad,
     grado_encargado: teacher.grado_encargado,
@@ -29,8 +33,8 @@ export const getAllTeachers = async (req, res) => {
     }
     try {
         const { page, limit } = req.query;
-        const result = await teacherService.getTeachers(page, limit);
-        res.json(result);
+        const { data, pagination } = await teacherService.getTeachers(page, limit);
+        return sendSuccess(res, 200, 'Profesores obtenidos con éxito', { items: data.map(formatTeacherResponse), pagination });
     } catch (e) {
         res.status(500).json({ message: 'Error al mostrar los profesores', error: e.message });
     }
@@ -59,18 +63,7 @@ export const createTeacher = async (req, res) => {
             nacionalidad, asignaciones, telefono, especialidad
         });
 
-        return res.status(200).json({
-            message: 'Profesor creado con éxito',
-            Nombre: newTeacher.usuario.nombre,
-            Apellido: newTeacher.usuario.apellido,
-            Email: newTeacher.usuario.email,
-            Genero: newTeacher.usuario.genero,
-            Domicilio: newTeacher.usuario.domicilio,
-            Nacionalidad: newTeacher.usuario.nacionalidad,
-            Telefono: newTeacher.telefono,
-            Especialidad: newTeacher.especialidad,
-            Asignaciones: newTeacher.grado_encargado,
-        });
+        return sendSuccess(res, 201, 'Profesor creado con éxito', formatTeacherResponse(newTeacher));
     } catch (error) {
         res.status(500).json({ message: 'Error al crear el profesor', error: error.message });
     }
@@ -98,14 +91,7 @@ export const updateTeacher = async (req, res) => {
         });
 
         if (updatedTeacher) {
-            return res.status(200).json({
-                message: 'Profesor actualizado con éxito',
-                Nombre: updatedTeacher.usuario.nombre,
-                Apellido: updatedTeacher.usuario.apellido,
-                Asignaciones: updatedTeacher.grado_encargado,
-                Telefono: updatedTeacher.telefono,
-                Especialidad: updatedTeacher.especialidad,
-            });
+            return sendSuccess(res, 200, 'Profesor actualizado con éxito', formatTeacherResponse(updatedTeacher));
         } else {
             return res.status(400).json({ message: 'No se pudo actualizar el profesor' });
         }
@@ -136,12 +122,7 @@ export const deleteTeacher = async (req, res) => {
         const deletedUser = await userService.eraseUser(email);
 
         if (deletedTeacher && deletedUser) {
-            return res.status(200).json({
-                message: 'Profesor eliminado con éxito',
-                Nombre: deletedTeacher.usuario.nombre,
-                Apellido: deletedTeacher.usuario.apellido,
-                Email: deletedTeacher.usuario.email,
-            });
+            return sendSuccess(res, 200, 'Profesor eliminado con éxito', formatTeacherResponse(deletedTeacher));
         } else {
             return res.status(400).json({ message: 'No se pudo eliminar el profesor o el usuario' });
         }
@@ -234,10 +215,7 @@ export const getTeacherSubjectInfo = async (req, res) => {
             response.push(subjectData);
         }
 
-        res.status(200).json({
-            message: "Información de las materias y estudiantes obtenida con éxito",
-            data: response,
-        });
+        return sendSuccess(res, 200, 'Información de las materias y estudiantes obtenida con éxito', response);
     } catch (error) {
         res.status(500).json({ error: "Error al obtener la información del profesor: " + error.message });
     }

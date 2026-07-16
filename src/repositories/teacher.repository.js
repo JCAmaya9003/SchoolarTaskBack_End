@@ -73,7 +73,11 @@ export const createTeacher = async (teacherData) => {
     return await Teacher.findById(savedTeacher._id)
         .populate({
             path: 'usuario',
-            select: 'nombre apellido email',
+            select: 'nombre apellido email genero domicilio nacionalidad rol',
+            populate: {
+                path: 'rol',
+                select: 'nombre',
+            },
         })
         .populate({
             path: 'grado_encargado.materias',
@@ -95,7 +99,11 @@ export const updateTeacherByUserId = async (id, updates) => {
     return await Teacher.findByIdAndUpdate(id, updates, { new: true, runValidators: true })
         .populate({
             path: 'usuario',
-            select: 'nombre apellido email',
+            select: 'nombre apellido email genero domicilio nacionalidad rol',
+            populate: {
+                path: 'rol',
+                select: 'nombre',
+            },
         })
         .populate({
             path: 'grado_encargado.materias',
@@ -116,7 +124,11 @@ export const deleteTeacherByUserId = async (id) => {
     return await Teacher.findByIdAndDelete(id)
         .populate({
             path: 'usuario',
-            select: 'nombre apellido email',
+            select: 'nombre apellido email genero domicilio nacionalidad rol',
+            populate: {
+                path: 'rol',
+                select: 'nombre',
+            },
         })
         .populate({
             path: 'grado_encargado.materias',
@@ -137,7 +149,11 @@ export const deleteTeacherById = async (id) => {
     return await Teacher.findByIdAndDelete(id)
         .populate({
             path: 'usuario',
-            select: 'nombre apellido email',
+            select: 'nombre apellido email genero domicilio nacionalidad rol',
+            populate: {
+                path: 'rol',
+                select: 'nombre',
+            },
         })
         .populate({
             path: 'grado_encargado.materias',
