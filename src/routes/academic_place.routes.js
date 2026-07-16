@@ -4,8 +4,8 @@ import * as academic_placeController from '../controllers/academic_place.control
 import { validateToken, checkRole } from '../middlewares/auth-middleware.js';
 
 const router = express.Router();
-router.get('/all', validateToken, checkRole(['admin', 'teacher']), academic_placeController.getAllPlaces);
-router.post('/create',
+router.get('/', validateToken, checkRole(['admin', 'teacher']), academic_placeController.getAllPlaces);
+router.post('/',
     validateToken,
     checkRole(['admin']),
     [
@@ -13,7 +13,7 @@ router.post('/create',
     ],
     academic_placeController.createNewPlace
   );
-router.put('/update',
+router.put('/',
     validateToken,
     checkRole(['admin']),
     [
@@ -22,7 +22,7 @@ router.put('/update',
     ],
     academic_placeController.editPlace
   );
-router.delete('/delete',
+router.delete('/',
     validateToken,
     checkRole(['admin']),
     [
@@ -31,6 +31,13 @@ router.delete('/delete',
     academic_placeController.deletePlace
   );
 
-router.post('/get-name', validateToken, checkRole(['admin', 'teacher']), academic_placeController.getPlaceNameById);
+router.post('/get-name',
+    validateToken,
+    checkRole(['admin', 'teacher']),
+    [
+      body('id').isString().withMessage('Id inválido'),
+    ],
+    academic_placeController.getPlaceNameById
+  );
 
   export default router;

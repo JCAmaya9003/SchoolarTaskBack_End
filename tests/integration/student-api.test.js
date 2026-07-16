@@ -77,7 +77,7 @@ beforeAll(async () => {
   const adminCookie = await loginAsAdmin();
 
   await request.post('/api/parents').set('Cookie', adminCookie).send(parentUser);
-  await request.post('/api/gradeSections/create').set('Cookie', adminCookie).send(gradeSectionData);
+  await request.post('/api/gradeSections').set('Cookie', adminCookie).send(gradeSectionData);
 });
 
 afterAll(async () => {

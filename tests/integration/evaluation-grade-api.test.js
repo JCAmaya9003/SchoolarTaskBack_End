@@ -84,7 +84,7 @@ beforeAll(async () => {
 
   await request.post('/api/subjects').set('Cookie', adminCookie).send({ nombre: 'Matematicas' });
   await request.post('/api/subjects').set('Cookie', adminCookie).send({ nombre: 'Historia' });
-  await request.post('/api/gradeSections/create').set('Cookie', adminCookie).send(gradeSectionData);
+  await request.post('/api/gradeSections').set('Cookie', adminCookie).send(gradeSectionData);
 
   await request.post('/api/teachers').set('Cookie', adminCookie).send(buildTeacher('prof-mate-grade@test.com', 'Matematicas'));
   await request.post('/api/teachers').set('Cookie', adminCookie).send(buildTeacher('prof-historia-grade@test.com', 'Historia'));
