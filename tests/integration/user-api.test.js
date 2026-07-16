@@ -358,7 +358,7 @@ describe('Autorización: accesos cruzados no autorizados devuelven 403', () => {
     expect(res.status).not.toBe(403);
   });
 
-  it('GET /api/news/get_user_news: un estudiante no puede pedir noticias de otro usuario', async () => {
+  it('GET /api/news/by-user: un estudiante no puede pedir noticias de otro usuario', async () => {
     await request.post('/api/users/register').send(testUser);
     const otherStudent = { ...testUser, email: 'otro-estudiante-news@test.com' };
     await request.post('/api/users/register').send(otherStudent);
@@ -370,9 +370,9 @@ describe('Autorización: accesos cruzados no autorizados devuelven 403', () => {
     const [cookie] = loginRes.headers['set-cookie'];
 
     const res = await request
-      .get('/api/news/get_user_news')
+      .get('/api/news/by-user')
       .set('Cookie', cookie.split(';')[0])
-      .send({ email: otherStudent.email });
+      .query({ email: otherStudent.email });
 
     expect(res.status).toBe(403);
   });
