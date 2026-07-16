@@ -165,19 +165,6 @@ try {
 }
 }
 
-export const getStudentGradesInfoToken = async (req, res) => {
-    try {
-        const { email } = req.user;
-
-        // Obtener estudiante
-        const response =  await studentService.getStudentGradesInfo(email);
-        res.json(response);
-
-    } catch (error) {
-        res.status(500).json({ error: "Error al obtener las notas del estudiante: " + error.message });
-    }
-};
-
 export const getStudentGradesInfoParent = async (req, res) => {
     try {
         const { email } = req.user;
@@ -232,23 +219,6 @@ export const getStudentGradesInfo = async (req, res) => {
         res.json(response);
     } catch (error) {
         res.status(500).json({ error: "Error al obtener las notas del estudiante: " + error.message });
-    }
-};
-
-export const getStudentsByParentEmail = async (req, res) => {
-    try {
-        const { email } = req.body;
-
-        // Verificar si el padre existe
-        const students = await studentService.getStudentsByParentEmail(email);
-
-        // Enviar respuesta
-        res.status(200).json({
-            message: "Estudiantes relacionados con el padre encontrados",
-            estudiantes: students,
-        });
-    } catch (error) {
-        res.status(500).json({ error: "Error al obtener estudiantes relacionados con el padre: " + error.message });
     }
 };
 
