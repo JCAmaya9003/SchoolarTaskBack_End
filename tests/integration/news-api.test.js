@@ -153,6 +153,18 @@ describe('GET /api/news/by-user', () => {
 
     expect(res.status).toBe(404);
   });
+
+  it('un usuario NO puede ver las noticias de otro usuario - 403', async () => {
+    await request.post('/api/users/register').send(buildStudentUser('estudiante-ajeno-news@test.com'));
+    const studentCookie = await loginAs('estudiante3-news@test.com', 'password123');
+
+    const res = await request
+      .get('/api/news/by-user')
+      .set('Cookie', studentCookie)
+      .query({ email: 'estudiante-ajeno-news@test.com' });
+
+    expect(res.status).toBe(403);
+  });
 });
 
 describe('PUT /api/news (admin)', () => {
