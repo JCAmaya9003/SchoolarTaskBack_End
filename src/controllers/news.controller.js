@@ -15,7 +15,7 @@ const formatNewsResponse = (news) => ({
     updatedAt: news.updatedAt,
 });
 
-export const createNews = async (req, res) => {
+export const createNews = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -25,11 +25,11 @@ export const createNews = async (req, res) => {
         const createdNews = await newsService.createNews({ email, titulo, contenido });
         return sendSuccess(res, 201, 'Noticia creada con éxito', formatNewsResponse(createdNews));
     } catch (error) {
-        res.status(500).json({ message: 'Error al crear noticia', error: error.message });
+        next(error);
     }
 };
 
-export const updateNews = async (req, res) => {
+export const updateNews = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -39,11 +39,11 @@ export const updateNews = async (req, res) => {
         const updatedNews = await newsService.editNews({ email, titulo, nuevoTitulo, contenido });
         return sendSuccess(res, 200, 'Noticia editada con éxito', formatNewsResponse(updatedNews));
     } catch (error) {
-        res.status(500).json({ message: 'Error al editar la noticia.', error: error.message });
+        next(error);
     }
 };
 
-export const deleteNews = async (req, res) => {
+export const deleteNews = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -53,11 +53,11 @@ export const deleteNews = async (req, res) => {
         const erasedNews = await newsService.eraseNews({ email, titulo });
         return sendSuccess(res, 200, 'Noticia eliminada con éxito', formatNewsResponse(erasedNews));
     } catch (error) {
-        res.status(500).json({ message: 'Error al eliminar la noticia.', error: error.message });
+        next(error);
     }
 };
 
-export const getAllNews = async (req, res) => {
+export const getAllNews = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -67,11 +67,11 @@ export const getAllNews = async (req, res) => {
         const { data, pagination } = await newsService.getNews(page, limit);
         return sendSuccess(res, 200, 'Noticias obtenidas con éxito', { items: data.map(formatNewsResponse), pagination });
     } catch (error) {
-        res.status(500).json({ message: 'Error al mostrar las noticias', error: error.message });
+        next(error);
     }
 };
 
-export const getAllNewsFromUser = async (req, res) => {
+export const getAllNewsFromUser = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -81,6 +81,6 @@ export const getAllNewsFromUser = async (req, res) => {
         const filteredNews = await newsService.getNewsByUser(email);
         return sendSuccess(res, 200, 'Noticias obtenidas con éxito', filteredNews.map(formatNewsResponse));
     } catch (error) {
-        res.status(500).json({ message: 'Error al mostrar las noticias', error: error.message });
+        next(error);
     }
 };
