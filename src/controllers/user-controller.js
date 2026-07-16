@@ -60,6 +60,15 @@ export const register = async (req, res, next) => {
 
   const { nombre, apellido, email, password, fecha_nacimiento, rolNombre, genero, domicilio, nacionalidad } = req.body;
   try {
+    // Defensa en profundidad: userService.registerUser es compartida con los flujos admin-only
+    // (POST /teachers, /parents, /students), que sí pueden asignar cualquier rol, así que la
+    // restricción a student/parent no puede vivir en el service. Este chequeo no debe depender
+    // únicamente del validador de la ruta (isIn) para el único punto público sin autenticación.
+    const rolesAutoRegistrables = ['student', 'parent'];
+    if (!rolesAutoRegistrables.includes(rolNombre)) {
+      return res.status(400).json({ message: 'El auto-registro solo permite los roles student o parent.' });
+    }
+
     const generosPermitidos = ['Masculino', 'Femenino'];
       if (!generosPermitidos.includes(genero)) {
           return res.status(400).json({
