@@ -39,8 +39,8 @@ export const newGradeSection = async (grado, seccion, materias = []) => {
 export const getSubjectsByGradeAndSection = async (grado, seccion) => {
     const materias = await gradeSectionRepository.findSubjectsByGradeAndSection(grado, seccion);
 
-    // Mapear materias para asegurarte de devolver solo los nombres
-    return materias.map((materia) => ({ id: materia._id, nombre: materia.nombre }));
+    // _id (no id): el resto del código interno (student.service.js) espera este campo como en cualquier doc de Mongo
+    return materias.map((materia) => ({ _id: materia._id, nombre: materia.nombre }));
 };
 
 

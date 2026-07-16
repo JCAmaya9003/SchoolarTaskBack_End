@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import supertest from 'supertest';
-import { setupTestDB, teardownTestDB } from '../setup.js';
+import { setupTestDB, teardownTestDB, registerUserDirectly } from '../setup.js';
 import Role from '../../src/models/role-model.js';
 
 let app;
@@ -73,7 +73,7 @@ beforeAll(async () => {
   app = appModule.default;
   request = supertest(app);
 
-  await request.post('/api/users/register').send(adminUser);
+  await registerUserDirectly(adminUser);
   const adminCookie = await loginAsAdmin();
 
   await request.post('/api/parents').set('Cookie', adminCookie).send(parentUser);
@@ -255,5 +255,45 @@ describe('POST /api/students/get-all (autorización)', () => {
       .send({ email: 'est8@test.com' });
 
     expect(res.status).toBe(403);
+  });
+});
+
+describe('POST /api/students/get-all (con materias asignadas)', () => {
+  it('debe devolver las notas sin crashear - 200 (regresión: subject._id undefined por remapeo a subject.id)', async () => {
+    const cookie = await loginAsAdmin();
+    await request.post('/api/subjects').set('Cookie', cookie).send({ nombre: 'MateriaConNotas' });
+    await request
+      .post('/api/gradeSections')
+      .set('Cookie', cookie)
+      .send({ grado: '9', seccion: 'Z', materias: ['MateriaConNotas'] });
+
+    const studentEmail = 'est-con-notas@test.com';
+    await request.post('/api/students').set('Cookie', cookie).send({
+      nombre: 'Ana',
+      apellido: 'Estudiante',
+      email: studentEmail,
+      password: 'password123',
+      rolNombre: 'student',
+      fecha_nacimiento: '2011-01-01',
+      genero: 'Femenino',
+      domicilio: 'Casa 9',
+      nacionalidad: 'Venezolana',
+      email_padre: parentUser.email,
+      grado: '9',
+      seccion: 'Z',
+      alergias: 'Ninguna',
+      condiciones_medicas: 'Ninguna',
+      contacto_emergencia: { nombre: 'Pedro Padre', telefono: '+50312345678' },
+    });
+
+    const res = await request
+      .post('/api/students/get-all')
+      .set('Cookie', cookie)
+      .send({ email: studentEmail });
+
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(res.body.data[0].materia).toBe('MateriaConNotas');
+    expect(res.body.data[0].evaluaciones).toEqual([]);
   });
 });
