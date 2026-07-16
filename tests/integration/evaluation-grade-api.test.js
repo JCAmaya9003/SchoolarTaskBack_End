@@ -135,6 +135,28 @@ describe('POST /api/evaluation_grades', () => {
     expect(res.body.data.estudiante.email).toBe(studentEmail);
   });
 
+  it('rechaza una calificación fuera de rango (0-10) - 400 (regresión: evaluation_grade.controller.js nunca llamaba validationResult)', async () => {
+    const cookie = await loginAsAdmin();
+
+    const res = await request
+      .post('/api/evaluation_grades')
+      .set('Cookie', cookie)
+      .send({ email: studentEmail, nombreMateria: 'Matematicas', nombreEvaluacion: 'Parcial Mate', calificacion: 15 });
+
+    expect(res.status).toBe(400);
+  });
+
+  it('rechaza una calificación negativa - 400 (regresión: evaluation_grade.controller.js nunca llamaba validationResult)', async () => {
+    const cookie = await loginAsAdmin();
+
+    const res = await request
+      .post('/api/evaluation_grades')
+      .set('Cookie', cookie)
+      .send({ email: studentEmail, nombreMateria: 'Matematicas', nombreEvaluacion: 'Parcial Mate', calificacion: -5 });
+
+    expect(res.status).toBe(400);
+  });
+
   it('falla si ya existe una nota para ese estudiante y evaluación - 409', async () => {
     const cookie = await loginAsAdmin();
 
@@ -253,6 +275,17 @@ describe('PUT /api/evaluation_grades', () => {
       .send({ email: studentEmail, nombreMateria: 'Historia', nombreEvaluacion: 'No existe', calificacion: 5 });
 
     expect(res.status).toBe(404);
+  });
+
+  it('rechaza una calificación fuera de rango al editar - 400 (regresión: evaluation_grade.controller.js nunca llamaba validationResult)', async () => {
+    const cookie = await loginAsAdmin();
+
+    const res = await request
+      .put('/api/evaluation_grades')
+      .set('Cookie', cookie)
+      .send({ email: studentEmail, nombreMateria: 'Matematicas', nombreEvaluacion: 'Parcial Mate', calificacion: 20 });
+
+    expect(res.status).toBe(400);
   });
 });
 

@@ -1,3 +1,4 @@
+import { validationResult } from 'express-validator';
 import * as evaluationGradeService from '../services/evaluation_grade.service.js';
 import { sendSuccess } from '../utils/apiResponse.js';
 
@@ -16,6 +17,10 @@ const formatEvaluationGradeResponse = (grade) => ({
 });
 
 export const createEvaluationGrade = async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
     try {
         const { email, nombreMateria, nombreEvaluacion, calificacion } = req.body;
 
@@ -43,6 +48,10 @@ export const getAllEvaluationGrades = async (req, res, next) => {
 };
 
 export const getEvaluationGradesByStudent = async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
     try {
         const { email } = req.query;
         const grades = await evaluationGradeService.getEvaluationGradesByStudent(email);
@@ -53,6 +62,10 @@ export const getEvaluationGradesByStudent = async (req, res, next) => {
 };
 
 export const getEvaluationGradesByEvaluation = async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
     try {
         const { nombre, nombreMateria } = req.query;
         const grades = await evaluationGradeService.getEvaluationGradesByEvaluation(nombre, nombreMateria);
@@ -63,6 +76,10 @@ export const getEvaluationGradesByEvaluation = async (req, res, next) => {
 };
 
 export const updateEvaluationGradeById = async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
     try {
         const { email, nombreMateria, nombreEvaluacion, calificacion } = req.body;
         const updatedGrade = await evaluationGradeService.updateEvaluationGradeByStudentAndEvaluation({ email, nombreMateria, nombreEvaluacion, calificacion });
@@ -73,6 +90,10 @@ export const updateEvaluationGradeById = async (req, res, next) => {
 };
 
 export const deleteEvaluationGradeById = async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
     try {
         const { email, nombreMateria, nombreEvaluacion } = req.body;
         const deletedGrade = await evaluationGradeService.deleteEvaluationGradeById(email, nombreMateria, nombreEvaluacion);
