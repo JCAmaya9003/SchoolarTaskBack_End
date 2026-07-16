@@ -60,7 +60,7 @@ export const updateGradeAndSectionById = async (id, updates) => {
  * @returns {Promise<Object|null>} - Grado y sección eliminados o null.
  */
 export const deleteGradeAndSectionById = async (id) => {
-    return await GradeSection.findByIdAndDelete(id);
+    return await GradeSection.findByIdAndDelete(id).populate('materias', 'nombre');
 };
 
 /**

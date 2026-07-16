@@ -173,4 +173,21 @@ describe('DELETE /api/gradeSections (admin)', () => {
 
     expect(res.status).toBe(404);
   });
+
+  it('debe devolver las materias populadas al eliminar un grado y sección que sí tiene materias asignadas - 200 (regresión: deleteGradeAndSectionById no populaba materias)', async () => {
+    const cookie = await loginAsAdmin();
+    await request
+      .post('/api/gradeSections')
+      .set('Cookie', cookie)
+      .send({ grado: '6', seccion: 'B', materias: ['Geografia'] });
+
+    const res = await request
+      .delete('/api/gradeSections')
+      .set('Cookie', cookie)
+      .send({ grado: '6', seccion: 'B' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.materias[0].nombre).toBe('Geografia');
+    expect(res.body.data.materias[0].id).toBeDefined();
+  });
 });
