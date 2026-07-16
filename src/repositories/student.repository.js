@@ -5,15 +5,23 @@ export const findStudentByUserId = async (userId) => {
     return await Student.findOne({usuario: userId }).populate([
         {
             path: 'usuario', 
-            select: 'nombre apellido email rol', 
+            select: 'nombre apellido email genero domicilio nacionalidad fecha_nacimiento rol', 
             populate: {
                 path: 'rol', 
                 select: 'nombre',
             },
         },
         {
-            path: 'padre', 
-            select: 'telefono telefono_trabajo lugar_trabajo profesion domicilio nacionalidad',
+            path: 'padre',
+            select: 'usuario telefono telefono_trabajo lugar_trabajo profesion',
+            populate: {
+                path: 'usuario',
+                select: 'nombre apellido email genero domicilio nacionalidad fecha_nacimiento rol',
+                populate: {
+                    path: 'rol',
+                    select: 'nombre'
+                }
+            }
         },
         {
             path: 'grado_seccion', 
@@ -36,7 +44,7 @@ export const findStudentByUserId = async (userId) => {
           .populate([
             {
                 path: 'usuario',
-                select: 'nombre apellido email rol',
+                select: 'nombre apellido email genero domicilio nacionalidad fecha_nacimiento rol',
                 populate: {
                     path: 'rol',
                     select: 'nombre',
@@ -47,7 +55,7 @@ export const findStudentByUserId = async (userId) => {
                 select: 'usuario telefono telefono_trabajo lugar_trabajo profesion domicilio nacionalidad',
                 populate: {
                     path: 'usuario',
-                    select: 'nombre apellido email rol',
+                    select: 'nombre apellido email genero domicilio nacionalidad fecha_nacimiento rol',
                     populate: {
                         path: 'rol',
                         select: 'nombre'
@@ -78,29 +86,40 @@ export const findStudentByUserId = async (userId) => {
       return await savedStudent.populate([
         {
             path: 'usuario', 
-            select: 'nombre apellido email rol', 
+            select: 'nombre apellido email genero domicilio nacionalidad fecha_nacimiento rol', 
             populate: {
                 path: 'rol', 
                 select: 'nombre',
             },
         },
         {
-            path: 'padre', 
-            select: 'telefono telefono_trabajo lugar_trabajo profesion domicilio nacionalidad',
+            path: 'padre',
+            select: 'usuario telefono telefono_trabajo lugar_trabajo profesion',
+            populate: {
+                path: 'usuario',
+                select: 'nombre apellido email genero domicilio nacionalidad fecha_nacimiento rol',
+                populate: {
+                    path: 'rol',
+                    select: 'nombre'
+                }
+            }
         },
         {
-            path: 'grado_seccion', 
+            path: 'grado_seccion',
             select: 'grado seccion materias',
+            populate: {
+                path: 'materias',
+                select: 'nombre',
+            }
         },
     ]);
-  
     };
     
     export const updateStudentByUserId = async (id, updates) => {
       return await Student.findByIdAndUpdate(id, updates, { new: true, runValidators: true }).populate([
         {
             path: 'usuario', 
-            select: 'nombre apellido email rol', 
+            select: 'nombre apellido email genero domicilio nacionalidad fecha_nacimiento rol', 
             populate: {
                 path: 'rol', 
                 select: 'nombre',
@@ -111,7 +130,7 @@ export const findStudentByUserId = async (userId) => {
             select: 'usuario telefono telefono_trabajo lugar_trabajo profesion domicilio nacionalidad',
             populate: {
                 path: 'usuario',
-                select: 'nombre apellido email rol',
+                select: 'nombre apellido email genero domicilio nacionalidad fecha_nacimiento rol',
                 populate: {
                     path: 'rol',
                     select: 'nombre'
@@ -133,15 +152,23 @@ export const findStudentByUserId = async (userId) => {
       return await Student.findByIdAndDelete(id).populate([
         {
             path: 'usuario', 
-            select: 'nombre apellido email rol', 
+            select: 'nombre apellido email genero domicilio nacionalidad fecha_nacimiento rol', 
             populate: {
                 path: 'rol', 
                 select: 'nombre',
             },
         },
         {
-            path: 'padre', 
-            select: 'telefono telefono_trabajo lugar_trabajo profesion domicilio nacionalidad',
+            path: 'padre',
+            select: 'usuario telefono telefono_trabajo lugar_trabajo profesion',
+            populate: {
+                path: 'usuario',
+                select: 'nombre apellido email genero domicilio nacionalidad fecha_nacimiento rol',
+                populate: {
+                    path: 'rol',
+                    select: 'nombre'
+                }
+            }
         },
         {
             path: 'grado_seccion', 
@@ -157,7 +184,7 @@ export const findStudentByUserId = async (userId) => {
         return await Student.findByIdAndDelete(id).populate([
             {
                 path: 'usuario',
-                select: 'nombre apellido email rol',
+                select: 'nombre apellido email genero domicilio nacionalidad fecha_nacimiento rol',
                 populate: {
                     path: 'rol',
                     select: 'nombre',
@@ -182,7 +209,7 @@ export const findStudentByUserId = async (userId) => {
         return await Student.find({ padre: parentId }).populate([
             {
                 path: 'usuario',
-                select: 'nombre apellido email rol',
+                select: 'nombre apellido email genero domicilio nacionalidad fecha_nacimiento rol',
                 populate: {
                     path: 'rol',
                     select: 'nombre',

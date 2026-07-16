@@ -1,6 +1,5 @@
 import { validationResult } from 'express-validator';
 import * as studentService from '../services/student.service.js';
-import * as parentService from '../services/parent.service.js';
 import * as userService from '../services/user-service.js';
 import { sendSuccess } from '../utils/apiResponse.js';
 

@@ -97,6 +97,16 @@ describe('POST /api/students (admin)', () => {
     expect(res.body.message).toBe('Estudiante creado con éxito');
     expect(res.body.data.email).toBe('est1@test.com');
     expect(res.body.data.id).toBeDefined();
+
+    // Regresión: estos campos no se populaban (genero/domicilio/nacionalidad/fecha_nacimiento
+    // faltaban en TODAS las queries, y createStudent en particular no anidaba padre.usuario)
+    expect(res.body.data.genero).toBe('Masculino');
+    expect(res.body.data.domicilio).toBe('Casa 1');
+    expect(res.body.data.nacionalidad).toBe('Venezolana');
+    expect(res.body.data.fecha_nacimiento).toBeDefined();
+    expect(res.body.data.padre.usuario.nombre).toBe('Pedro');
+    expect(res.body.data.padre.usuario.email).toBe(parentUser.email);
+    expect(res.body.data.grado_seccion.materias).toBeDefined();
   });
 
   it('debe fallar si el padre no existe - 404', async () => {
