@@ -6,11 +6,11 @@ import { validateToken, checkRole } from '../middlewares/auth-middleware.js';
 const router = express.Router();
 
 // Obtener todas las combinaciones de grado y sección - requiere autenticación
-router.get('/all', validateToken, gradeSectionController.getAllGradeAndSections);
+router.get('/', validateToken, gradeSectionController.getAllGradeAndSections);
 
 // Crear un nuevo grado y sección - solo ADMIN
 router.post(
-    '/create',
+    '/',
     validateToken,
     checkRole(['admin']),
     [
@@ -24,7 +24,7 @@ router.post(
 
 // Actualizar un grado y sección - solo ADMIN
 router.put(
-    '/update',
+    '/',
     validateToken,
     checkRole(['admin']),
     [
@@ -40,7 +40,7 @@ router.put(
 
 // Eliminar un grado y sección - solo ADMIN
 router.delete(
-    '/delete',
+    '/',
     validateToken,
     checkRole(['admin']),
     [

@@ -26,7 +26,7 @@ export const findSubjectsByGradeAndSection = async (grado, seccion) => {
     const gradeSection = await GradeSection.findOne({ grado, seccion }).populate('materias', 'nombre');
 
     if (!gradeSection) {
-        throw new Error("No se encontró el grado y sección");
+        return [];
     }
     return gradeSection.materias;
 };
@@ -48,7 +48,8 @@ export const findAllGradeAndSections = async () => {
  */
 export const createGradeAndSection = async (userdata) => {
     const grade_section = new GradeSection(userdata);
-    return await grade_section.save();
+    await grade_section.save();
+    return await grade_section.populate('materias', 'nombre');
 };
 
 /**

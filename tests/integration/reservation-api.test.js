@@ -55,8 +55,8 @@ beforeAll(async () => {
   await request.post('/api/users/register').send(adminUser);
   const adminCookie = await loginAsAdmin();
 
-  await request.post('/api/academic_places/create').set('Cookie', adminCookie).send({ lugar: 'Laboratorio A' });
-  await request.post('/api/academic_places/create').set('Cookie', adminCookie).send({ lugar: 'Auditorio' });
+  await request.post('/api/academic_places').set('Cookie', adminCookie).send({ lugar: 'Laboratorio A' });
+  await request.post('/api/academic_places').set('Cookie', adminCookie).send({ lugar: 'Auditorio' });
 
   await request.post('/api/teachers').set('Cookie', adminCookie).send(buildTeacher('prof-a-reserva@test.com'));
   await request.post('/api/teachers').set('Cookie', adminCookie).send(buildTeacher('prof-b-reserva@test.com'));

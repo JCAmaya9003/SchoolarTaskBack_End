@@ -62,7 +62,7 @@ beforeAll(async () => {
   const adminCookie = await loginAsAdmin();
 
   await request.post('/api/subjects').set('Cookie', adminCookie).send({ nombre: 'Matematicas' });
-  await request.post('/api/gradeSections/create').set('Cookie', adminCookie).send(gradeSectionData);
+  await request.post('/api/gradeSections').set('Cookie', adminCookie).send(gradeSectionData);
 });
 
 afterAll(async () => {

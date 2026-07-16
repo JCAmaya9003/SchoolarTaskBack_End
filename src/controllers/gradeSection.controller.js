@@ -1,10 +1,18 @@
 import * as gradeSectionService from '../services/gradeSection.service.js';
 import { validationResult } from 'express-validator';
+import { sendSuccess } from '../utils/apiResponse.js';
+
+const formatGradeSectionResponse = (gradeSection) => ({
+    id: gradeSection._id,
+    grado: gradeSection.grado,
+    seccion: gradeSection.seccion,
+    materias: gradeSection.materias.map((materia) => ({ id: materia._id, nombre: materia.nombre })),
+});
 
 /**
  * Crear un nuevo grado y sección.
  */
-export const createGradeSection = async (req, res) => {
+export const createGradeSection = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -13,22 +21,16 @@ export const createGradeSection = async (req, res) => {
     const { grado, seccion, materias } = req.body;
     try {
         const newGradeSection = await gradeSectionService.newGradeSection(grado, seccion, materias);
-
-        return res.status(200).json({
-            message: 'Grado y sección creado con éxito',
-            grado: newGradeSection.grado,
-            seccion: newGradeSection.seccion,
-            materias: newGradeSection.materias,
-        });
+        return sendSuccess(res, 201, 'Grado y sección creado con éxito', formatGradeSectionResponse(newGradeSection));
     } catch (error) {
-        res.status(500).json({ message: 'Error al crear grado y sección', error: error.message });
+        next(error);
     }
 };
 
 /**
  * Actualizar un grado y sección.
  */
-export const updateGradeAndSection = async (req, res) => {
+export const updateGradeAndSection = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -37,78 +39,46 @@ export const updateGradeAndSection = async (req, res) => {
     const { grado, seccion, nuevoGrado, nuevaSeccion, materias } = req.body;
     try {
         const updatedGradeSection = await gradeSectionService.updateGradeAndSectionById(grado, seccion, nuevoGrado, nuevaSeccion, materias);
-
-        return res.status(200).json({
-            message: 'Grado y sección actualizado con éxito',
-            grado: updatedGradeSection.grado,
-            seccion: updatedGradeSection.seccion,
-            materias: updatedGradeSection.materias,
-        });
+        return sendSuccess(res, 200, 'Grado y sección actualizado con éxito', formatGradeSectionResponse(updatedGradeSection));
     } catch (error) {
-        res.status(500).json({ message: 'Error al actualizar grado y sección', error: error.message });
+        next(error);
     }
 };
 
 /**
  * Eliminar un grado y sección.
  */
-export const deleteGradeAndSection = async (req, res) => {
+export const deleteGradeAndSection = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json({ message: 'Error al intentar eliminar el grado y sección', errors: errors.array() });
+        return res.status(400).json({ errors: errors.array() });
     }
 
     const { grado, seccion } = req.body;
     try {
         const deletedGradeSection = await gradeSectionService.eraseGradeAndSectionById(grado, seccion);
-
-        return res.status(200).json({
-            message: 'Grado y sección eliminado con éxito',
-            grado: deletedGradeSection.grado,
-            seccion: deletedGradeSection.seccion,
-        });
+        return sendSuccess(res, 200, 'Grado y sección eliminado con éxito', formatGradeSectionResponse(deletedGradeSection));
     } catch (error) {
-        res.status(500).json({ message: 'Error al eliminar grado y sección', error: error.message });
+        next(error);
     }
 };
 
 /**
  * Obtener todas las combinaciones de grado y sección.
  */
-export const getAllGradeAndSections = async (req, res) => {
+export const getAllGradeAndSections = async (req, res, next) => {
     try {
-        const GradeSections = await gradeSectionService.getAllGradeAndSection();
-        res.status(200).json(GradeSections);
+        const gradeSections = await gradeSectionService.getAllGradeAndSection();
+        return sendSuccess(res, 200, 'Grados y secciones obtenidos con éxito', gradeSections.map(formatGradeSectionResponse));
     } catch (error) {
-        res.status(500).json({ message: 'Error al obtener todas las combinaciones de grado y sección', error: error.message });
-    }
-};
-
-/**
- * Obtener un grado y sección específicos.
- */
-export const getGradeAndSection = async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ message: 'Error al intentar obtener el grado y sección', errors: errors.array() });
-    }
-
-    const { grado, seccion } = req.body;
-    try {
-        const GradeSections = await gradeSectionService.getGradeAndSection(grado, seccion);
-        if (!GradeSections) {
-            return res.status(404).json({ message: 'El grado y sección no existe' });
-        }
-        res.status(200).json(GradeSections);
-    } catch (error) {
-        res.status(500).json({ message: 'Error al obtener grado y sección', error: error.message });
+        next(error);
     }
 };
 
 /**
  * Agregar materias a un grado y sección.
  */
-export const addSubjectsToGradeSection = async (req, res) => {
+export const addSubjectsToGradeSection = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -117,22 +87,16 @@ export const addSubjectsToGradeSection = async (req, res) => {
     const { grado, seccion, materias } = req.body;
     try {
         const updatedGradeSection = await gradeSectionService.addSubjectsToGradeSection(grado, seccion, materias);
-
-        return res.status(200).json({
-            message: 'Materias agregadas con éxito',
-            grado: updatedGradeSection.grado,
-            seccion: updatedGradeSection.seccion,
-            materias: updatedGradeSection.materias,
-        });
+        return sendSuccess(res, 200, 'Materias agregadas con éxito', formatGradeSectionResponse(updatedGradeSection));
     } catch (error) {
-        res.status(500).json({ message: 'Error al agregar materias', error: error.message });
+        next(error);
     }
 };
 
 /**
  * Eliminar materias de un grado y sección.
  */
-export const removeSubjectsFromGradeSection = async (req, res) => {
+export const removeSubjectsFromGradeSection = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -141,14 +105,8 @@ export const removeSubjectsFromGradeSection = async (req, res) => {
     const { grado, seccion, materias } = req.body;
     try {
         const updatedGradeSection = await gradeSectionService.removeSubjectsFromGradeSection(grado, seccion, materias);
-
-        return res.status(200).json({
-            message: 'Materias eliminadas con éxito',
-            grado: updatedGradeSection.grado,
-            seccion: updatedGradeSection.seccion,
-            materias: updatedGradeSection.materias,
-        });
+        return sendSuccess(res, 200, 'Materias eliminadas con éxito', formatGradeSectionResponse(updatedGradeSection));
     } catch (error) {
-        res.status(500).json({ message: 'Error al eliminar materias', error: error.message });
+        next(error);
     }
 };

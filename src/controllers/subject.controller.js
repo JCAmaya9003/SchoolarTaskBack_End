@@ -1,112 +1,61 @@
 import * as subjectService from '../services/subject.service.js';
 import { validationResult } from 'express-validator';
+import { sendSuccess } from '../utils/apiResponse.js';
 
-export const createNewSubject = async (req, res)=>{
+const formatSubjectResponse = (subject) => ({
+    id: subject._id,
+    nombre: subject.nombre,
+});
+
+export const createNewSubject = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json({message: "Error al intentar crear la materia!", errors: errors.array() });
+        return res.status(400).json({ errors: errors.array() });
     }
     try {
-        const {nombre} = req.body;
-
-        const createdSubject =  await subjectService.newSubject(nombre);
-
-        if(createdSubject){
-            return res.status(201).json({
-              message: 'Materia creada con éxito!',
-              subjectName: createdSubject.nombre,
-            });
-          }else{
-            return res.status(400).json({ message: 'Materia ya creada' });
-          }
-    }catch (e) {
-        res.status(500).json({ message: 'Error al crear la materia.', error: e.message });
-    };
-};
-
-export const editSubject = async (req, res) =>{
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({message: "Error al intentar editar la materia!", errors: errors.array() });
-    }
-    
-    try {
-        const {nombre, nuevoNombre} = req.body;
-
-        const editedSubject =  await subjectService.updateSubject(nombre, nuevoNombre);
-        if (editedSubject) {
-            return res.status(200).json({
-              message: 'Materia actualizado con éxito',
-              subjectId: editedSubject.id,
-              subjectName: editedSubject.nombre,
-            });
-          }else{
-            return res.status(404).json({ message: 'La materia especificado no existe!' });
-          }
-    }catch (e) {
-        res.status(500).json({ message: 'Error al editar la materia.', error: e.message });
+        const { nombre } = req.body;
+        const createdSubject = await subjectService.newSubject(nombre);
+        return sendSuccess(res, 201, 'Materia creada con éxito', formatSubjectResponse(createdSubject));
+    } catch (error) {
+        next(error);
     }
 };
 
-export const deleteSubject = async (req, res) =>{
+export const editSubject = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json({message: "Error al intentar eliminar la materia!", errors: errors.array() });
+        return res.status(400).json({ errors: errors.array() });
     }
-    
-    try {
-        const {nombre} = req.body;
 
-        const erasedSubject =  await subjectService.eraseSubject(nombre);
-        if (erasedSubject) {
-            return res.status(200).json({
-              message: 'Materia eliminada con éxito',
-              subjectId: erasedSubject.id,
-              subjectName: erasedSubject.nombre,
-            });
-          }else{
-            return res.status(404).json({ message: 'La materia especificada no existe!' });
-          }
-    }catch (e) {
-        res.status(500).json({ message: 'Error al eliminar la materia.', error: e.message });
+    try {
+        const { nombre, nuevoNombre } = req.body;
+        const editedSubject = await subjectService.updateSubject(nombre, nuevoNombre);
+        return sendSuccess(res, 200, 'Materia editada con éxito', formatSubjectResponse(editedSubject));
+    } catch (error) {
+        next(error);
     }
 };
 
-export const getAllSubjects = async (req, res) =>{
+export const deleteSubject = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json({message: "Error al intentar mostrar las materias!", errors: errors.array() });
+        return res.status(400).json({ errors: errors.array() });
     }
-    
-    try {
 
-        const subjects =  await subjectService.getSubjects();
-        res.json(subjects);
-    }catch (e) {
-        res.status(500).json({ message: 'Error al mostrar las materias.', error: e.message });
+    try {
+        const { nombre } = req.body;
+        const erasedSubject = await subjectService.eraseSubject(nombre);
+        return sendSuccess(res, 200, 'Materia eliminada con éxito', formatSubjectResponse(erasedSubject));
+    } catch (error) {
+        next(error);
     }
 };
 
-export const getSubjectByname = async (req, res) =>{
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({message: "Error al intentar mostrar la materia!", errors: errors.array() });
-    }
-    
+export const getAllSubjects = async (req, res, next) => {
     try {
-        const {nombre} = req.body;
-
-        const subjectExists =  await subjectService.searchSubjectByName(nombre);
-        if (subjectExists) {
-            return res.status(200).json({
-              message: 'Materia encontrada con éxito',
-              subjectId: subjectExists.id,
-              subjectName: subjectExists.nombre,
-            });
-          }else{
-            return res.status(404).json({ message: 'La materia especificada no existe!' });
-          }
-    }catch (e) {
-        res.status(500).json({ message: 'Error al mostrar la materia.', error: e.message });
+        const subjects = await subjectService.getSubjects();
+        return sendSuccess(res, 200, 'Materias obtenidas con éxito', subjects.map(formatSubjectResponse));
+    } catch (error) {
+        next(error);
     }
 };

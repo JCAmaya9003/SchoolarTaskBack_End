@@ -1,133 +1,76 @@
 import * as academic_placeService from '../services/academic_place.service.js';
 import { validationResult } from 'express-validator';
+import { sendSuccess } from '../utils/apiResponse.js';
 
-export const createNewPlace = async (req, res)=>{
+const formatPlaceResponse = (place) => ({
+    id: place._id,
+    lugar: place.lugar,
+});
+
+export const createNewPlace = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json({message: "Error al intentar crear el lugar!", errors: errors.array() });
+        return res.status(400).json({ errors: errors.array() });
     }
     try {
-        const {lugar} = req.body;
-
-        const createdPlace =  await academic_placeService.newPlace(lugar);
-
-        if(createdPlace){
-            return res.status(201).json({
-              message: 'Lugar creado con éxito!',
-              placeAdress: createdPlace.lugar,
-            });
-          }else{
-            return res.status(400).json({ message: 'Lugar ya creado' });
-          }
-    }catch (e) {
-        res.status(500).json({ message: 'Error al crear el lugar.', error: e.message });
-    };
-};
-
-export const editPlace = async (req, res) =>{
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({message: "Error al intentar editar el lugar!", errors: errors.array() });
-    }
-    
-    try {
-        const {lugar, nuevoLugar} = req.body;
-
-        const editedPlace =  await academic_placeService.updatePlace(lugar, nuevoLugar);
-        if (editedPlace) {
-            return res.status(200).json({
-              message: 'Lugar actualizado con éxito',
-              placeId: editedPlace.id,
-              placeName: editedPlace.lugar,
-            });
-          }else{
-            return res.status(404).json({ message: 'El lugar especificado no existe!' });
-          }
-    }catch (e) {
-        res.status(500).json({ message: 'Error al editar el lugar.', error: e.message });
+        const { lugar } = req.body;
+        const createdPlace = await academic_placeService.newPlace(lugar);
+        return sendSuccess(res, 201, 'Lugar creado con éxito', formatPlaceResponse(createdPlace));
+    } catch (error) {
+        next(error);
     }
 };
 
-export const deletePlace = async (req, res) =>{
+export const editPlace = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json({message: "Error al intentar eliminar el lugar!", errors: errors.array() });
+        return res.status(400).json({ errors: errors.array() });
     }
-    
-    try {
-        const {lugar} = req.body;
 
-        const erasedPlace =  await academic_placeService.erasePlace(lugar);
-        if (erasedPlace) {
-            return res.status(200).json({
-              message: 'Lugar eliminado con éxito',
-              placeId: erasedPlace.id,
-              placeName: erasedPlace.nombre,
-            });
-          }else{
-            return res.status(404).json({ message: 'El lugar especificado no existe!' });
-          }
-    }catch (e) {
-        res.status(500).json({ message: 'Error al eliminar el lugar.', error: e.message });
+    try {
+        const { lugar, nuevoLugar } = req.body;
+        const editedPlace = await academic_placeService.updatePlace(lugar, nuevoLugar);
+        return sendSuccess(res, 200, 'Lugar actualizado con éxito', formatPlaceResponse(editedPlace));
+    } catch (error) {
+        next(error);
     }
 };
 
-export const getAllPlaces = async (req, res) =>{
+export const deletePlace = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json({message: "Error al intentar mostrar los lugares!", errors: errors.array() });
+        return res.status(400).json({ errors: errors.array() });
     }
-    
+
     try {
-        const places =  await academic_placeService.getPlaces();
-        res.json(places);
-    }catch (e) {
-        res.status(500).json({ message: 'Error al mostrar los lugares.', error: e.message });
+        const { lugar } = req.body;
+        const erasedPlace = await academic_placeService.erasePlace(lugar);
+        return sendSuccess(res, 200, 'Lugar eliminado con éxito', formatPlaceResponse(erasedPlace));
+    } catch (error) {
+        next(error);
     }
 };
 
-export const getPlaceByName = async (req, res) =>{
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({message: "Error al intentar mostrar el lugar!", errors: errors.array() });
-    }
-    
+export const getAllPlaces = async (req, res, next) => {
     try {
-        const {lugar} = req.body;
-
-        const placeExists =  await academic_placeService.searchPlaceByName(lugar);
-        if (placeExists) {
-            return res.status(200).json({
-              message: 'Lugar encontrado con éxito',
-              placeId: placeExists.id,
-              placeName: placeExists.nombre,
-            });
-          }else{
-            return res.status(404).json({ message: 'El lugar especificado no existe!' });
-          }
-    }catch (e) {
-        res.status(500).json({ message: 'Error al mostrar el lugar.', error: e.message });
+        const places = await academic_placeService.getPlaces();
+        return sendSuccess(res, 200, 'Lugares obtenidos con éxito', places.map(formatPlaceResponse));
+    } catch (error) {
+        next(error);
     }
 };
 
-export const getPlaceNameById = async (req, res) =>{
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-      return res.status(400).json({message: "Error al intentar mostrar el lugar!", errors: errors.array() });
-  }
-  
-  try {
-      const {id} = req.body;
+export const getPlaceNameById = async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
 
-      const placeExists =  await academic_placeService.getPlaceById(id);
-      if (placeExists) {
-          return res.status(200).json({
-            nombre: placeExists.lugar,
-          });
-        }else{
-          return res.status(404).json({ message: 'El lugar especificado no existe!' });
-        }
-  }catch (e) {
-      res.status(500).json({ message: 'Error al mostrar el lugar.', error: e.message });
-  }
+    try {
+        const { id } = req.body;
+        const place = await academic_placeService.getPlaceById(id);
+        return sendSuccess(res, 200, 'Nombre del lugar obtenido con éxito', { nombre: place.lugar });
+    } catch (error) {
+        next(error);
+    }
 };
