@@ -1,45 +1,58 @@
 import express from 'express';
-import { body } from 'express-validator';
+import { body, query } from 'express-validator';
 import * as newsController from '../controllers/news.controller.js'
 import { validateToken, checkRole } from '../middlewares/auth-middleware.js';
 import { verifyOwnResource, enrichUserContext } from '../middlewares/authorization-middleware.js';
 
 const router = express.Router();
 
-router.get('/get_all_news', validateToken, checkRole(['admin', 'teacher', 'student']), newsController.getAllNews);
+// Obtener todas las noticias paginadas
+router.get('/', validateToken, checkRole(['admin', 'teacher', 'student']), newsController.getAllNews);
+
+// Obtener las noticias de un usuario puntual (admin/teacher pueden pedir cualquiera, student solo la propia)
 router.get(
-    '/get_user_news',
+    '/by-user',
     validateToken,
     enrichUserContext,
     checkRole(['admin', 'teacher', 'student']),
-    verifyOwnResource('body'),
+    verifyOwnResource('query'),
+    [
+        query('email').isEmail().withMessage('Email inválido'),
+    ],
     newsController.getAllNewsFromUser
 );
-router.post('/create_news',
-    validateToken,
-    checkRole(['admin']),
-    [
-    body('email').isEmail().withMessage('Email inválido'),
-    body('titulo').isString().withMessage('Titulo inválido'),
-    body('contenido').isString().withMessage('Contenido inválido'),
-], newsController.createNews);
 
-router.put('/edit_news',
+// Crear noticia - solo ADMIN
+router.post('/',
     validateToken,
     checkRole(['admin']),
     [
-    body('email').isEmail().withMessage('Email inválido'),
-    body('titulo').isString().withMessage('Titulo inválido'),
-    body('nuevoTitulo').isString().withMessage('Titulo inválido'),
-    body('contenido').isString().withMessage('Contenido inválido'),
-], newsController.updateNews);
+        body('email').isEmail().withMessage('Email inválido'),
+        body('titulo').isString().withMessage('Titulo inválido'),
+        body('contenido').isString().withMessage('Contenido inválido'),
+    ],
+    newsController.createNews);
 
-router.delete( '/delete_news',
+// Actualizar noticia - solo ADMIN
+router.put('/',
     validateToken,
     checkRole(['admin']),
     [
-    body('email').isEmail().withMessage('Email inválido'),
-    body('titulo').isString().withMessage('Titulo inválido'),
-], newsController.deleteNews);
+        body('email').isEmail().withMessage('Email inválido'),
+        body('titulo').isString().withMessage('Titulo inválido'),
+        body('nuevoTitulo').isString().withMessage('Titulo inválido'),
+        body('contenido').isString().withMessage('Contenido inválido'),
+    ],
+    newsController.updateNews);
+
+// Eliminar noticia - solo ADMIN
+router.delete('/',
+    validateToken,
+    checkRole(['admin']),
+    [
+        body('email').isEmail().withMessage('Email inválido'),
+        body('titulo').isString().withMessage('Titulo inválido'),
+    ],
+    newsController.deleteNews);
 
 export default router;

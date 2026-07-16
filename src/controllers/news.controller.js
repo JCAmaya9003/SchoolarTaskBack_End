@@ -1,118 +1,86 @@
 import * as newsService from '../services/news.service.js'
 import { validationResult } from 'express-validator';
+import { sendSuccess } from '../utils/apiResponse.js';
 
-export const createNews = async (req, res) =>{
+const formatNewsResponse = (news) => ({
+    id: news._id,
+    titulo: news.titulo,
+    contenido: news.contenido,
+    autor: {
+        nombre: news.usuario.nombre,
+        apellido: news.usuario.apellido,
+        email: news.usuario.email,
+    },
+    createdAt: news.createdAt,
+    updatedAt: news.updatedAt,
+});
+
+export const createNews = async (req, res) => {
     const errors = validationResult(req);
-  
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
     }
     const { email, titulo, contenido } = req.body;
     try {
         const createdNews = await newsService.createNews({ email, titulo, contenido });
-
-        if(createdNews){
-            return res.status(200).json({
-                message: 'Noticia creada con éxito',
-                Nombre: createdNews.usuario.nombre,
-                Apellido: createdNews.usuario.apellido,
-                Email: createdNews.usuario.email,
-                Titulo: createdNews.titulo,
-                Contenido: createdNews.contenido
-            });
-        }else{
-            return res.status(409).json({ message: 'Datos Invalidos para crear la noticia' });
-        }
-        
+        return sendSuccess(res, 201, 'Noticia creada con éxito', formatNewsResponse(createdNews));
     } catch (error) {
         res.status(500).json({ message: 'Error al crear noticia', error: error.message });
     }
 };
 
-export const updateNews = async (req, res)=>{
-    const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-          return res.status(400).json({message: "Error al intentar editar la noticia!", errors: errors.array() });
-      }
-  
-      try {
-
-          const { email, titulo, nuevoTitulo, contenido } = req.body;
-
-          const updatedNews = await newsService.editNews({email, titulo, nuevoTitulo,  contenido} );
-          if (updatedNews) {
-            return res.status(200).json({
-              message: 'Noticia editada con éxito',
-                Nombre: updatedNews.usuario.nombre,
-                Apellido: updatedNews.usuario.apellido,
-                Email: updatedNews.usuario.email,
-                Titulo: updatedNews.titulo,
-                Contenido: updatedNews.contenido
-            });
-          }else{
-            return res.status(404).json({ message: 'El usuario y/o noticia especificado no existe' });
-          }
-
-      } catch (e) {
-        res.status(500).json({ message: 'Error al editar la noticia.', error: e.message });
-      }
-  };
-
-  export const deleteNews = async (req, res) =>{
-    const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-          return res.status(400).json({message: "Error al intentar eliminar la noticia!", errors: errors.array() });
-      }
-      try{
-          const {email, titulo} = req.body;
-          if(email && titulo){
-            const erasedNews = await newsService.eraseNews({email, titulo});
-            if(erasedNews){
-              return res.status(200).json({
-                message: 'Noticia eliminada con éxito',
-                Nombre: erasedNews.usuario.nombre,
-                Apellido: erasedNews.usuario.apellido,
-                Email: erasedNews.usuario.email,
-                Titulo: erasedNews.titulo,
-                Contenido: erasedNews.contenido
-            });
-            }else{
-              return res.status(404).json({ message: 'El usuario y/o noticia especificado no existe' });
-            }
-          }else{
-            return res.status(400).json({ message: 'El email del usuario y titulo de la noticia es obligatorio.' });
-          }
-
-      }catch(e){
-          res.status(500).json({ message: 'Error al eliminar la noticia.', error: e.message });
-      }
-  };
-
-  export const getAllNews = async (req, res) =>{
+export const updateNews = async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json({message: "Error al intentar mostrar las noticias!", errors: errors.array() });
+        return res.status(400).json({ errors: errors.array() });
     }
     try {
-          const { page, limit } = req.query;
-          const result = await newsService.getNews(page, limit);
-          res.json(result);
-    } catch (e) {
-      res.status(500).json({ message: 'Error al mostrar las noticias', error: e.message });
+        const { email, titulo, nuevoTitulo, contenido } = req.body;
+        const updatedNews = await newsService.editNews({ email, titulo, nuevoTitulo, contenido });
+        return sendSuccess(res, 200, 'Noticia editada con éxito', formatNewsResponse(updatedNews));
+    } catch (error) {
+        res.status(500).json({ message: 'Error al editar la noticia.', error: error.message });
     }
-  };
+};
 
-  export const getAllNewsFromUser = async (req, res)=>{
+export const deleteNews = async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json({message: "Error al intentar mostrar las noticias!", errors: errors.array() });
+        return res.status(400).json({ errors: errors.array() });
     }
     try {
-            const {email} = req.body;
-
-            const filteredNews = await newsService.getNewsByUser(email);
-            res.json(filteredNews);
-    } catch (e) {
-      res.status(500).json({ message: 'Error al mostrar las noticias', error: e.message });
+        const { email, titulo } = req.body;
+        const erasedNews = await newsService.eraseNews({ email, titulo });
+        return sendSuccess(res, 200, 'Noticia eliminada con éxito', formatNewsResponse(erasedNews));
+    } catch (error) {
+        res.status(500).json({ message: 'Error al eliminar la noticia.', error: error.message });
     }
-  }
+};
+
+export const getAllNews = async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+    try {
+        const { page, limit } = req.query;
+        const { data, pagination } = await newsService.getNews(page, limit);
+        return sendSuccess(res, 200, 'Noticias obtenidas con éxito', { items: data.map(formatNewsResponse), pagination });
+    } catch (error) {
+        res.status(500).json({ message: 'Error al mostrar las noticias', error: error.message });
+    }
+};
+
+export const getAllNewsFromUser = async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+    try {
+        const { email } = req.query;
+        const filteredNews = await newsService.getNewsByUser(email);
+        return sendSuccess(res, 200, 'Noticias obtenidas con éxito', filteredNews.map(formatNewsResponse));
+    } catch (error) {
+        res.status(500).json({ message: 'Error al mostrar las noticias', error: error.message });
+    }
+};
