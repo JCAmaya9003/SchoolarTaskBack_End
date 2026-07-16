@@ -39,14 +39,10 @@ export const erasePlace = async (lugar)=>{
     }
 };
 
+// Lookup helper usado por reservation.service.js: devuelve null (no throw) para no dejar
+// ramas muertas en quien la llama (mismo patrón que subjectService.searchSubjectByName).
 export const searchPlaceByName = async (lugar) =>{
-    const placeExists = await academic_placeRepository.findPlaceByName(lugar);
-
-    if(placeExists){
-        return placeExists;
-    }else{
-        throw new Error("Lugar inexistente");
-    }
+    return await academic_placeRepository.findPlaceByName(lugar);
 };
 
 export const getPlaces = async () =>{
