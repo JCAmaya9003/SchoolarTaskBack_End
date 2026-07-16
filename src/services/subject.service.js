@@ -1,4 +1,5 @@
 import * as subjectRepository from '../repositories/subject.repository.js'
+import { NotFoundError, ConflictError } from '../errors/errors.js';
 
 export const newSubject = async (nombre) =>{
     const subjectExists = await subjectRepository.findSubjectByName(nombre);
@@ -9,7 +10,7 @@ export const newSubject = async (nombre) =>{
         });
         return newSubject;
     }else{
-        throw new Error("Materia ya existente");
+        throw new ConflictError("La materia ya existe");
     }
 };
 
@@ -19,21 +20,16 @@ export const updateSubject= async (nombre, nuevoNombre) =>{
         const updatedSubject = await subjectRepository.updateSubjectById(subjectExists.id, {nombre: nuevoNombre});
         return updatedSubject;
     }else{
-        throw new Error("Materia inexistente");
+        throw new NotFoundError("La materia no existe");
     }
 };
 
 export const eraseSubject = async (nombre)=>{
     const subjectExists = await subjectRepository.findSubjectByName(nombre);
     if(subjectExists){
-        const deletedSubject = await subjectRepository.deleteSubjectById(subjectExists.id);
-        if(deletedSubject){
-            return deletedSubject;
-        }else{
-            throw new Error("Datos invalidos para eliminar la materia")
-        }
+        return await subjectRepository.deleteSubjectById(subjectExists.id);
     }else{
-        throw new Error("Materia inexistente");
+        throw new NotFoundError("La materia no existe");
     }
 };
 

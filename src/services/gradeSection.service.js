@@ -1,5 +1,6 @@
 import * as gradeSectionRepository from '../repositories/gradeSection.repository.js';
 import * as subjectService from '../services/subject.service.js';
+import { NotFoundError, ConflictError } from '../errors/errors.js';
 
 /**
  * Crear un nuevo grado y sección.
@@ -17,9 +18,9 @@ export const newGradeSection = async (grado, seccion, materias = []) => {
             const subject = await subjectService.searchSubjectByName(subjectName);
 
             if (subject) {
-                validSubjects.push(subject._id); 
+                validSubjects.push(subject._id);
             } else {
-                throw new Error(`Materia inválida: ${subjectName}`);
+                throw new NotFoundError(`Materia inválida: ${subjectName}`);
             }
         }
 
@@ -31,7 +32,7 @@ export const newGradeSection = async (grado, seccion, materias = []) => {
 
         return newGradeSection;
     } else {
-        throw new Error("Grado y sección existentes");
+        throw new ConflictError("El grado y sección ya existe");
     }
 };
 
@@ -62,9 +63,9 @@ export const updateGradeAndSectionById = async (grado, seccion, nuevoGrado, nuev
             const subject = await subjectService.searchSubjectByName(subjectName);
 
             if (subject) {
-                validSubjects.push(subject._id); 
+                validSubjects.push(subject._id);
             } else {
-                throw new Error(`Materia inválida: ${subjectName}`);
+                throw new NotFoundError(`Materia inválida: ${subjectName}`);
             }
         }
 
@@ -74,7 +75,7 @@ export const updateGradeAndSectionById = async (grado, seccion, nuevoGrado, nuev
             materias: validSubjects,
         });
     } else {
-        throw new Error("El grado y sección no existe");
+        throw new NotFoundError("El grado y sección no existe");
     }
 };
 
@@ -89,7 +90,7 @@ export const eraseGradeAndSectionById = async (grado, seccion) => {
     if (GradeSectionExists) {
         return await gradeSectionRepository.deleteGradeAndSectionById(GradeSectionExists.id);
     } else {
-        throw new Error("El grado y sección no existe");
+        throw new NotFoundError("El grado y sección no existe");
     }
 };
 
@@ -121,7 +122,7 @@ export const getAllGradeAndSection = async () => {
 export const addSubjectsToGradeSection = async (grado, seccion, materias = []) => {
     const gradeSection = await gradeSectionRepository.findGradeAndSection(grado, seccion);
     if (!gradeSection) {
-        throw new Error("El grado y sección no existe");
+        throw new NotFoundError("El grado y sección no existe");
     }
     const validSubjects = [];
         for (const subjectName of materias) {
@@ -129,7 +130,7 @@ export const addSubjectsToGradeSection = async (grado, seccion, materias = []) =
             if (subject) {
                 validSubjects.push(subject._id);
             } else {
-                throw new Error(`Materia inválida: ${subjectName}`);
+                throw new NotFoundError(`Materia inválida: ${subjectName}`);
             }
         }
 
@@ -146,7 +147,7 @@ export const addSubjectsToGradeSection = async (grado, seccion, materias = []) =
 export const removeSubjectsFromGradeSection = async (grado, seccion, materias = []) => {
     const gradeSection = await gradeSectionRepository.findGradeAndSection(grado, seccion);
     if (!gradeSection) {
-        throw new Error("El grado y sección no existe");
+        throw new NotFoundError("El grado y sección no existe");
     }
     const validSubjects = [];
         for (const subjectName of materias) {
@@ -154,18 +155,16 @@ export const removeSubjectsFromGradeSection = async (grado, seccion, materias = 
             if (subject) {
                 validSubjects.push(subject._id);
             } else {
-                throw new Error(`Materia inválida: ${subjectName}`);
+                throw new NotFoundError(`Materia inválida: ${subjectName}`);
             }
         }
 
     return await gradeSectionRepository.removeSubjectsFromGradeSection(gradeSection.id, validSubjects);
 };
 
+// Devuelve [] (no throw) si la materia no está asignada a ningún grado/sección todavía:
+// es un estado válido (ej. materia recién creada), no un error.
 export const getGradeSectionsBySubject = async (subjectId) => {
-    const gradeSections = await gradeSectionRepository.findGradeSectionsBySubject(subjectId);
-    if (!gradeSections || gradeSections.length === 0) {
-        throw new Error("No se encontraron grados y secciones para la materia especificada");
-    }
-    return gradeSections;
+    return await gradeSectionRepository.findGradeSectionsBySubject(subjectId);
 };
 

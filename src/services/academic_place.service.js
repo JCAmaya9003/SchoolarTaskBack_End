@@ -1,4 +1,5 @@
 import * as academic_placeRepository from '../repositories/academic_place.repository.js'
+import { NotFoundError, ConflictError } from '../errors/errors.js';
 
 export const newPlace = async (lugar) =>{
     const placeExists = await academic_placeRepository.findPlaceByName(lugar);
@@ -9,10 +10,10 @@ export const newPlace = async (lugar) =>{
         });
         return newPlace;
     }else{
-        throw new Error("Lugar ya existente");
+        throw new ConflictError("El lugar ya existe");
     }
 };
-    
+
 
 export const updatePlace= async (lugar, nuevoLugar) =>{
     const placeExists = await academic_placeRepository.findPlaceByName(lugar);
@@ -20,7 +21,7 @@ export const updatePlace= async (lugar, nuevoLugar) =>{
         const updatedPlace = await academic_placeRepository.updatePlaceById(placeExists.id, {lugar: nuevoLugar});
         return updatedPlace;
     }else{
-        throw new Error("Lugar inexistente");
+        throw new NotFoundError("El lugar no existe");
     }
 };
 
@@ -28,14 +29,9 @@ export const erasePlace = async (lugar)=>{
     const placeExists = await academic_placeRepository.findPlaceByName(lugar);
 
     if(placeExists){
-        const deletedPlace = await academic_placeRepository.deletePlaceById(placeExists.id);
-        if(deletedPlace){
-            return deletedPlace;
-        }else{
-            throw new Error("Datos invalidos para eliminar el lugar");
-        }
+        return await academic_placeRepository.deletePlaceById(placeExists.id);
     }else{
-        throw new Error("Lugar inexistente");
+        throw new NotFoundError("El lugar no existe");
     }
 };
 
@@ -54,6 +50,6 @@ export const getPlaceById = async(id) =>{
     if(place){
         return place;
     }else{
-        throw new Error("No existe el lugar");
+        throw new NotFoundError("No existe el lugar");
     }
 }
