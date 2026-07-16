@@ -62,7 +62,7 @@ export const updateReservation = async ({ lugar, nuevoLugar, usuarioEmail, descr
         throw new NotFoundError(`No se encontró una reserva en el lugar '${lugar}' para el usuario con email '${usuarioEmail}'`);
     }
 
-    const reservasEnFechas = await reservationRepository.findReservationsByTimeRange(nueva_fecha_inicio, nueva_fecha_fin, lugarNuevo.id);
+    const reservasEnFechas = await reservationRepository.findReservationsByTimeRange(nueva_fecha_inicio, nueva_fecha_fin, lugarNuevo.id, reservaExistente.id);
     if (reservasEnFechas.length > 0) {
         throw new ConflictError(`El lugar '${nuevoLugar}' ya está reservado en las fechas especificadas.`);
     }

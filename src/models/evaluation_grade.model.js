@@ -15,6 +15,8 @@ const Evaluation_gradeSchema = new mongoose.Schema({
     calificacion: {
       type: Number,
       required: true,
+      min: 0,
+      max: 10,
     },
 
   }, {

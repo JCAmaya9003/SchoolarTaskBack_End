@@ -4,6 +4,7 @@ const Academic_placeSchema = new mongoose.Schema({
     lugar: {
       type: String,
       required: true,
+      unique: true,
       trim: true,
     }
   }, {

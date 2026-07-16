@@ -20,7 +20,7 @@ router.post(
         body('email').isEmail().withMessage('Email inválido'),
         body('password').isLength({ min: 6 }).withMessage('La contraseña debe tener al menos 6 caracteres'),
         body('rolNombre').isString().withMessage('Rol Invalido!'),
-        body('genero').isString().matches(/^[A-Za-z\s]+$/).withMessage('Nombre Invalido! Generos validos: "Masculino" y "Femenino"'),
+        body('genero').isString().matches(/^(Masculino|Femenino)$/).withMessage('Género inválido. Valores aceptados: Masculino, Femenino.'),
         body('domicilio').isString().withMessage('Domicilio Incorrecto'),
         body('nacionalidad').isString().withMessage('Nacionalidad Incorrecto'),
         

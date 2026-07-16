@@ -11,11 +11,13 @@ const ParentSchema = new mongoose.Schema({
       required: true,
       unique: true,
       trim: true,
+      match: /^\+?[1-9]\d{1,14}$/,
     },
     telefono_trabajo: {
       type: String,
       required: true,
       trim: true,
+      match: /^\+?[1-9]\d{1,14}$/,
     },
     lugar_trabajo: {
       type: String,

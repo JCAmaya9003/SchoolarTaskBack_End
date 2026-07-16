@@ -11,6 +11,7 @@ const GradeSectionSchema = new mongoose.Schema({
       required: true,
       trim: true,
       uppercase: true,
+      match: /^[A-Z]$/,
   },
   materias:
     [

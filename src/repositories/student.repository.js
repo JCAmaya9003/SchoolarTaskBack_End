@@ -192,7 +192,15 @@ export const findStudentByUserId = async (userId) => {
             },
             {
                 path: 'padre',
-                select: 'telefono telefono_trabajo lugar_trabajo profesion domicilio nacionalidad',
+                select: 'usuario telefono telefono_trabajo lugar_trabajo profesion domicilio nacionalidad',
+                populate: {
+                    path: 'usuario',
+                    select: 'nombre apellido email genero domicilio nacionalidad fecha_nacimiento rol',
+                    populate: {
+                        path: 'rol',
+                        select: 'nombre'
+                    }
+                }
             },
             {
                 path: 'grado_seccion',

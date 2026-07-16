@@ -97,6 +97,19 @@ describe('PUT /api/academic_places (admin)', () => {
 
     expect(res.status).toBe(404);
   });
+
+  it('debe fallar si se renombra a un nombre ya existente - 409 (regresión: lugar no tenía unique en el modelo, permitía duplicados)', async () => {
+    const cookie = await loginAsAdmin();
+    await request.post('/api/academic_places').set('Cookie', cookie).send({ lugar: 'Biblioteca' });
+    await request.post('/api/academic_places').set('Cookie', cookie).send({ lugar: 'Gimnasio' });
+
+    const res = await request
+      .put('/api/academic_places')
+      .set('Cookie', cookie)
+      .send({ lugar: 'Gimnasio', nuevoLugar: 'Biblioteca' });
+
+    expect(res.status).toBe(409);
+  });
 });
 
 describe('POST /api/academic_places/get-name', () => {

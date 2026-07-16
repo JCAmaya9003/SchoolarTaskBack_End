@@ -55,7 +55,7 @@ export const checkRole = (allowedRoles) => {
       next();
     } catch (error) {
       logger.error('Error verificando rol:', { error: error.message });
-      return res.status(500).json({ message: 'Error al verificar permisos' });
+      return next(error);
     }
   };
 };
