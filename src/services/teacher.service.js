@@ -4,6 +4,7 @@ import * as subjectService from '../services/subject.service.js';
 import * as userService from '../services/user-service.js';
 import { hardDeleteUserById } from '../repositories/user-repository.js';
 import logger from '../config/logger.js';
+import { NotFoundError } from '../errors/errors.js';
 
 /**
  * Obtener todos los profesores.
@@ -178,6 +179,9 @@ export const getTeacherByUserIdAndEmail = async (email) => {
  */
 export const deleteWithId = async ({ id }) => {
     const deleted = await teacherRepository.deleteTeacherById(id);
+    if (!deleted) {
+        throw new NotFoundError("No se encontró un profesor con ese id");
+    }
     return deleted;
 };
 

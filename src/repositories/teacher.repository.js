@@ -134,6 +134,18 @@ export const deleteTeacherByUserId = async (id) => {
  * @returns {Promise<Object|null>} - Profesor eliminado o null.
  */
 export const deleteTeacherById = async (id) => {
-    return await Teacher.findByIdAndDelete(id);
+    return await Teacher.findByIdAndDelete(id)
+        .populate({
+            path: 'usuario',
+            select: 'nombre apellido email',
+        })
+        .populate({
+            path: 'grado_encargado.materias',
+            select: 'nombre',
+        })
+        .populate({
+            path: 'grado_encargado.grado_secciones',
+            select: 'grado seccion',
+        });
 };
 

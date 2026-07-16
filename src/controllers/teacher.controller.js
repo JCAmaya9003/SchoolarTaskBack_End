@@ -4,6 +4,18 @@ import * as studentService from '../services/student.service.js'
 import * as evaluationService from '../services/evaluation.service.js'
 import * as evaluationGradeService from '../services/evaluation_grade.service.js'
 import { validationResult } from 'express-validator';
+import { sendSuccess } from '../utils/apiResponse.js';
+
+// Forma consistente para exponer un profesor en las respuestas
+const formatTeacherResponse = (teacher) => ({
+    id: teacher._id,
+    nombre: teacher.usuario.nombre,
+    apellido: teacher.usuario.apellido,
+    email: teacher.usuario.email,
+    telefono: teacher.telefono,
+    especialidad: teacher.especialidad,
+    grado_encargado: teacher.grado_encargado,
+});
 
 /**
  * Obtener todos los profesores.
@@ -135,6 +147,27 @@ export const deleteTeacher = async (req, res) => {
         }
     } catch (error) {
         return res.status(500).json({ message: 'Error al eliminar el profesor', error: error.message });
+    }
+};
+
+/**
+ * Eliminar un profesor por ID.
+ * @param {Object} req - Solicitud HTTP.
+ * @param {Object} res - Respuesta HTTP.
+ */
+export const deleteById = async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { id } = req.body;
+
+    try {
+        const deleted = await teacherService.deleteWithId({ id });
+        return sendSuccess(res, 200, 'Profesor eliminado con éxito', formatTeacherResponse(deleted));
+    } catch (error) {
+        next(error);
     }
 };
 
