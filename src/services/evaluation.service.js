@@ -1,5 +1,7 @@
 import * as evaluationRepository from '../repositories/evaluation.repository.js'
 import * as subjectService from '../services/subject.service.js'
+import * as teacherService from '../services/teacher.service.js'
+import { NotFoundError, ConflictError } from '../errors/errors.js';
 
 export const createEvaluation = async ({nombre, nombreMateria, descripcion, fecha, peso}) =>{
     const materia = await subjectService.searchSubjectByName(nombreMateria);
@@ -16,10 +18,10 @@ export const createEvaluation = async ({nombre, nombreMateria, descripcion, fech
               });
             return newEvaluation;
         }else{
-            throw new Error("Evaluacion existente");
+            throw new ConflictError("La evaluación ya existe");
         }
     }else{
-        throw new Error("Materia existente");
+        throw new NotFoundError("La materia no existe");
     };
 };
 
@@ -45,15 +47,15 @@ export const editEvaluation = async ({nombre, nuevoNombre, nombreMateria, nuevaM
                 });
                 return updatedEvaluation;
             }else{
-                throw new Error("Evaluacion inexistente");
+                throw new NotFoundError("La evaluación no existe");
             }
         }else{
-            throw new Error("La nueva materia ingresada no existe");
+            throw new NotFoundError("La nueva materia ingresada no existe");
         }
     }else{
-        throw new Error("La materia original ingresada no existe");
+        throw new NotFoundError("La materia original ingresada no existe");
     };
-    
+
 }
 
 export const deleteEvaluation = async ({nombre, nombreMateria}) =>{
@@ -64,27 +66,40 @@ export const deleteEvaluation = async ({nombre, nombreMateria}) =>{
             const deletedEvaluation = await evaluationRepository.deleteEvaluationById(evaluacionExiste.id);
             return deletedEvaluation;
         }else{
-            throw new Error("La evaluacion no existe");
+            throw new NotFoundError("La evaluación no existe");
         }
     }else{
-        throw new Error("La materia no existe");
+        throw new NotFoundError("La materia no existe");
     };
 };
 
+// Lookup helper usado por evaluation_grade.service.js: devuelve null (no throw) para no dejar
+// ramas muertas en quien la llama (mismo patrón que subjectService.searchSubjectByName).
 export const searchEvaluationbyNameAndSubject = async (nombre, nombreMateria) =>{
     const materia = await subjectService.searchSubjectByName(nombreMateria);
-    if(materia){
-        const evaluacionExiste = await evaluationRepository.findEvaluationByNameAndSubject(materia, nombre);
-        if(evaluacionExiste){
-            return evaluacionExiste;
-        }else{
-            throw new Error("La evaluacion no existe");
-        };
-    }else{
-        throw new Error("La materia no existe");
-    };
+    if(!materia){
+        return null;
+    }
+    return await evaluationRepository.findEvaluationByNameAndSubject(materia, nombre);
 };
 
-export const getAllEvaluations = async (page, limit) =>{
-    return await evaluationRepository.findAllEvaluations(page, limit);
+// Si requestingUser es teacher, filtra a solo las materias que dicta (admin ve todo).
+export const getAllEvaluations = async (page, limit, requestingUser) =>{
+    let subjectIds = null;
+    if (requestingUser?.role === 'teacher') {
+        subjectIds = await getTeacherSubjectIds(requestingUser.email);
+    }
+    return await evaluationRepository.findAllEvaluations(page, limit, subjectIds);
 }
+
+export const getTeacherSubjectIds = async (email) => {
+    try {
+        const subjects = await teacherService.getSubjectsByTeacherEmail(email);
+        return subjects.map((subject) => subject._id);
+    } catch (error) {
+        if (error instanceof NotFoundError) {
+            return [];
+        }
+        throw error;
+    }
+};

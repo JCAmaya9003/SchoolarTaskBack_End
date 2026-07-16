@@ -1,140 +1,71 @@
 import { validationResult } from 'express-validator';
 import * as evaluationService from '../services/evaluation.service.js'
+import { sendSuccess } from '../utils/apiResponse.js';
 
-export const newEvaluation = async (req, res) =>{
+const formatEvaluationResponse = (evaluation) => ({
+    id: evaluation._id,
+    nombre: evaluation.nombre,
+    materia: evaluation.materia.nombre,
+    descripcion: evaluation.descripcion,
+    fecha: evaluation.fecha,
+    peso: evaluation.peso,
+});
+
+export const newEvaluation = async (req, res, next) => {
     const errors = validationResult(req);
-  
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-
-  const { nombre, nombreMateria, descripcion, fecha, peso } = req.body;
-  try {
-    const evaluation = await evaluationService.createEvaluation({nombre, nombreMateria, descripcion, fecha, peso });
-    
-    if (evaluation) {
-      
-
-      return res.json({
-        message: 'Evaluacion creada con exito',
-        evaluationNombre: evaluation.nombre,
-        evaluationMateria: evaluation.materia.nombre,
-        evaluationDescripcion: evaluation.descripcion,
-        evaluationFecha: evaluation.fecha,
-        evaluationPeso: evaluation.peso,
-        });
-    }else{
-      return res.status(401).json({ message: 'Datos invalidos para crear la evaluacion!' });
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
     }
 
-  } catch (error) {
-    res.status(500).json({ message: 'Error al crear la evaluacion: ', error: error.message });
-  }
+    const { nombre, nombreMateria, descripcion, fecha, peso } = req.body;
+    try {
+        const evaluation = await evaluationService.createEvaluation({ nombre, nombreMateria, descripcion, fecha, peso });
+        return sendSuccess(res, 201, 'Evaluación creada con éxito', formatEvaluationResponse(evaluation));
+    } catch (error) {
+        next(error);
+    }
 };
 
-export const updateEvaluation = async (req, res) =>{
+export const updateEvaluation = async (req, res, next) => {
     const errors = validationResult(req);
-  
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-
-  const { nombre, nuevoNombre, nombreMateria, nuevaMateria, descripcion, fecha, peso } = req.body;
-  try {
-    const evaluationUpdated = await evaluationService.editEvaluation({nombre, nuevoNombre, nombreMateria, nuevaMateria, descripcion, fecha, peso });
-    
-    if (evaluationUpdated) {
-      
-      return res.json({
-        message: 'Evaluacion editada con exito',
-        evaluationNombre: evaluationUpdated.nombre,
-        evaluationMateria: evaluationUpdated.materia.nombre,
-        evaluationDescripcion: evaluationUpdated.descripcion,
-        evaluationFecha: evaluationUpdated.fecha,
-        evaluationPeso: evaluationUpdated.peso,
-        });
-    }else{
-      return res.status(401).json({ message: 'Datos invalidos para editar la evaluacion!' });
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
     }
 
-  } catch (error) {
-    res.status(500).json({ message: 'Error al editar la evaluacion: ', error: error.message });
-  }
+    const { nombre, nuevoNombre, nombreMateria, nuevaMateria, descripcion, fecha, peso } = req.body;
+    try {
+        const evaluationUpdated = await evaluationService.editEvaluation({ nombre, nuevoNombre, nombreMateria, nuevaMateria, descripcion, fecha, peso });
+        return sendSuccess(res, 200, 'Evaluación editada con éxito', formatEvaluationResponse(evaluationUpdated));
+    } catch (error) {
+        next(error);
+    }
 };
 
-export const eraseEvaluation = async (req, res) =>{
+export const eraseEvaluation = async (req, res, next) => {
     const errors = validationResult(req);
-  
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-
-  const { nombre, nombreMateria} = req.body;
-  try {
-    const evaluationDeleted = await evaluationService.deleteEvaluation({nombre, nombreMateria});
-    
-    if (evaluationDeleted) {
-
-      return res.json({
-        message: 'Evaluacion eliminada con exito',
-        evaluationNombre: evaluationDeleted.nombre,
-        evaluationMateria: evaluationDeleted.materia.nombre,
-        evaluationDescripcion: evaluationDeleted.descripcion,
-        evaluationFecha: evaluationDeleted.fecha,
-        evaluationPeso: evaluationDeleted.peso,
-        });
-    }else{
-      return res.status(401).json({ message: 'Datos invalidos para borrar la evaluacion!' });
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
     }
 
-  } catch (error) {
-    res.status(500).json({ message: 'Error al borrar la evaluacion: ', error: error.message });
-  }
-};
-
-export const searchEvaluationByNameAndSubject = async (req, res) =>{
-    const errors = validationResult(req);
-  
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-
-  const { nombre, nombreMateria} = req.body;
-  try {
-    const evaluation = await evaluationService.searchEvaluationbyNameAndSubject(nombre, nombreMateria);
-    
-    if (evaluation) {
-
-      return res.json({
-        message: 'Evaluacion encontrada con exito',
-        evaluationNombre: evaluation.nombre,
-        evaluationMateria: evaluation.materia.nombre,
-        evaluationDescripcion: evaluation.descripcion,
-        evaluationFecha: evaluation.fecha,
-        evaluationPeso: evaluation.peso,
-        });
-    }else{
-      return res.status(401).json({ message: 'Datos invalidos para obtener la evaluacion!' });
+    const { nombre, nombreMateria } = req.body;
+    try {
+        const evaluationDeleted = await evaluationService.deleteEvaluation({ nombre, nombreMateria });
+        return sendSuccess(res, 200, 'Evaluación eliminada con éxito', formatEvaluationResponse(evaluationDeleted));
+    } catch (error) {
+        next(error);
     }
-
-  } catch (error) {
-    res.status(500).json({ message: 'Error al obtener la evaluacion: ', error: error.message });
-  }
 };
 
-export const getEvaluations = async (req, res) =>{
+export const getEvaluations = async (req, res, next) => {
     const errors = validationResult(req);
-
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-  try {
-    const { page, limit } = req.query;
-    const result = await evaluationService.getAllEvaluations(page, limit);
-
-    res.json(result);
-
-  } catch (error) {
-    res.status(500).json({ message: 'Error al obtener las evaluaciones: ', error: error.message });
-  }
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+    try {
+        const { page, limit } = req.query;
+        const { data, pagination } = await evaluationService.getAllEvaluations(page, limit, req.user);
+        return sendSuccess(res, 200, 'Evaluaciones obtenidas con éxito', { items: data.map(formatEvaluationResponse), pagination });
+    } catch (error) {
+        next(error);
+    }
 };

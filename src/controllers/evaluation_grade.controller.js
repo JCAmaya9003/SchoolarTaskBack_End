@@ -1,6 +1,21 @@
 import * as evaluationGradeService from '../services/evaluation_grade.service.js';
+import { sendSuccess } from '../utils/apiResponse.js';
 
-export const createEvaluationGrade = async (req, res) => {
+const formatEvaluationGradeResponse = (grade) => ({
+    id: grade._id,
+    calificacion: grade.calificacion,
+    estudiante: {
+        nombre: grade.estudiante.usuario.nombre,
+        apellido: grade.estudiante.usuario.apellido,
+        email: grade.estudiante.usuario.email,
+    },
+    evaluacion: {
+        nombre: grade.evaluacion.nombre,
+        fecha: grade.evaluacion.fecha,
+    },
+});
+
+export const createEvaluationGrade = async (req, res, next) => {
     try {
         const { email, nombreMateria, nombreEvaluacion, calificacion } = req.body;
 
@@ -11,101 +26,58 @@ export const createEvaluationGrade = async (req, res) => {
             calificacion,
         });
 
-        return res.status(201).json({
-            message: 'Calificación creada con éxito',
-            data: createdGrade,
-        });
+        return sendSuccess(res, 201, 'Calificación creada con éxito', formatEvaluationGradeResponse(createdGrade));
     } catch (error) {
-        return res.status(500).json({
-            message: 'Error al crear la calificación',
-            error: error.message,
-        });
+        next(error);
     }
 };
 
-
-export const getAllEvaluationGrades = async (req, res) => {
+export const getAllEvaluationGrades = async (req, res, next) => {
     try {
-        const grades = await evaluationGradeService.getAllEvaluationGrades();
-        return res.status(200).json(grades);
+        const { page, limit } = req.query;
+        const { data, pagination } = await evaluationGradeService.getAllEvaluationGrades(page, limit, req.user);
+        return sendSuccess(res, 200, 'Calificaciones obtenidas con éxito', { items: data.map(formatEvaluationGradeResponse), pagination });
     } catch (error) {
-        return res.status(500).json({
-            message: 'Error al obtener las calificaciones',
-            error: error.message,
-        });
+        next(error);
     }
 };
 
-export const getEvaluationGradesByStudent = async (req, res) => {
+export const getEvaluationGradesByStudent = async (req, res, next) => {
     try {
         const { email } = req.query;
         const grades = await evaluationGradeService.getEvaluationGradesByStudent(email);
-
-        return res.status(200).json(grades);
+        return sendSuccess(res, 200, 'Calificaciones obtenidas con éxito', grades.map(formatEvaluationGradeResponse));
     } catch (error) {
-        return res.status(500).json({
-            message: 'Error al obtener las calificaciones del estudiante',
-            error: error.message,
-        });
+        next(error);
     }
 };
 
-
-export const getEvaluationGradesByEvaluation = async (req, res) => {
+export const getEvaluationGradesByEvaluation = async (req, res, next) => {
     try {
-        const { nombreEvaluacion, nombreMateria } = req.query;
-        const grades = await evaluationGradeService.getEvaluationGradesByEvaluation(nombreEvaluacion, nombreMateria);
-
-        return res.status(200).json(grades);
+        const { nombre, nombreMateria } = req.query;
+        const grades = await evaluationGradeService.getEvaluationGradesByEvaluation(nombre, nombreMateria);
+        return sendSuccess(res, 200, 'Calificaciones obtenidas con éxito', grades.map(formatEvaluationGradeResponse));
     } catch (error) {
-        return res.status(500).json({
-            message: 'Error al obtener las calificaciones de la evaluación',
-            error: error.message,
-        });
+        next(error);
     }
 };
 
-
-export const updateEvaluationGradeById = async (req, res) => {
+export const updateEvaluationGradeById = async (req, res, next) => {
     try {
         const { email, nombreMateria, nombreEvaluacion, calificacion } = req.body;
-        const updatedGrade = await evaluationGradeService.updateEvaluationGradeByStudentAndEvaluation( {email, nombreMateria, nombreEvaluacion, calificacion});
-
-        if (!updatedGrade) {
-            return res.status(404).json({ message: 'Calificación no encontrada' });
-        }
-
-        return res.status(200).json({
-            message: 'Calificación actualizada con éxito',
-            data: updatedGrade,
-        });
+        const updatedGrade = await evaluationGradeService.updateEvaluationGradeByStudentAndEvaluation({ email, nombreMateria, nombreEvaluacion, calificacion });
+        return sendSuccess(res, 200, 'Calificación actualizada con éxito', formatEvaluationGradeResponse(updatedGrade));
     } catch (error) {
-        return res.status(500).json({
-            message: 'Error al actualizar la calificación',
-            error: error.message,
-        });
+        next(error);
     }
 };
 
-
-export const deleteEvaluationGradeById = async (req, res) => {
+export const deleteEvaluationGradeById = async (req, res, next) => {
     try {
         const { email, nombreMateria, nombreEvaluacion } = req.body;
-
         const deletedGrade = await evaluationGradeService.deleteEvaluationGradeById(email, nombreMateria, nombreEvaluacion);
-
-        if (!deletedGrade) {
-            return res.status(404).json({ message: 'Calificación no encontrada' });
-        }
-
-        return res.status(200).json({
-            message: 'Calificación eliminada con éxito',
-            data: deletedGrade,
-        });
+        return sendSuccess(res, 200, 'Calificación eliminada con éxito', formatEvaluationGradeResponse(deletedGrade));
     } catch (error) {
-        return res.status(500).json({
-            message: 'Error al eliminar la calificación',
-            error: error.message,
-        });
+        next(error);
     }
 };
