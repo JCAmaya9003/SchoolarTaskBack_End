@@ -20,7 +20,7 @@ const formatParentResponse = (parent) => ({
     profesion: parent.profesion,
 });
 
-export const getAllParents = async (req, res) =>{
+export const getAllParents = async (req, res, next) =>{
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({message: "Error al intentar mostrar los padres!", errors: errors.array() });
@@ -30,11 +30,11 @@ export const getAllParents = async (req, res) =>{
         const { data, pagination } = await parentService.getParents(page, limit);
         return sendSuccess(res, 200, 'Padres obtenidos con éxito', { items: data.map(formatParentResponse), pagination });
     } catch (e) {
-        res.status(500).json({ message: 'Error al mostrar los padres', error: e.message });
+        next(e);
     }
 }
 
-export const createParent = async (req, res) =>{
+export const createParent = async (req, res, next) =>{
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -52,11 +52,11 @@ export const createParent = async (req, res) =>{
 
         return sendSuccess(res, 201, 'Padre creado con éxito', formatParentResponse(newParent));
     }catch (error) {
-        res.status(500).json({ message: 'Error al crear el padre', error: error.message });
+        next(error);
     }
 }
 
-export const deleteParent = async (req, res) =>{
+export const deleteParent = async (req, res, next) =>{
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -68,11 +68,11 @@ export const deleteParent = async (req, res) =>{
 
         return sendSuccess(res, 200, 'Padre eliminado con éxito', formatParentResponse(parentDeleted));
     }catch (error) {
-        res.status(500).json({ message: 'Error al eliminar el padre', error: error.message });
+        next(error);
     }
 }
 
-export const updateParent = async (req, res) =>{
+export const updateParent = async (req, res, next) =>{
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -90,11 +90,11 @@ export const updateParent = async (req, res) =>{
         });
         return sendSuccess(res, 200, 'Padre editado con éxito', formatParentResponse(editedParent));
     }catch (error) {
-        res.status(500).json({ message: 'Error al editar el padre', error: error.message });
+        next(error);
     }
 };
 
-export const deleteById= async(req, res) =>{
+export const deleteById= async(req, res, next) =>{
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -105,6 +105,6 @@ export const deleteById= async(req, res) =>{
         const deleted = await parentService.deleteWithId({ id });
         return sendSuccess(res, 200, 'Padre eliminado con éxito', formatParentResponse(deleted));
     }catch (error) {
-        res.status(500).json({ message: 'Error al eliminar el padre', error: error.message });
+        next(error);
     }
 }
