@@ -236,6 +236,24 @@ describe('DELETE /api/students/id (admin)', () => {
     expect(res.status).toBe(200);
   });
 
+  it('debe devolver el padre con su usuario populado al eliminar por id - 200 (regresión: deleteStudentById no populaba padre.usuario)', async () => {
+    const cookie = await loginAsAdmin();
+    const createRes = await request
+      .post('/api/students')
+      .set('Cookie', cookie)
+      .send(buildStudent('est-delete-padre@test.com'));
+    const studentId = createRes.body.data.id;
+
+    const res = await request
+      .delete('/api/students/id')
+      .set('Cookie', cookie)
+      .send({ id: studentId });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.padre.usuario.nombre).toBe(parentUser.nombre);
+    expect(res.body.data.padre.usuario.email).toBe(parentUser.email);
+  });
+
   it('debe fallar si el id no existe - 404', async () => {
     const cookie = await loginAsAdmin();
 
@@ -305,5 +323,56 @@ describe('POST /api/students/get-all (con materias asignadas)', () => {
     expect(Array.isArray(res.body.data)).toBe(true);
     expect(res.body.data[0].materia).toBe('MateriaConNotas');
     expect(res.body.data[0].evaluaciones).toEqual([]);
+  });
+
+  it('debe devolver una nota de 0 como 0, no como null (regresión: gradesMap.get() || null colapsaba 0)', async () => {
+    const cookie = await loginAsAdmin();
+    await request.post('/api/subjects').set('Cookie', cookie).send({ nombre: 'MateriaConNotaCero' });
+    await request
+      .post('/api/gradeSections')
+      .set('Cookie', cookie)
+      .send({ grado: '9', seccion: 'Y', materias: ['MateriaConNotaCero'] });
+
+    const studentEmail = 'est-nota-cero@test.com';
+    await request.post('/api/students').set('Cookie', cookie).send({
+      nombre: 'Luis',
+      apellido: 'Estudiante',
+      email: studentEmail,
+      password: 'password123',
+      rolNombre: 'student',
+      fecha_nacimiento: '2011-01-01',
+      genero: 'Masculino',
+      domicilio: 'Casa 10',
+      nacionalidad: 'Venezolana',
+      email_padre: parentUser.email,
+      grado: '9',
+      seccion: 'Y',
+      alergias: 'Ninguna',
+      condiciones_medicas: 'Ninguna',
+      contacto_emergencia: { nombre: 'Pedro Padre', telefono: '+50312345678' },
+    });
+
+    await request.post('/api/evaluations').set('Cookie', cookie).send({
+      nombre: 'ExamenReprobado',
+      nombreMateria: 'MateriaConNotaCero',
+      descripcion: 'Examen final',
+      fecha: '2026-01-10',
+      peso: 1.0,
+    });
+
+    await request.post('/api/evaluation_grades').set('Cookie', cookie).send({
+      email: studentEmail,
+      nombreMateria: 'MateriaConNotaCero',
+      nombreEvaluacion: 'ExamenReprobado',
+      calificacion: 0,
+    });
+
+    const res = await request
+      .post('/api/students/get-all')
+      .set('Cookie', cookie)
+      .send({ email: studentEmail });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data[0].evaluaciones[0].nota).toBe(0);
   });
 });

@@ -179,7 +179,7 @@ export const getStudentGradesInfo = async (email) => {
 
         const evaluationData = subjectEvaluations.map(evaluation => ({
             evaluacion: evaluation.nombre,
-            nota: gradesMap.get(evaluation._id.toString()) || null,
+            nota: gradesMap.get(evaluation._id.toString()) ?? null,
             peso: evaluation.peso,
         }));
 
