@@ -2,6 +2,7 @@ import express from 'express';
 import { body, query } from 'express-validator';
 import * as reservationController from '../controllers/reservation.controller.js';
 import { validateToken, checkRole } from '../middlewares/auth-middleware.js';
+import { verifyResourceOwnerOrAdmin } from '../middlewares/authorization-middleware.js';
 
 const router = express.Router();
 
@@ -10,6 +11,7 @@ router.post(
     '/create',
     validateToken,
     checkRole(['admin', 'teacher']),
+    verifyResourceOwnerOrAdmin('body', 'usuarioEmail'),
     [
         body('lugar').isString().withMessage('El lugar debe ser una cadena válida.'),
         body('usuarioEmail').isEmail().withMessage('El email del profesor debe ser válido.'),
@@ -25,6 +27,7 @@ router.put(
     '/',
     validateToken,
     checkRole(['admin', 'teacher']),
+    verifyResourceOwnerOrAdmin('body', 'usuarioEmail'),
     [
         body('lugar').isString().withMessage('El lugar debe ser una cadena válida.'),
         body('nuevoLugar').isString().withMessage('El nuevo lugar debe ser una cadena válida.'),
@@ -41,6 +44,7 @@ router.delete(
     '/',
     validateToken,
     checkRole(['admin', 'teacher']),
+    verifyResourceOwnerOrAdmin('body', 'usuarioEmail'),
     [
         body('lugar').isString().withMessage('El lugar debe ser una cadena válida.'),
         body('usuarioEmail').isEmail().withMessage('El email del profesor debe ser válido.'),
@@ -48,7 +52,18 @@ router.delete(
     reservationController.deleteReservation
 );
 
-// Ruta para obtener todas las reservas
+// Ruta para eliminar una reserva por ID - solo ADMIN
+router.delete(
+    '/id',
+    validateToken,
+    checkRole(['admin']),
+    [
+        body('id').isString().withMessage('Id inválido'),
+    ],
+    reservationController.deleteReservationById
+);
+
+// Ruta para obtener todas las reservas paginadas
 router.get('/all', validateToken, checkRole(['admin', 'teacher']), reservationController.getAllReservations);
 
 // Ruta para obtener reservas en un rango de tiempo
@@ -68,6 +83,7 @@ router.get(
     '/by-teacher-and-place',
     validateToken,
     checkRole(['admin', 'teacher']),
+    verifyResourceOwnerOrAdmin('query', 'usuarioEmail'),
     [
         query('usuarioEmail').isEmail().withMessage('El email del profesor debe ser válido.'),
         query('lugar').isString().withMessage('El lugar debe ser una cadena válida.'),
@@ -80,6 +96,7 @@ router.get(
     '/by-teacher',
     validateToken,
     checkRole(['admin', 'teacher']),
+    verifyResourceOwnerOrAdmin('query', 'usuarioEmail'),
     [
         query('usuarioEmail').isEmail().withMessage('El email del profesor debe ser válido.'),
     ],

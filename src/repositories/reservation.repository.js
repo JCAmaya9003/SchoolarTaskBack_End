@@ -1,4 +1,5 @@
 import Reservation from '../models/reservation.model.js';
+import { getPaginationParams, getPaginationMeta } from '../utils/pagination-helper.js';
 
 /**
  * Crear una nueva reserva.
@@ -20,7 +21,7 @@ export const updateReservationById = async (id, updates) => {
     return await Reservation.findByIdAndUpdate(id, updates, { new: true, runValidators: true })
         .populate({
             path: 'lugar',
-            select: 'nombre ubicacion capacidad',
+            select: 'lugar',
         })
         .populate({
             path: 'usuario',
@@ -34,15 +35,7 @@ export const updateReservationById = async (id, updates) => {
  * @returns {Promise<Object|null>} - Reserva eliminada o null si no se encontró.
  */
 export const deleteReservationById = async (id) => {
-    return await Reservation.findByIdAndDelete(id);
-};
-
-/**
- * Buscar todas las reservas.
- * @returns {Promise<Array>} - Lista de reservas con detalles de lugar y usuario.
- */
-export const findAllReservations = async () => {
-    return await Reservation.find()
+    return await Reservation.findByIdAndDelete(id)
         .populate({
             path: 'lugar',
             select: 'lugar',
@@ -51,6 +44,34 @@ export const findAllReservations = async () => {
             path: 'usuario',
             select: 'nombre apellido email rol',
         });
+};
+
+/**
+ * Buscar todas las reservas, paginadas.
+ * @returns {Promise<{data: Array, pagination: Object}>}
+ */
+export const findAllReservations = async (page, limit) => {
+    const { skip, limit: validLimit, page: validPage } = getPaginationParams(page, limit);
+
+    const [reservations, total] = await Promise.all([
+        Reservation.find()
+            .skip(skip)
+            .limit(validLimit)
+            .populate({
+                path: 'lugar',
+                select: 'lugar',
+            })
+            .populate({
+                path: 'usuario',
+                select: 'nombre apellido email rol',
+            }),
+        Reservation.countDocuments(),
+    ]);
+
+    return {
+        data: reservations,
+        pagination: getPaginationMeta(validPage, validLimit, total),
+    };
 };
 
 

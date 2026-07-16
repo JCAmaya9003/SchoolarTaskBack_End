@@ -1,11 +1,23 @@
 import * as reservationService from '../services/reservation.service.js';
+import { sendSuccess } from '../utils/apiResponse.js';
+
+const formatReservationResponse = (reservation) => ({
+    id: reservation._id,
+    lugar: reservation.lugar.lugar,
+    descripcion: reservation.descripcion,
+    fecha_inicio: reservation.fecha_inicio,
+    fecha_fin: reservation.fecha_fin,
+    usuario: {
+        nombre: reservation.usuario.nombre,
+        apellido: reservation.usuario.apellido,
+        email: reservation.usuario.email,
+    },
+});
 
 /**
  * Crear una nueva reserva.
- * @param {Object} req - Objeto de la solicitud HTTP.
- * @param {Object} res - Objeto de la respuesta HTTP.
  */
-export const createReservation = async (req, res) => {
+export const createReservation = async (req, res, next) => {
     try {
         const { lugar, usuarioEmail, descripcion, fecha_inicio, fecha_fin } = req.body;
 
@@ -17,21 +29,16 @@ export const createReservation = async (req, res) => {
             fecha_fin,
         });
 
-        return res.status(201).json({
-            message: 'Reserva creada con éxito',
-            data: nuevaReserva,
-        });
+        return sendSuccess(res, 201, 'Reserva creada con éxito', formatReservationResponse(nuevaReserva));
     } catch (error) {
-        return res.status(500).json({ message: 'Error al crear la reserva', error: error.message });
+        next(error);
     }
 };
 
 /**
  * Actualizar una reserva.
- * @param {Object} req - Objeto de la solicitud HTTP.
- * @param {Object} res - Objeto de la respuesta HTTP.
  */
-export const updateReservation = async (req, res) => {
+export const updateReservation = async (req, res, next) => {
     try {
         const { lugar, nuevoLugar, usuarioEmail, descripcion, nueva_fecha_inicio, nueva_fecha_fin } = req.body;
 
@@ -44,24 +51,16 @@ export const updateReservation = async (req, res) => {
             nueva_fecha_fin,
         });
 
-        return res.status(200).json({
-            message: 'Reserva actualizada con éxito',
-            data: updatedReservation,
-        });
+        return sendSuccess(res, 200, 'Reserva actualizada con éxito', formatReservationResponse(updatedReservation));
     } catch (error) {
-        return res.status(500).json({
-            message: 'Error al actualizar la reserva',
-            error: error.message,
-        });
+        next(error);
     }
 };
 
 /**
  * Eliminar una reserva.
- * @param {Object} req - Objeto de la solicitud HTTP.
- * @param {Object} res - Objeto de la respuesta HTTP.
  */
-export const deleteReservation = async (req, res) => {
+export const deleteReservation = async (req, res, next) => {
     try {
         const { lugar, usuarioEmail } = req.body;
 
@@ -70,42 +69,45 @@ export const deleteReservation = async (req, res) => {
             usuarioEmail,
         });
 
-        return res.status(200).json({
-            message: 'Reserva eliminada con éxito',
-            data: deletedReservation,
-        });
+        return sendSuccess(res, 200, 'Reserva eliminada con éxito', formatReservationResponse(deletedReservation));
     } catch (error) {
-        return res.status(500).json({
-            message: 'Error al eliminar la reserva',
-            error: error.message,
-        });
+        next(error);
     }
 };
 
 /**
- * Obtener todas las reservas.
- * @param {Object} req - Objeto de la solicitud HTTP.
- * @param {Object} res - Objeto de la respuesta HTTP.
+ * Eliminar una reserva por id.
  */
-export const getAllReservations = async (req, res) => {
+export const deleteReservationById = async (req, res, next) => {
     try {
-        const reservations = await reservationService.getAllReservations();
+        const { id } = req.body;
 
-        return res.status(200).json(reservations);
+        const deletedReservation = await reservationService.deleteReservationById(id);
+
+        return sendSuccess(res, 200, 'Reserva eliminada con éxito', formatReservationResponse(deletedReservation));
     } catch (error) {
-        return res.status(500).json({
-            message: 'Error al obtener todas las reservas',
-            error: error.message,
-        });
+        next(error);
+    }
+};
+
+/**
+ * Obtener todas las reservas paginadas.
+ */
+export const getAllReservations = async (req, res, next) => {
+    try {
+        const { page, limit } = req.query;
+        const { data, pagination } = await reservationService.getAllReservations(page, limit);
+
+        return sendSuccess(res, 200, 'Reservas obtenidas con éxito', { items: data.map(formatReservationResponse), pagination });
+    } catch (error) {
+        next(error);
     }
 };
 
 /**
  * Obtener reservas en un rango de tiempo.
- * @param {Object} req - Objeto de la solicitud HTTP.
- * @param {Object} res - Objeto de la respuesta HTTP.
  */
-export const getReservationsByTimeRange = async (req, res) => {
+export const getReservationsByTimeRange = async (req, res, next) => {
     try {
         const { fecha_inicio, fecha_fin } = req.query;
 
@@ -114,21 +116,16 @@ export const getReservationsByTimeRange = async (req, res) => {
             new Date(fecha_fin)
         );
 
-        return res.status(200).json(reservations);
+        return sendSuccess(res, 200, 'Reservas obtenidas con éxito', reservations.map(formatReservationResponse));
     } catch (error) {
-        return res.status(500).json({
-            message: 'Error al obtener reservas en el rango de tiempo',
-            error: error.message,
-        });
+        next(error);
     }
 };
 
 /**
  * Obtener una reserva por usuario y lugar.
- * @param {Object} req - Objeto de la solicitud HTTP.
- * @param {Object} res - Objeto de la respuesta HTTP.
  */
-export const getReservationByUserAndPlace = async (req, res) => {
+export const getReservationByUserAndPlace = async (req, res, next) => {
     try {
         const { usuarioEmail, lugar } = req.query;
 
@@ -137,64 +134,35 @@ export const getReservationByUserAndPlace = async (req, res) => {
             lugar
         );
 
-        return res.status(200).json(reservation);
+        return sendSuccess(res, 200, 'Reserva obtenida con éxito', formatReservationResponse(reservation));
     } catch (error) {
-        return res.status(500).json({
-            message: 'Error al obtener la reserva por usuario y lugar',
-            error: error.message,
-        });
+        next(error);
     }
 };
 
 /**
  * Obtener todas las reservas realizadas por un usuario.
- * @param {Object} req - Objeto de la solicitud HTTP.
- * @param {Object} res - Objeto de la respuesta HTTP.
  */
-export const getReservationsByUser = async (req, res) => {
+export const getReservationsByUser = async (req, res, next) => {
     try {
         const { usuarioEmail } = req.query;
 
         const reservations = await reservationService.getReservationsByUser(usuarioEmail);
 
-        return res.status(200).json(reservations);
+        return sendSuccess(res, 200, 'Reservas obtenidas con éxito', reservations.map(formatReservationResponse));
     } catch (error) {
-        return res.status(500).json({
-            message: 'Error al obtener reservas del usuario',
-            error: error.message,
-        });
+        next(error);
     }
 };
 
-export const getReservationNameById = async (req, res) => {
+export const getReservationNameById = async (req, res, next) => {
     try {
         const { id } = req.body;
 
         const reservation = await reservationService.getReservationById(id);
 
-        return res.status(200).json({nombre: reservation.lugar.lugar});
+        return sendSuccess(res, 200, 'Nombre del lugar obtenido con éxito', { nombre: reservation.lugar.lugar });
     } catch (error) {
-        return res.status(500).json({
-            message: 'Error al obtener reservas del usuario',
-            error: error.message,
-        });
-    }
-};
-
-export const deleteReservationById = async (req, res) => {
-    try {
-        const { id } = req.body;
-
-        const reservation = await reservationService.deleteReservationById(id);
-        if(reservation){
-            return res.status(200).json({message: "Reserva Eliminada con exito!"});
-        }else{
-            return res.status(404).json({message: "Reserva no encontrada!"});
-        }
-    } catch (error) {
-        return res.status(500).json({
-            message: 'Error al obtener reservas del usuario',
-            error: error.message,
-        });
+        next(error);
     }
 };

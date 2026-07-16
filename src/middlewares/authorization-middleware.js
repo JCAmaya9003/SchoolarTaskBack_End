@@ -60,6 +60,60 @@ export const verifyOwnResource = (emailSource = 'body') => {
 };
 
 /**
+ * Verifica que el email del recurso coincida con el email del usuario autenticado.
+ * A diferencia de verifyOwnResource, acá SOLO admin bypassea la verificación:
+ * cualquier otro rol (incluido teacher) tiene que ser dueño del recurso.
+ * Usado para recursos donde un teacher no debería poder gestionar los de otro teacher.
+ * @param {string} emailSource - Fuente del email ('body', 'query', 'params')
+ * @param {string} emailField - Nombre del campo que contiene el email en esa fuente (default 'email')
+ */
+export const verifyResourceOwnerOrAdmin = (emailSource = 'body', emailField = 'email') => {
+  return async (req, res, next) => {
+    try {
+      const userEmail = req.user?.email; // Email del token JWT
+      const requestEmail = req[emailSource]?.[emailField]; // Email del recurso en el request
+
+      if (!userEmail) {
+        throw new UnauthorizedError('Usuario no autenticado');
+      }
+
+      if (!requestEmail) {
+        // Si no hay email en el request, continuar (el recurso no requiere verificación)
+        return next();
+      }
+
+      const User = (await import('../models/user-model.js')).default;
+      const user = await User.findOne({ email: userEmail }).populate('rol');
+
+      if (!user || !user.rol) {
+        throw new ForbiddenError('Usuario sin rol asignado');
+      }
+
+      const userRole = user.rol.nombre;
+
+      // Solo admin puede gestionar recursos de otros
+      if (userRole === 'admin') {
+        return next();
+      }
+
+      if (userEmail !== requestEmail) {
+        logger.warn('Intento de acceso no autorizado a recurso de otro usuario:', {
+          userEmail,
+          requestEmail,
+          role: userRole,
+          endpoint: req.originalUrl,
+        });
+        throw new ForbiddenError('No tienes permiso para gestionar este recurso');
+      }
+
+      next();
+    } catch (error) {
+      next(error);
+    }
+  };
+};
+
+/**
  * Verifica que un padre solo pueda acceder a sus propios hijos
  */
 export const verifyParentOwnership = async (req, res, next) => {
