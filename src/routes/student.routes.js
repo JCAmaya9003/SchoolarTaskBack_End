@@ -42,7 +42,7 @@ const router = express.Router();
  *               - $ref: '#/components/schemas/User'
  *               - $ref: '#/components/schemas/Student'
  *     responses:
- *       200:
+ *       201:
  *         description: Estudiante creado
  *       500:
  *         description: Error en creación

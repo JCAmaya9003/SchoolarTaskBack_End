@@ -2,7 +2,24 @@ import { validationResult } from 'express-validator';
 import * as studentService from '../services/student.service.js';
 import * as parentService from '../services/parent.service.js';
 import * as userService from '../services/user-service.js';
+import { sendSuccess } from '../utils/apiResponse.js';
 
+// Forma consistente para exponer un estudiante en las respuestas (antes variaba: Nombre/userRol/userParentnombre...)
+const formatStudentResponse = (student) => ({
+    nombre: student.usuario.nombre,
+    apellido: student.usuario.apellido,
+    email: student.usuario.email,
+    genero: student.usuario.genero,
+    domicilio: student.usuario.domicilio,
+    nacionalidad: student.usuario.nacionalidad,
+    fecha_nacimiento: student.usuario.fecha_nacimiento,
+    rol: student.usuario.rol,
+    padre: student.padre,
+    grado_seccion: student.grado_seccion,
+    alergias: student.alergias,
+    condiciones_medicas: student.condiciones_medicas,
+    contacto_emergencia: student.contacto_emergencia,
+});
 
 export const getAllStudents = async (req, res) =>{
     const errors = validationResult(req);
@@ -11,8 +28,8 @@ export const getAllStudents = async (req, res) =>{
     }
     try {
         const { page, limit } = req.query;
-        const result = await studentService.getStudents(page, limit);
-        res.json(result);
+        const { data, pagination } = await studentService.getStudents(page, limit);
+        return sendSuccess(res, 200, 'Estudiantes obtenidos con éxito', { items: data.map(formatStudentResponse), pagination });
     } catch (e) {
         res.status(500).json({ message: 'Error al mostrar los estudiantes', error: e.message });
     }
@@ -32,28 +49,13 @@ export const createStudent = async (req, res) =>{
     try {
         const newStudent = await studentService.createStudent({
             nombre, apellido, email, password, fecha_nacimiento, rolNombre,
-            genero, domicilio, nacionalidad, 
+            genero, domicilio, nacionalidad,
             email_padre,
             grado, seccion,
             alergias, condiciones_medicas, contacto_emergencia
         });
-        
-        return res.status(200).json({
-            message: 'Estudiante creado con éxito',
-            Nombre: newStudent.usuario.nombre,
-            Apellido: newStudent.usuario.apellido,
-            Email: newStudent.usuario.email,
-            genero: newStudent.usuario.genero,
-            domicilio: newStudent.usuario.domicilio,
-            nacionalidad: newStudent.usuario.nacionalidad,
-            userFecha: newStudent.usuario.fecha_nacimiento,
-            userRol: newStudent.usuario.rol,
-            userParent: newStudent.padre,
-            userGradeSection: newStudent.grado_seccion,
-            alergias: newStudent.alergias,
-            condiciones_medicas: newStudent.condiciones_medicas,
-            contacto_emergencia: newStudent.contacto_emergencia,
-        }); 
+
+        return sendSuccess(res, 201, 'Estudiante creado con éxito', formatStudentResponse(newStudent));
     }catch (error) {
         res.status(500).json({ message: 'Error al crear el estudiante', error: error.message });
     }
@@ -72,22 +74,7 @@ export const deleteStudent = async (req, res) =>{
             if(studentDeleted){
                 await userService.eraseUser(email);
 
-                return res.status(200).json({
-                    message: 'Estudiante eliminado con éxito',
-                        Nombre: studentDeleted.usuario.nombre,
-                        Apellido: studentDeleted.usuario.apellido,
-                        Email: studentDeleted.usuario.email,
-                        genero: studentDeleted.usuario.genero,
-                        domicilio: studentDeleted.usuario.domicilio,
-                        nacionalidad: studentDeleted.usuario.nacionalidad,
-                        userFecha: studentDeleted.usuario.fecha_nacimiento,
-                        userRol: studentDeleted.usuario.rol,
-                        userParentnombre: studentDeleted.padre,
-                        userGradeSection: studentDeleted.grado_seccion,
-                        alergias: studentDeleted.alergias,
-                        condiciones_medicas: studentDeleted.condiciones_medicas,
-                        contacto_emergencia: studentDeleted.contacto_emergencia,
-                });
+                return sendSuccess(res, 200, 'Estudiante eliminado con éxito', formatStudentResponse(studentDeleted));
             }else{
                 return res.status(409).json({ message: 'Datos Invalidos para eliminar el estudiante' });
             }
@@ -115,22 +102,7 @@ try {
             alergias, condiciones_medicas, contacto_emergencia
         });
         if(editedStudent){
-            return res.status(200).json({
-                message: 'Estudiante editado con éxito',
-                Nombre: editedStudent.usuario.nombre,
-                Apellido: editedStudent.usuario.apellido,
-                Email: editedStudent.usuario.email,
-                genero: editedStudent.usuario.genero,
-                domicilio: editedStudent.usuario.domicilio,
-                nacionalidad: editedStudent.usuario.nacionalidad,
-                userFecha: editedStudent.usuario.fecha_nacimiento,
-                userRol: editedStudent.usuario.rol,
-                userParent: editedStudent.padre,
-                userGradeSection: editedStudent.grado_seccion,
-                alergias: editedStudent.alergias,
-                condiciones_medicas: editedStudent.condiciones_medicas,
-                contacto_emergencia: editedStudent.contacto_emergencia,
-            });
+            return sendSuccess(res, 200, 'Estudiante editado con éxito', formatStudentResponse(editedStudent));
     }else{
         return res.status(409).json({ message: 'Datos Invalidos para editar el estudiante' });
     }
@@ -150,13 +122,7 @@ try {
             id
         });
     if(deleted){
-        return res.status(200).json({
-            message: 'Estudiante eliminado con éxito',
-            telefono: deleted.telefono,
-            telefono_trabajo: deleted.telefono_trabajo, 
-            lugar_trabajo: deleted.lugar_trabajo, 
-            profesion: deleted.profesion, 
-          });
+        return sendSuccess(res, 200, 'Estudiante eliminado con éxito', formatStudentResponse(deleted));
     }else{
         return res.status(409).json({ message: 'Datos Invalidos para eliminar el estudiante' });
     }
@@ -199,10 +165,7 @@ export const getStudentGradesInfoParent = async (req, res) => {
             });
         }
 
-        res.status(200).json({
-            message: "Información de los estudiantes y sus notas obtenida con éxito",
-            data: response,
-        });
+        return sendSuccess(res, 200, 'Información de los estudiantes y sus notas obtenida con éxito', response);
     } catch (error) {
         res.status(500).json({ error: "Error al obtener las notas de los estudiantes: " + error.message });
     }
@@ -216,9 +179,8 @@ export const getStudentGradesInfo = async (req, res) => {
         // Obtener estudiante
         const response =  await studentService.getStudentGradesInfo(email);
 
-        res.json(response);
+        return sendSuccess(res, 200, 'Notas del estudiante obtenidas con éxito', response);
     } catch (error) {
         res.status(500).json({ error: "Error al obtener las notas del estudiante: " + error.message });
     }
 };
-
