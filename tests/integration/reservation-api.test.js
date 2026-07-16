@@ -282,6 +282,27 @@ describe('GET /api/reservations/by-time-range (validación)', () => {
 
     expect(res.status).toBe(400);
   });
+
+  it('debe devolver las reservas del rango sin importar el lugar - 200 (regresión: findReservationsByTimeRange filtraba por lugar: undefined, que Mongo/Mongoose no ignora y nunca hace match, dejando esta ruta siempre vacía)', async () => {
+    const cookie = await loginAsAdmin();
+
+    await request.post('/api/reservations/create').set('Cookie', cookie).send({
+      lugar: 'Auditorio',
+      usuarioEmail: 'prof-b-reserva@test.com',
+      descripcion: 'Reserva para probar el rango completo',
+      fecha_inicio: '2026-12-01T10:00:00.000Z',
+      fecha_fin: '2026-12-01T12:00:00.000Z',
+    });
+
+    const res = await request
+      .get('/api/reservations/by-time-range')
+      .set('Cookie', cookie)
+      .query({ fecha_inicio: '2026-12-01T09:00:00.000Z', fecha_fin: '2026-12-01T13:00:00.000Z' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.length).toBeGreaterThanOrEqual(1);
+    expect(res.body.data.some((r) => r.descripcion === 'Reserva para probar el rango completo')).toBe(true);
+  });
 });
 
 describe('DELETE /api/reservations', () => {

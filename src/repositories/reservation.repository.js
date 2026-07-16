@@ -84,7 +84,7 @@ export const findAllReservations = async (page, limit) => {
  */
 export const findReservationsByTimeRange = async (startDate, endDate, lugarId, excludeId) => {
     return await Reservation.find({
-        lugar: lugarId,
+        ...(lugarId ? { lugar: lugarId } : {}),
         ...(excludeId ? { _id: { $ne: excludeId } } : {}),
         $or: [
             { fecha_inicio: { $lt: endDate, $gte: startDate } },
