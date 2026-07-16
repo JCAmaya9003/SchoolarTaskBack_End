@@ -5,15 +5,16 @@ export const findEvaluationByNameAndSubject = async (materia, nombre) => {
     return await Evaluation.findOne({materia: materia, nombre: nombre }).populate('materia', 'nombre');
   };
   
-  export const findAllEvaluations = async (page, limit) =>{
+  export const findAllEvaluations = async (page, limit, subjectIds = null) =>{
     const { skip, limit: validLimit, page: validPage } = getPaginationParams(page, limit);
+    const filter = subjectIds ? { materia: { $in: subjectIds } } : {};
 
     const [evaluations, total] = await Promise.all([
-      Evaluation.find()
+      Evaluation.find(filter)
         .skip(skip)
         .limit(validLimit)
         .populate('materia', 'nombre'),
-      Evaluation.countDocuments(),
+      Evaluation.countDocuments(filter),
     ]);
 
     return {

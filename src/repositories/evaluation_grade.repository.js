@@ -1,4 +1,5 @@
 import EvaluationGrade from '../models/evaluation_grade.model.js';
+import { getPaginationParams, getPaginationMeta } from '../utils/pagination-helper.js';
 
 /**
  * Crear un registro de calificación de evaluación.
@@ -7,7 +8,18 @@ import EvaluationGrade from '../models/evaluation_grade.model.js';
  */
 export const createEvaluationGrade = async (evaluationGradeData) => {
     const evaluationGrade = new EvaluationGrade(evaluationGradeData);
-    return await evaluationGrade.save();
+    await evaluationGrade.save();
+    return await evaluationGrade.populate([
+        {
+            path: 'estudiante',
+            select: 'usuario grado_seccion',
+            populate: { path: 'usuario', select: 'nombre apellido email' },
+        },
+        {
+            path: 'evaluacion',
+            select: 'nombre materia fecha',
+        },
+    ]);
 };
 
 export const findEvaluationGradeByStudentAndEvaluation = async (studentId, evaluationId) => {
@@ -39,27 +51,52 @@ export const updateEvaluationGradeById = async (id, updates) => {
  * @returns {Promise<Object|null>} - Registro eliminado o null si no se encontró.
  */
 export const deleteEvaluationGradeById = async (id) => {
-    return await EvaluationGrade.findByIdAndDelete(id);
-};
-
-/**
- * Buscar todas las calificaciones de evaluaciones.
- * @returns {Promise<Array>} - Lista de calificaciones con los detalles de estudiantes y evaluaciones.
- */
-export const findAllEvaluationGrades = async () => {
-    return await EvaluationGrade.find()
+    return await EvaluationGrade.findByIdAndDelete(id)
         .populate({
             path: 'estudiante',
             select: 'usuario grado_seccion',
-            populate: { 
-                path: 'usuario', 
-                select: 'nombre apellido email' 
-            },
+            populate: { path: 'usuario', select: 'nombre apellido email' },
         })
         .populate({
             path: 'evaluacion',
             select: 'nombre materia fecha',
         });
+};
+
+/**
+ * Buscar todas las calificaciones de evaluaciones, paginadas.
+ * @param {Number} page
+ * @param {Number} limit
+ * @param {Array<String>|null} evaluationIds - Si se pasa, filtra solo calificaciones de esas evaluaciones.
+ * @returns {Promise<{data: Array, pagination: Object}>}
+ */
+export const findAllEvaluationGrades = async (page, limit, evaluationIds = null) => {
+    const { skip, limit: validLimit, page: validPage } = getPaginationParams(page, limit);
+    const filter = evaluationIds ? { evaluacion: { $in: evaluationIds } } : {};
+
+    const [grades, total] = await Promise.all([
+        EvaluationGrade.find(filter)
+            .skip(skip)
+            .limit(validLimit)
+            .populate({
+                path: 'estudiante',
+                select: 'usuario grado_seccion',
+                populate: {
+                    path: 'usuario',
+                    select: 'nombre apellido email'
+                },
+            })
+            .populate({
+                path: 'evaluacion',
+                select: 'nombre materia fecha',
+            }),
+        EvaluationGrade.countDocuments(filter),
+    ]);
+
+    return {
+        data: grades,
+        pagination: getPaginationMeta(validPage, validLimit, total),
+    };
 };
 
 /**
@@ -88,6 +125,11 @@ export const findEvaluationGradeByStudentIdAndEvaluation = async (studentId, eva
 export const findEvaluationGradesByStudent = async (student) => {
     return await EvaluationGrade.find({ estudiante: student })
         .populate({
+            path: 'estudiante',
+            select: 'usuario grado_seccion',
+            populate: { path: 'usuario', select: 'nombre apellido email' },
+        })
+        .populate({
             path: 'evaluacion',
             select: 'nombre materia fecha',
         });
@@ -104,5 +146,9 @@ export const findEvaluationGradesByEvaluation = async (evaluation) => {
             path: 'estudiante',
             select: 'usuario grado_seccion',
             populate: { path: 'usuario', select: 'nombre apellido email' },
+        })
+        .populate({
+            path: 'evaluacion',
+            select: 'nombre materia fecha',
         });
 };
