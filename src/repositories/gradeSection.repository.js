@@ -1,15 +1,6 @@
 import GradeSection from "../models/gradeSection-model.js";
 
 /**
- * Buscar secciones por grado.
- * @param {String} grado - Grado a buscar.
- * @returns {Promise<Array>} - Lista de secciones asociadas al grado.
- */
-export const findSectionsByGrade = async (grado) => {
-    return await GradeSection.find({ grado }).populate('materias', 'nombre');
-};
-
-/**
  * Buscar un grado y sección específicos.
  * @param {String} grado - Grado a buscar.
  * @param {String} seccion - Sección a buscar.

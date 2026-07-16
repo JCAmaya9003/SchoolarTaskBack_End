@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import supertest from 'supertest';
-import { setupTestDB, teardownTestDB } from '../setup.js';
+import { setupTestDB, teardownTestDB, registerUserDirectly } from '../setup.js';
 import Role from '../../src/models/role-model.js';
 
 let app;
@@ -52,7 +52,7 @@ beforeEach(async () => {
 
 // Helper para registrar y hacer login como admin
 async function loginAsAdmin() {
-  await request.post('/api/users/register').send(adminUser);
+  await registerUserDirectly(adminUser);
   const res = await request.post('/api/users/login').send({
     email: adminUser.email,
     password: adminUser.password,
@@ -71,11 +71,11 @@ describe('POST /api/users/register', () => {
     expect(res.body.data.email).toBe('maria@test.com');
   });
 
-  it('debe rechazar registro duplicado - 500', async () => {
+  it('debe rechazar registro duplicado - 409', async () => {
     await request.post('/api/users/register').send(testUser);
     const res = await request.post('/api/users/register').send(testUser);
 
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(409);
   });
 
   it('debe rechazar datos inválidos - 400', async () => {
@@ -83,6 +83,27 @@ describe('POST /api/users/register', () => {
       nombre: '123', // nombre con números
       email: 'invalido',
       password: '12345', // muy corta
+    });
+
+    expect(res.status).toBe(400);
+  });
+
+  it('debe rechazar rolNombre=admin en el auto-registro público - 400 (regresión: escalada de privilegios)', async () => {
+    const res = await request.post('/api/users/register').send({
+      ...testUser,
+      email: 'quiere-ser-admin@test.com',
+      rolNombre: 'admin',
+    });
+
+    expect(res.status).toBe(400);
+  });
+
+  it('debe rechazar si falta rolNombre - 400 (regresión: antes asignaba el primer rol de la colección, admin)', async () => {
+    const { rolNombre, ...payloadSinRol } = testUser;
+
+    const res = await request.post('/api/users/register').send({
+      ...payloadSinRol,
+      email: 'sin-rol@test.com',
     });
 
     expect(res.status).toBe(400);

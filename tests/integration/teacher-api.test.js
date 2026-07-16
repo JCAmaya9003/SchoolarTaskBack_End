@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import supertest from 'supertest';
-import { setupTestDB, teardownTestDB } from '../setup.js';
+import { setupTestDB, teardownTestDB, registerUserDirectly } from '../setup.js';
 import Role from '../../src/models/role-model.js';
 
 let app;
@@ -58,7 +58,7 @@ beforeAll(async () => {
   app = appModule.default;
   request = supertest(app);
 
-  await request.post('/api/users/register').send(adminUser);
+  await registerUserDirectly(adminUser);
   const adminCookie = await loginAsAdmin();
 
   await request.post('/api/subjects').set('Cookie', adminCookie).send({ nombre: 'Matematicas' });
@@ -105,6 +105,38 @@ describe('GET /api/teachers (admin)', () => {
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body.data.items)).toBe(true);
     expect(res.body.data.pagination.currentPage).toBe(1);
+  });
+
+  it('debe incluir genero/domicilio/nacionalidad/rol en el listado - 200 (regresión: findAllTeachers no los populaba)', async () => {
+    const cookie = await loginAsAdmin();
+    await request.post('/api/teachers').set('Cookie', cookie).send(buildTeacher('prof-populate@test.com'));
+
+    const res = await request.get('/api/teachers').set('Cookie', cookie);
+
+    const teacher = res.body.data.items.find((t) => t.email === 'prof-populate@test.com');
+    expect(teacher.genero).toBe('Femenino');
+    expect(teacher.domicilio).toBe('Casa 2');
+    expect(teacher.nacionalidad).toBe('Venezolana');
+    expect(teacher.rol).toBeDefined();
+  });
+});
+
+describe('POST /api/users/get-info (teacher)', () => {
+  it('debe devolver grado_encargado con las materias del profesor - 200 (regresión: campos direccion/materias/grados_secciones inexistentes)', async () => {
+    const cookie = await loginAsAdmin();
+    await request.post('/api/teachers').set('Cookie', cookie).send(buildTeacher('prof-getinfo@test.com'));
+
+    const res = await request
+      .post('/api/users/get-info')
+      .set('Cookie', cookie)
+      .send({ email: 'prof-getinfo@test.com', rolNombre: 'teacher' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.direccion).toBeUndefined();
+    expect(res.body.data.materias).toBeUndefined();
+    expect(res.body.data.grados_secciones).toBeUndefined();
+    expect(Array.isArray(res.body.data.grado_encargado)).toBe(true);
+    expect(res.body.data.grado_encargado[0].materias.length).toBeGreaterThan(0);
   });
 });
 

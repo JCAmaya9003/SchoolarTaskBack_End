@@ -11,7 +11,7 @@ export const findTeacherByUserId = async (userId) => {
     .populate([
         {
             path: 'usuario',
-            select: 'nombre apellido email rol',
+            select: 'nombre apellido email genero domicilio nacionalidad rol',
             populate: {
                 path: 'rol',
                 select: 'nombre',
@@ -43,7 +43,11 @@ export const findAllTeachers = async (page, limit) => {
             .limit(validLimit)
             .populate({
                 path: 'usuario',
-                select: 'nombre apellido email',
+                select: 'nombre apellido email genero domicilio nacionalidad rol',
+                populate: {
+                    path: 'rol',
+                    select: 'nombre',
+                },
             })
             .populate({
                 path: 'grado_encargado.materias',
@@ -97,31 +101,6 @@ export const createTeacher = async (teacherData) => {
  */
 export const updateTeacherByUserId = async (id, updates) => {
     return await Teacher.findByIdAndUpdate(id, updates, { new: true, runValidators: true })
-        .populate({
-            path: 'usuario',
-            select: 'nombre apellido email genero domicilio nacionalidad rol',
-            populate: {
-                path: 'rol',
-                select: 'nombre',
-            },
-        })
-        .populate({
-            path: 'grado_encargado.materias',
-            select: 'nombre',
-        })
-        .populate({
-            path: 'grado_encargado.grado_secciones',
-            select: 'grado seccion',
-        });
-};
-
-/**
- * Eliminar un profesor por el ID de usuario.
- * @param {String} id - ID del usuario asociado al profesor.
- * @returns {Promise<Object|null>} - Profesor eliminado o null.
- */
-export const deleteTeacherByUserId = async (id) => {
-    return await Teacher.findByIdAndDelete(id)
         .populate({
             path: 'usuario',
             select: 'nombre apellido email genero domicilio nacionalidad rol',

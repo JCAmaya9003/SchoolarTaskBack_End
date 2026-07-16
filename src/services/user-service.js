@@ -3,11 +3,11 @@ import {hashPassword,verifyPassword} from '../middlewares/auth-middleware.js';
 import * as roleService from '../services/role-service.js'
 import crypto from 'crypto';
 import logger from '../config/logger.js';
-import { ValidationError } from '../errors/errors.js';
+import { ValidationError, InvalidCredentialsError, NotFoundError, UserAlreadyExistsError } from '../errors/errors.js';
 
 export const loginUser = async( {email, password} ) => {
     const user = await findUserByEmail(email);
-    
+
     if(user){
       const isPasswordValid = await verifyPassword(password, user.password);
 
@@ -16,12 +16,12 @@ export const loginUser = async( {email, password} ) => {
         return user;
       }else{
         logger.warn(`[AUTH] Login fallido (contraseña incorrecta): ${email}`);
-        throw new Error("Contraseña inválida");
+        throw new InvalidCredentialsError();
       }
     }else{
       logger.warn(`[AUTH] Login fallido (usuario inexistente): ${email}`);
-      throw new Error("Usuario inexistente");
-    } 
+      throw new InvalidCredentialsError();
+    }
 };
 
 export const registerUser = async ( {nombre, apellido, email, password, fecha_nacimiento, rolNombre, genero, domicilio, nacionalidad}) => {
@@ -30,7 +30,6 @@ export const registerUser = async ( {nombre, apellido, email, password, fecha_na
 
     if (!userExists) {
       const rol = await roleService.searchRoleByName(rolNombre);
-
 
       if(rol){
         const hashedPassword = await hashPassword(password);
@@ -50,10 +49,10 @@ export const registerUser = async ( {nombre, apellido, email, password, fecha_na
         logger.info(`[AUTH] Usuario registrado: ${email}, rol: ${rolNombre}`);
         return newUser;
       }else{
-        throw new Error("El rol no existe!");
+        throw new NotFoundError("El rol no existe");
       }
     }else{
-      throw new Error("Usuario ya existe");
+      throw new UserAlreadyExistsError();
     }
 };
 
@@ -72,10 +71,10 @@ export const editUser = async (email, nombre, apellido, password, fecha_nacimien
       logger.info(`[ADMIN] Usuario editado: ${email}, nuevo rol: ${rolNombre}`);
       return updatedUser;
     }else{
-      throw new Error("Rol inexistente");
+      throw new NotFoundError("El rol no existe");
     }
   }else{
-    throw new Error("Usuario inexistente!");
+    throw new NotFoundError("El usuario no existe");
   }
 };
 

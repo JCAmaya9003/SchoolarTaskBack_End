@@ -5,14 +5,13 @@ import * as teacherService from '../services/teacher.service.js'
 import * as studentService from '../services/student.service.js'
 import * as parentService from '../services/parent.service.js'
 import * as roleService from '../services/role-service.js'
-import { InvalidCredentialsError } from '../errors/errors.js';
 import { sendSuccess } from '../utils/apiResponse.js';
-import logger from '../config/logger.js';
 
 const LOGIN_COOKIE_MAX_AGE = 60 * 60 * 1000; // 1 hora, igual que la cookie de OAuth
 
 // Forma consistente para exponer un usuario en las respuestas del CRUD (antes variaba: Nombre/userNombre/genero/Genero...)
 const formatUserResponse = (user) => ({
+  id: user._id,
   nombre: user.nombre,
   apellido: user.apellido,
   email: user.email,
@@ -45,9 +44,6 @@ export const login = async (req, res, next) => {
     return sendSuccess(res, 200, 'Inicio de sesión exitoso');
 
   } catch (error) {
-    if (error.message === "Contraseña inválida" || error.message === "Usuario inexistente") {
-      return next(new InvalidCredentialsError());
-    }
     next(error);
   }
 };
@@ -56,12 +52,12 @@ export const getMe = (req, res) => {
   return sendSuccess(res, 200, 'Usuario autenticado obtenido con éxito', { email: req.user.email });
 };
 
-export const register = async (req, res) => {
+export const register = async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
-  
+
   const { nombre, apellido, email, password, fecha_nacimiento, rolNombre, genero, domicilio, nacionalidad } = req.body;
   try {
     const generosPermitidos = ['Masculino', 'Femenino'];
@@ -73,18 +69,13 @@ export const register = async (req, res) => {
       }
 
     const newUser = await userService.registerUser({nombre, apellido, email, password, fecha_nacimiento, rolNombre, genero, domicilio, nacionalidad});
-    if (newUser) {
-      return sendSuccess(res, 201, 'Usuario creado con éxito', formatUserResponse(newUser));
-    }else{
-      return res.status(409).json({ message: 'Datos Invalidos para crear usuario' });
-    }
-    
+    return sendSuccess(res, 201, 'Usuario creado con éxito', formatUserResponse(newUser));
   } catch (error) {
-    res.status(500).json({ message: 'Error al registrar usuario', error: error.message });
+    next(error);
   }
 };
 
-export const updateUser = async (req, res)=>{
+export const updateUser = async (req, res, next)=>{
   const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({message: "Error al intentar editar el usuario!", errors: errors.array() });
@@ -102,51 +93,37 @@ export const updateUser = async (req, res)=>{
         }
 
         const updatedUser = await userService.editUser(email, nombre, apellido, password, fecha_nacimiento, rolNombre, genero, domicilio, nacionalidad );
-
-        if (updatedUser) {
-          return sendSuccess(res, 200, 'Usuario actualizado con éxito', formatUserResponse(updatedUser));
-        }else{
-          return res.status(404).json({ message: 'El usuario y/o rol especificado no existe' });
-        }
-
-    } catch (e) {
-      res.status(500).json({ message: 'Error al editar el usuario.', error: e.message });
+        return sendSuccess(res, 200, 'Usuario actualizado con éxito', formatUserResponse(updatedUser));
+    } catch (error) {
+      next(error);
     }
 };
 
-export const deleteUser = async (req, res) =>{
+export const deleteUser = async (req, res, next) =>{
   const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({message: "Error al intentar eliminar el usuario!", errors: errors.array() });
     }
     try{
         const {email} = req.body;
-        if(email){
-          const erasedUser = await userService.eraseUser(email);
-          if(erasedUser){
-            return sendSuccess(res, 200, 'Usuario eliminado con éxito', formatUserResponse(erasedUser));
-          }else{
-            return res.status(404).json({ message: 'El usuario especificado no existe!' });
-          }
+        const erasedUser = await userService.eraseUser(email);
+        if(erasedUser){
+          return sendSuccess(res, 200, 'Usuario eliminado con éxito', formatUserResponse(erasedUser));
         }else{
-          return res.status(400).json({ message: 'El email del usuario es obligatorio.' });
+          return res.status(404).json({ message: 'El usuario especificado no existe!' });
         }
-    }catch(e){
-        res.status(500).json({ message: 'Error al eliminar el usuario.', error: e.message });
+    }catch(error){
+        next(error);
     }
 };
 
-export const getAllUsers = async (req, res)=>{
-  const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({message: "Error al intentar mostrar los usuarios!", errors: errors.array() });
-    }
+export const getAllUsers = async (req, res, next)=>{
     try {
           const { page, limit } = req.query;
           const { data, pagination } = await userService.getUsers(page, limit);
           return sendSuccess(res, 200, 'Usuarios obtenidos con éxito', { items: data.map(formatUserResponse), pagination });
-    } catch (e) {
-      res.status(500).json({ message: 'Error al mostrar los usuarios', error: e.message });
+    } catch (error) {
+      next(error);
     }
 };
 
@@ -155,7 +132,7 @@ export const getAllUsers = async (req, res)=>{
  * @param {Object} req - Objeto de la solicitud HTTP.
  * @param {Object} res - Objeto de la respuesta HTTP.
  */
-export const getUserRole = async (req, res) => {
+export const getUserRole = async (req, res, next) => {
   try {
     const { email } = req.user;
 
@@ -173,8 +150,7 @@ export const getUserRole = async (req, res) => {
     const rolNombre = populatedUser.rol.nombre;
     return sendSuccess(res, 200, 'Rol obtenido con éxito', { rol: rolNombre });
   } catch (error) {
-    logger.error('Error en getUserRole:', { error: error.message });
-    return res.status(500).json({ message: "Error al obtener el rol del usuario", error: error.message });
+    next(error);
   }
 };
 
@@ -228,10 +204,8 @@ const ROLE_INFO_HANDLERS = {
       domicilio: user.usuario.domicilio,
       nacionalidad: user.usuario.nacionalidad,
       telefono: user.telefono,
-      direccion: user.direccion,
       especialidad: user.especialidad,
-      materias: user.materias,
-      grados_secciones: user.grados_secciones,
+      grado_encargado: user.grado_encargado,
     };
   },
 };
@@ -242,7 +216,7 @@ const ROLE_NOT_FOUND_MESSAGE = {
   teacher: 'Profesor no encontrado',
 };
 
-export const getUserInfo = async(req, res) => {
+export const getUserInfo = async(req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
       return res.status(400).json({message: "Error al intentar obtener los datos!", errors: errors.array() });
@@ -266,30 +240,26 @@ export const getUserInfo = async(req, res) => {
     }
 
     return sendSuccess(res, 200, 'Datos obtenidos con éxito', info);
-  } catch (e) {
-    res.status(500).json({ message: 'Error al mostrar los datos del usuario!', error: e.message });
+  } catch (error) {
+    next(error);
   }
 };
 
-export const restoreUser = async (req, res) => {
+export const restoreUser = async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({message: "Error al intentar restaurar el usuario!", errors: errors.array() });
   }
   try {
     const { email } = req.body;
-    if(email){
-      const restoredUser = await userService.restoreUser(email);
-      if(restoredUser){
-        return sendSuccess(res, 200, 'Usuario restaurado con éxito', formatUserResponse(restoredUser));
-      }else{
-        return res.status(404).json({ message: 'No se encontró un usuario eliminado con ese email' });
-      }
+    const restoredUser = await userService.restoreUser(email);
+    if(restoredUser){
+      return sendSuccess(res, 200, 'Usuario restaurado con éxito', formatUserResponse(restoredUser));
     }else{
-      return res.status(400).json({ message: 'El email del usuario es obligatorio.' });
+      return res.status(404).json({ message: 'No se encontró un usuario eliminado con ese email' });
     }
-  } catch(e) {
-    res.status(500).json({ message: 'Error al restaurar el usuario.', error: e.message });
+  } catch(error) {
+    next(error);
   }
 };
 
