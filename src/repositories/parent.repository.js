@@ -3,19 +3,26 @@ import { getPaginationParams, getPaginationMeta } from "../utils/pagination-help
 
 export const findParentByUserId = async (userId) => {
   return await Parent.findOne({usuario: userId }).populate({
-    path: 'usuario', 
-    select: 'nombre apellido email rol', 
+    path: 'usuario',
+    select: 'nombre apellido email genero domicilio nacionalidad fecha_nacimiento rol',
     populate: {
-      path: 'rol', 
-      select: 'nombre', 
+      path: 'rol',
+      select: 'nombre',
     },
   });
 };
 
 export const deleteParentById = async (id) => {
-  return await Parent.findByIdAndDelete(id);
+  return await Parent.findByIdAndDelete(id).populate({
+    path: 'usuario',
+    select: 'nombre apellido email genero domicilio nacionalidad fecha_nacimiento rol',
+    populate: {
+      path: 'rol',
+      select: 'nombre',
+    },
+  });
 };
-  
+
   export const findAllParents = async (page, limit) =>{
     const { skip, limit: validLimit, page: validPage } = getPaginationParams(page, limit);
 
@@ -25,7 +32,7 @@ export const deleteParentById = async (id) => {
         .limit(validLimit)
         .populate({
           path: 'usuario',
-          select: 'nombre apellido email rol',
+          select: 'nombre apellido email genero domicilio nacionalidad fecha_nacimiento rol',
           populate: {
             path: 'rol',
             select: 'nombre',
@@ -39,13 +46,13 @@ export const deleteParentById = async (id) => {
       pagination: getPaginationMeta(validPage, validLimit, total),
     };
   }
-  
+
   export const createParent = async (parentData) => {
     const parent = new Parent(parentData);
     const savedParent = await parent.save();
     return await savedParent.populate({
       path: 'usuario',
-      select: 'nombre apellido email rol',
+      select: 'nombre apellido email genero domicilio nacionalidad fecha_nacimiento rol',
       populate: {
         path: 'rol',
         select: 'nombre',
@@ -53,18 +60,25 @@ export const deleteParentById = async (id) => {
   });
 
   };
-  
+
   export const updateParentByUserId = async (id, updates) => {
-    return await Parent.findByIdAndUpdate(id, updates, { new: true, runValidators: true }).populate('usuario');
+    return await Parent.findByIdAndUpdate(id, updates, { new: true, runValidators: true }).populate({
+      path: 'usuario',
+      select: 'nombre apellido email genero domicilio nacionalidad fecha_nacimiento rol',
+      populate: {
+        path: 'rol',
+        select: 'nombre',
+      },
+    });
   };
-      
+
   export const deleteParentByUserId = async (id) => {
     return await Parent.findByIdAndDelete(id).populate({
-      path: 'usuario', 
-      select: 'nombre apellido email rol', 
+      path: 'usuario',
+      select: 'nombre apellido email genero domicilio nacionalidad fecha_nacimiento rol',
       populate: {
-        path: 'rol', 
-        select: 'nombre', 
+        path: 'rol',
+        select: 'nombre',
       },
   });
   };

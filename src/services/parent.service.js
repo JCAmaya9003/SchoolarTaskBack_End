@@ -2,6 +2,7 @@ import * as parentRepository from '../repositories/parent.repository.js'
 import * as userService from '../services/user-service.js'
 import { hardDeleteUserById } from '../repositories/user-repository.js';
 import logger from '../config/logger.js';
+import { NotFoundError, ConflictError } from '../errors/errors.js';
 
 export const getParents = async (page, limit) =>{
     return await parentRepository.findAllParents(page, limit);
@@ -35,7 +36,7 @@ export const createParent = async ({nombre, apellido, email, password, fecha_nac
                     profesion,
                 });
             }else{
-                throw new Error("Padre ya existente");
+                throw new ConflictError("Padre ya existente");
             }
         } catch (error) {
             await hardDeleteUserById(user._id);
@@ -43,7 +44,7 @@ export const createParent = async ({nombre, apellido, email, password, fecha_nac
             throw error;
         }
     }else{
-        throw new Error("Usuario ya existente");
+        throw new ConflictError("Usuario ya existente");
     }
 };
 
@@ -58,10 +59,10 @@ export const updateParent = async ({email, telefono, telefono_trabajo, lugar_tra
                 telefono_trabajo, lugar_trabajo, profesion
                 });
         }else{
-            throw new Error("El padre no existe");
+            throw new NotFoundError("El padre no existe");
         }
     }else{
-        throw new Error("EL usuario no existe");
+        throw new NotFoundError("El usuario no existe");
     };
 };
 
@@ -73,10 +74,10 @@ export const deleteParent = async (email) =>{
         if(parentExists){
             return await parentRepository.deleteParentByUserId(parentExists.id);
         }else{
-            throw new Error("El padre no existe");
+            throw new NotFoundError("El padre no existe");
         }
     }else{
-        throw new Error("EL usuario no existe");
+        throw new NotFoundError("El usuario no existe");
     }
 };
 
@@ -90,5 +91,8 @@ export const getParentByUserIdAndEmail = async (email) =>{
 
 export const deleteWithId = async ({id}) =>{
     const deleted = await parentRepository.deleteParentById(id);
+    if (!deleted) {
+        throw new NotFoundError("No se encontró un padre con ese id");
+    }
     return deleted;
 };
