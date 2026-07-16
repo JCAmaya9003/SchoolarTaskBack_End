@@ -21,7 +21,7 @@ const formatStudentResponse = (student) => ({
     contacto_emergencia: student.contacto_emergencia,
 });
 
-export const getAllStudents = async (req, res) =>{
+export const getAllStudents = async (req, res, next) =>{
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({message: "Error al intentar mostrar los estudiantes!", errors: errors.array() });
@@ -31,11 +31,11 @@ export const getAllStudents = async (req, res) =>{
         const { data, pagination } = await studentService.getStudents(page, limit);
         return sendSuccess(res, 200, 'Estudiantes obtenidos con éxito', { items: data.map(formatStudentResponse), pagination });
     } catch (e) {
-        res.status(500).json({ message: 'Error al mostrar los estudiantes', error: e.message });
+        next(e);
     }
 }
 
-export const createStudent = async (req, res) =>{
+export const createStudent = async (req, res, next) =>{
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -57,36 +57,27 @@ export const createStudent = async (req, res) =>{
 
         return sendSuccess(res, 201, 'Estudiante creado con éxito', formatStudentResponse(newStudent));
     }catch (error) {
-        res.status(500).json({ message: 'Error al crear el estudiante', error: error.message });
+        next(error);
     }
 }
 
-export const deleteStudent = async (req, res) =>{
+export const deleteStudent = async (req, res, next) =>{
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
     }
     const { email } = req.body;
     try {
-        if(email){
-            const studentDeleted = await studentService.deleteStudent(email);
+        const studentDeleted = await studentService.deleteStudent(email);
+        await userService.eraseUser(email);
 
-            if(studentDeleted){
-                await userService.eraseUser(email);
-
-                return sendSuccess(res, 200, 'Estudiante eliminado con éxito', formatStudentResponse(studentDeleted));
-            }else{
-                return res.status(409).json({ message: 'Datos Invalidos para eliminar el estudiante' });
-            }
-        }else{
-            return res.status(404).json({ message: 'Porfavor ingrese un email!' });
-        }
+        return sendSuccess(res, 200, 'Estudiante eliminado con éxito', formatStudentResponse(studentDeleted));
     }catch (error) {
-        res.status(500).json({ message: 'Error al elimnar el estudiante', error: error.message });
+        next(error);
     }
 }
 
-export const updateStudent = async (req, res) =>{
+export const updateStudent = async (req, res, next) =>{
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -95,57 +86,39 @@ export const updateStudent = async (req, res) =>{
             grado, seccion,
             alergias, condiciones_medicas, contacto_emergencia} = req.body;
 
-try {
+    try {
         const editedStudent = await studentService.updateStudent({
             email,
             grado, seccion,
             alergias, condiciones_medicas, contacto_emergencia
         });
-        if(editedStudent){
-            return sendSuccess(res, 200, 'Estudiante editado con éxito', formatStudentResponse(editedStudent));
-    }else{
-        return res.status(409).json({ message: 'Datos Invalidos para editar el estudiante' });
+        return sendSuccess(res, 200, 'Estudiante editado con éxito', formatStudentResponse(editedStudent));
+    }catch (error) {
+        next(error);
     }
-}catch (error) {
-    res.status(500).json({ message: 'Error al editar el estudiante', error: error.message });
 }
-}
-export const deleteById= async(req, res) =>{
+
+export const deleteById = async (req, res, next) =>{
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
     }
     const { id } = req.body;
 
-try {
-        const deleted = await studentService.deleteWithId({
-            id
-        });
-    if(deleted){
+    try {
+        const deleted = await studentService.deleteWithId({ id });
         return sendSuccess(res, 200, 'Estudiante eliminado con éxito', formatStudentResponse(deleted));
-    }else{
-        return res.status(409).json({ message: 'Datos Invalidos para eliminar el estudiante' });
+    }catch (error) {
+        next(error);
     }
-}catch (error) {
-    res.status(500).json({ message: 'Error al eliminar el estudiante', error: error.message });
-}
 }
 
-export const getStudentGradesInfoParent = async (req, res) => {
+export const getStudentGradesInfoParent = async (req, res, next) => {
     try {
         const { email } = req.user;
 
-        // Verificar si el padre existe
-        const parent = await parentService.getParentByUserIdAndEmail(email);
-        if (!parent) {
-            return res.status(404).json({ message: "Padre no encontrado" });
-        }
-
-        // Obtener estudiantes relacionados con el padre
+        // Obtener estudiantes relacionados con el padre (el service ya valida que el padre exista)
         const students = await studentService.getStudentsByParentEmail(email);
-        if (!students.length) {
-            return res.status(404).json({ message: "No se encontraron estudiantes asociados al padre" });
-        }
 
         // Preparar la respuesta
         const response = [];
@@ -167,12 +140,12 @@ export const getStudentGradesInfoParent = async (req, res) => {
 
         return sendSuccess(res, 200, 'Información de los estudiantes y sus notas obtenida con éxito', response);
     } catch (error) {
-        res.status(500).json({ error: "Error al obtener las notas de los estudiantes: " + error.message });
+        next(error);
     }
 };
 
 //POST
-export const getStudentGradesInfo = async (req, res) => {
+export const getStudentGradesInfo = async (req, res, next) => {
     try {
         const { email } = req.body;
 
@@ -181,6 +154,6 @@ export const getStudentGradesInfo = async (req, res) => {
 
         return sendSuccess(res, 200, 'Notas del estudiante obtenidas con éxito', response);
     } catch (error) {
-        res.status(500).json({ error: "Error al obtener las notas del estudiante: " + error.message });
+        next(error);
     }
 };
