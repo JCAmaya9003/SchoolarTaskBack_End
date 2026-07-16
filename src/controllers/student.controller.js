@@ -6,6 +6,7 @@ import { sendSuccess } from '../utils/apiResponse.js';
 
 // Forma consistente para exponer un estudiante en las respuestas (antes variaba: Nombre/userRol/userParentnombre...)
 const formatStudentResponse = (student) => ({
+    id: student._id,
     nombre: student.usuario.nombre,
     apellido: student.usuario.apellido,
     email: student.usuario.email,
