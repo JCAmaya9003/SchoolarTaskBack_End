@@ -48,7 +48,7 @@ describe('registerUser', () => {
     await userService.registerUser(testUserData);
 
     await expect(userService.registerUser(testUserData))
-      .rejects.toThrow('Usuario ya existe');
+      .rejects.toThrow('El usuario ya existe');
   });
 
   it('debe lanzar error si el rol no existe', async () => {
@@ -78,14 +78,14 @@ describe('loginUser', () => {
     await expect(userService.loginUser({
       email: 'juan@test.com',
       password: 'wrongpassword',
-    })).rejects.toThrow('Contraseña inválida');
+    })).rejects.toThrow('Credenciales inválidas');
   });
 
   it('debe lanzar error con email inexistente', async () => {
     await expect(userService.loginUser({
       email: 'noexiste@test.com',
       password: 'password123',
-    })).rejects.toThrow('Usuario inexistente');
+    })).rejects.toThrow('Credenciales inválidas');
   });
 });
 

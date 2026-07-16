@@ -71,11 +71,11 @@ describe('POST /api/users/register', () => {
     expect(res.body.data.email).toBe('maria@test.com');
   });
 
-  it('debe rechazar registro duplicado - 500', async () => {
+  it('debe rechazar registro duplicado - 409', async () => {
     await request.post('/api/users/register').send(testUser);
     const res = await request.post('/api/users/register').send(testUser);
 
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(409);
   });
 
   it('debe rechazar datos inválidos - 400', async () => {
