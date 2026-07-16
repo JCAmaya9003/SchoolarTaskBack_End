@@ -77,6 +77,7 @@ router.post(
     body('genero').isString().matches(/^[A-Za-z\s]+$/).withMessage('Nombre Invalido! Generos validos: "Masculino" y "Femenino"'),
     body('domicilio').isString().withMessage('Domicilio Incorrecto'),
     body('nacionalidad').isString().withMessage('Nacionalidad Incorrecto'),
+    body('rolNombre').isIn(['student', 'parent']).withMessage('Rol inválido. El auto-registro solo permite los roles student o parent.'),
   ],
   register
 );
@@ -225,6 +226,7 @@ router.put('/',
     body('genero').isString().matches(/^[A-Za-z\s]+$/).withMessage('Nombre Invalido! Generos validos: "Masculino" y "Femenino"'),
     body('domicilio').isString().withMessage('Domicilio Incorrecto'),
     body('nacionalidad').isString().withMessage('Nacionalidad Incorrecto'),
+    body('rolNombre').isString().withMessage('Rol inválido.'),
   ],
   updateUser
 );

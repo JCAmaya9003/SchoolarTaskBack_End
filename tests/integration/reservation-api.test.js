@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import supertest from 'supertest';
-import { setupTestDB, teardownTestDB } from '../setup.js';
+import { setupTestDB, teardownTestDB, registerUserDirectly } from '../setup.js';
 import Role from '../../src/models/role-model.js';
 
 let app;
@@ -52,7 +52,7 @@ beforeAll(async () => {
   app = appModule.default;
   request = supertest(app);
 
-  await request.post('/api/users/register').send(adminUser);
+  await registerUserDirectly(adminUser);
   const adminCookie = await loginAsAdmin();
 
   await request.post('/api/academic_places').set('Cookie', adminCookie).send({ lugar: 'Laboratorio A' });
