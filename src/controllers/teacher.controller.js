@@ -26,7 +26,7 @@ const formatTeacherResponse = (teacher) => ({
  * @param {Object} req - Solicitud HTTP.
  * @param {Object} res - Respuesta HTTP.
  */
-export const getAllTeachers = async (req, res) => {
+export const getAllTeachers = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ message: "Error al intentar mostrar los profesores!", errors: errors.array() });
@@ -36,7 +36,7 @@ export const getAllTeachers = async (req, res) => {
         const { data, pagination } = await teacherService.getTeachers(page, limit);
         return sendSuccess(res, 200, 'Profesores obtenidos con éxito', { items: data.map(formatTeacherResponse), pagination });
     } catch (e) {
-        res.status(500).json({ message: 'Error al mostrar los profesores', error: e.message });
+        next(e);
     }
 };
 
@@ -45,7 +45,7 @@ export const getAllTeachers = async (req, res) => {
  * @param {Object} req - Solicitud HTTP.
  * @param {Object} res - Respuesta HTTP.
  */
-export const createTeacher = async (req, res) => {
+export const createTeacher = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -65,7 +65,7 @@ export const createTeacher = async (req, res) => {
 
         return sendSuccess(res, 201, 'Profesor creado con éxito', formatTeacherResponse(newTeacher));
     } catch (error) {
-        res.status(500).json({ message: 'Error al crear el profesor', error: error.message });
+        next(error);
     }
 };
 
@@ -74,7 +74,7 @@ export const createTeacher = async (req, res) => {
  * @param {Object} req - Solicitud HTTP.
  * @param {Object} res - Respuesta HTTP.
  */
-export const updateTeacher = async (req, res) => {
+export const updateTeacher = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -90,13 +90,9 @@ export const updateTeacher = async (req, res) => {
             especialidad,
         });
 
-        if (updatedTeacher) {
-            return sendSuccess(res, 200, 'Profesor actualizado con éxito', formatTeacherResponse(updatedTeacher));
-        } else {
-            return res.status(400).json({ message: 'No se pudo actualizar el profesor' });
-        }
+        return sendSuccess(res, 200, 'Profesor actualizado con éxito', formatTeacherResponse(updatedTeacher));
     } catch (error) {
-        return res.status(500).json({ message: 'Error al actualizar el profesor', error: error.message });
+        next(error);
     }
 };
 
@@ -105,7 +101,7 @@ export const updateTeacher = async (req, res) => {
  * @param {Object} req - Solicitud HTTP.
  * @param {Object} res - Respuesta HTTP.
  */
-export const deleteTeacher = async (req, res) => {
+export const deleteTeacher = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -115,19 +111,15 @@ export const deleteTeacher = async (req, res) => {
 
     try {
         const deletedTeacher = await teacherService.deleteTeacher(email);
-        if (!deletedTeacher) {
-            return res.status(404).json({ message: 'Profesor no encontrado' });
-        }
-
         const deletedUser = await userService.eraseUser(email);
 
-        if (deletedTeacher && deletedUser) {
-            return sendSuccess(res, 200, 'Profesor eliminado con éxito', formatTeacherResponse(deletedTeacher));
-        } else {
-            return res.status(400).json({ message: 'No se pudo eliminar el profesor o el usuario' });
+        if (!deletedUser) {
+            return res.status(500).json({ message: 'No se pudo eliminar el usuario asociado al profesor' });
         }
+
+        return sendSuccess(res, 200, 'Profesor eliminado con éxito', formatTeacherResponse(deletedTeacher));
     } catch (error) {
-        return res.status(500).json({ message: 'Error al eliminar el profesor', error: error.message });
+        next(error);
     }
 };
 
@@ -152,16 +144,12 @@ export const deleteById = async (req, res, next) => {
     }
 };
 
-export const getTeacherSubjectInfo = async (req, res) => {
+export const getTeacherSubjectInfo = async (req, res, next) => {
     try {
         const { email } = req.user;
 
-        // Obtener materias relacionadas con el profesor
+        // Obtener materias relacionadas con el profesor (el service ya lanza NotFoundError si no hay)
         const subjects = await teacherService.getSubjectsByTeacherEmail(email);
-
-        if (!subjects || subjects.length === 0) {
-            return res.status(404).json({ message: "No se encontraron materias asociadas al profesor" });
-        }
 
         // Preparar la respuesta
         const response = [];
@@ -217,6 +205,6 @@ export const getTeacherSubjectInfo = async (req, res) => {
 
         return sendSuccess(res, 200, 'Información de las materias y estudiantes obtenida con éxito', response);
     } catch (error) {
-        res.status(500).json({ error: "Error al obtener la información del profesor: " + error.message });
+        next(error);
     }
 };
