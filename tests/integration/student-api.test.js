@@ -284,6 +284,17 @@ describe('POST /api/students/get-all (autorización)', () => {
 
     expect(res.status).toBe(403);
   });
+
+  it('rechaza un email mal formado - 400 (regresión: getStudentGradesInfo nunca llamaba validationResult)', async () => {
+    const cookie = await loginAsAdmin();
+
+    const res = await request
+      .post('/api/students/get-all')
+      .set('Cookie', cookie)
+      .send({ email: 'no-es-un-email' });
+
+    expect(res.status).toBe(400);
+  });
 });
 
 describe('POST /api/students/get-all (con materias asignadas)', () => {
