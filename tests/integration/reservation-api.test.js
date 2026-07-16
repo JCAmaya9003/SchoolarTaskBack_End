@@ -230,6 +230,58 @@ describe('PUT /api/reservations', () => {
 
     expect(res.status).toBe(403);
   });
+
+  it('admin puede reeditar una reserva sin moverla fuera de su propio horario - 200 (regresión: self-conflict al no excluir la propia reserva del chequeo de solapamiento)', async () => {
+    const cookie = await loginAsAdmin();
+
+    // La reserva ya quedó en Laboratorio A, 2026-09-01T14:00-16:00 tras el test anterior de este describe.
+    // Reeditarla manteniendo el mismo lugar y el mismo horario (que se solapa consigo misma) no debe fallar.
+    const res = await request
+      .put('/api/reservations')
+      .set('Cookie', cookie)
+      .send({
+        lugar: 'Laboratorio A',
+        nuevoLugar: 'Laboratorio A',
+        usuarioEmail: 'prof-a-reserva@test.com',
+        descripcion: 'Segunda edición sin mover el horario',
+        nueva_fecha_inicio: '2026-09-01T14:00:00.000Z',
+        nueva_fecha_fin: '2026-09-01T16:00:00.000Z',
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.descripcion).toBe('Segunda edición sin mover el horario');
+  });
+
+  it('rechaza datos inválidos (email mal formado) - 400 (regresión: reservation.controller.js nunca llamaba validationResult)', async () => {
+    const cookie = await loginAsAdmin();
+
+    const res = await request
+      .put('/api/reservations')
+      .set('Cookie', cookie)
+      .send({
+        lugar: 'Laboratorio A',
+        nuevoLugar: 'Laboratorio A',
+        usuarioEmail: 'no-es-un-email',
+        descripcion: 'Descripción',
+        nueva_fecha_inicio: '2026-09-01T14:00:00.000Z',
+        nueva_fecha_fin: '2026-09-01T16:00:00.000Z',
+      });
+
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('GET /api/reservations/by-time-range (validación)', () => {
+  it('rechaza fechas inválidas - 400 (regresión: reservation.controller.js nunca llamaba validationResult)', async () => {
+    const cookie = await loginAsAdmin();
+
+    const res = await request
+      .get('/api/reservations/by-time-range')
+      .set('Cookie', cookie)
+      .query({ fecha_inicio: 'no-es-una-fecha', fecha_fin: '2026-09-01T12:00:00.000Z' });
+
+    expect(res.status).toBe(400);
+  });
 });
 
 describe('DELETE /api/reservations', () => {

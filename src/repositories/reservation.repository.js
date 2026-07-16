@@ -79,11 +79,13 @@ export const findAllReservations = async (page, limit) => {
  * Buscar reservas entre un rango de tiempo.
  * @param {Date} startDate - Fecha de inicio.
  * @param {Date} endDate - Fecha de fin.
+ * @param {String} [excludeId] - ID de una reserva a excluir de la búsqueda (para no comparar una reserva contra sí misma al editarla).
  * @returns {Promise<Array>} - Lista de reservas en el rango de tiempo.
  */
-export const findReservationsByTimeRange = async (startDate, endDate, lugarId) => {
+export const findReservationsByTimeRange = async (startDate, endDate, lugarId, excludeId) => {
     return await Reservation.find({
         lugar: lugarId,
+        ...(excludeId ? { _id: { $ne: excludeId } } : {}),
         $or: [
             { fecha_inicio: { $lt: endDate, $gte: startDate } },
             { fecha_fin: { $lte: endDate, $gt: startDate } },

@@ -1,3 +1,4 @@
+import { validationResult } from 'express-validator';
 import * as reservationService from '../services/reservation.service.js';
 import { sendSuccess } from '../utils/apiResponse.js';
 
@@ -18,6 +19,10 @@ const formatReservationResponse = (reservation) => ({
  * Crear una nueva reserva.
  */
 export const createReservation = async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
     try {
         const { lugar, usuarioEmail, descripcion, fecha_inicio, fecha_fin } = req.body;
 
@@ -39,6 +44,10 @@ export const createReservation = async (req, res, next) => {
  * Actualizar una reserva.
  */
 export const updateReservation = async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
     try {
         const { lugar, nuevoLugar, usuarioEmail, descripcion, nueva_fecha_inicio, nueva_fecha_fin } = req.body;
 
@@ -61,6 +70,10 @@ export const updateReservation = async (req, res, next) => {
  * Eliminar una reserva.
  */
 export const deleteReservation = async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
     try {
         const { lugar, usuarioEmail } = req.body;
 
@@ -79,6 +92,10 @@ export const deleteReservation = async (req, res, next) => {
  * Eliminar una reserva por id.
  */
 export const deleteReservationById = async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
     try {
         const { id } = req.body;
 
@@ -108,6 +125,10 @@ export const getAllReservations = async (req, res, next) => {
  * Obtener reservas en un rango de tiempo.
  */
 export const getReservationsByTimeRange = async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
     try {
         const { fecha_inicio, fecha_fin } = req.query;
 
@@ -126,6 +147,10 @@ export const getReservationsByTimeRange = async (req, res, next) => {
  * Obtener una reserva por usuario y lugar.
  */
 export const getReservationByUserAndPlace = async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
     try {
         const { usuarioEmail, lugar } = req.query;
 
@@ -144,6 +169,10 @@ export const getReservationByUserAndPlace = async (req, res, next) => {
  * Obtener todas las reservas realizadas por un usuario.
  */
 export const getReservationsByUser = async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
     try {
         const { usuarioEmail } = req.query;
 
