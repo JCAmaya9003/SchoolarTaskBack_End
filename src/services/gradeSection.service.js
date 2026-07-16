@@ -100,12 +100,7 @@ export const eraseGradeAndSectionById = async (grado, seccion) => {
  * @returns {Promise<Object>} - Grado y sección encontrados.
  */
 export const getGradeAndSection = async (grado, seccion) => {
-    const GradeSectionExists = await gradeSectionRepository.findGradeAndSection(grado, seccion);
-    if (GradeSectionExists) {
-        return GradeSectionExists;
-    } else {
-        throw new Error("El grado y sección no existe");
-    }
+    return await gradeSectionRepository.findGradeAndSection(grado, seccion);
 };
 
 /**

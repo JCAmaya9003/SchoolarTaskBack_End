@@ -4,6 +4,7 @@ import * as subjectService from '../services/subject.service.js';
 import * as userService from '../services/user-service.js';
 import { hardDeleteUserById } from '../repositories/user-repository.js';
 import logger from '../config/logger.js';
+import { NotFoundError, ConflictError } from '../errors/errors.js';
 
 /**
  * Obtener todos los profesores.
@@ -33,7 +34,7 @@ export const createTeacher = async ({ nombre, apellido, email, password, fecha_n
                 if (subject) {
                     validSubjects.push(subject._id);
                 } else {
-                    throw new Error(`Materia inválida: ${subjectName}`);
+                    throw new NotFoundError(`Materia inválida: ${subjectName}`);
                 }
             }
 
@@ -44,7 +45,7 @@ export const createTeacher = async ({ nombre, apellido, email, password, fecha_n
                 if (gradeSection) {
                     validGradeSections.push(gradeSection._id);
                 } else {
-                    throw new Error(`Grado y sección inválidos: Grado=${grado}, Sección=${seccion}`);
+                    throw new NotFoundError(`Grado y sección inválidos: Grado=${grado}, Sección=${seccion}`);
                 }
             }
 
@@ -78,7 +79,7 @@ export const createTeacher = async ({ nombre, apellido, email, password, fecha_n
                 throw error;
             }
         } else {
-            throw new Error("Usuario ya existente!");
+            throw new ConflictError("Usuario ya existente!");
         };
     };
 
@@ -106,7 +107,7 @@ export const updateTeacher = async ({ email, asignaciones, telefono, especialida
                     if (subject) {
                         validSubjects.push(subject._id);
                     } else {
-                        throw new Error(`Materia inválida: ${subjectName}`);
+                        throw new NotFoundError(`Materia inválida: ${subjectName}`);
                     }
                 }
 
@@ -116,7 +117,7 @@ export const updateTeacher = async ({ email, asignaciones, telefono, especialida
                     if (gradeSection) {
                         validGradeSections.push(gradeSection._id);
                     } else {
-                        throw new Error(`Grado y sección inválidos: Grado=${grado}, Sección=${seccion}`);
+                        throw new NotFoundError(`Grado y sección inválidos: Grado=${grado}, Sección=${seccion}`);
                     }
                 }
 
@@ -129,10 +130,10 @@ export const updateTeacher = async ({ email, asignaciones, telefono, especialida
                 especialidad,
             });
         } else {
-            throw new Error(`No existe el profesor!`);
+            throw new NotFoundError(`No existe el profesor!`);
         }
     } else {
-        throw new Error(`No existe el usuario!`);
+        throw new NotFoundError(`No existe el usuario!`);
     }
 };
 
@@ -149,10 +150,10 @@ export const deleteTeacher = async (email) => {
         if (teacherExists) {
             return await teacherRepository.deleteTeacherById(teacherExists.id);
         } else {
-            throw new Error("No existe el profesor");
+            throw new NotFoundError("No existe el profesor");
         }
     } else {
-        throw new Error("No existe el usuario");
+        throw new NotFoundError("No existe el usuario");
     }
 };
 
@@ -178,18 +179,21 @@ export const getTeacherByUserIdAndEmail = async (email) => {
  */
 export const deleteWithId = async ({ id }) => {
     const deleted = await teacherRepository.deleteTeacherById(id);
+    if (!deleted) {
+        throw new NotFoundError("No se encontró un profesor con ese id");
+    }
     return deleted;
 };
 
 export const getSubjectsByTeacherEmail = async (email) => {
     const teacherUser = await userService.searchUserByEmail(email);
     if (!teacherUser) {
-        throw new Error("Usuario no encontrado");
+        throw new NotFoundError("Usuario no encontrado");
     }
 
     const teacher = await teacherRepository.findTeacherByUserId(teacherUser.id);
     if (!teacher) {
-        throw new Error("Profesor no encontrado");
+        throw new NotFoundError("Profesor no encontrado");
     }
 
     // Extraer materias desde grado_encargado
@@ -201,7 +205,7 @@ export const getSubjectsByTeacherEmail = async (email) => {
     }
 
     if (!subjects.length) {
-        throw new Error("No se encontraron materias para el profesor");
+        throw new NotFoundError("No se encontraron materias para el profesor");
     }
 
     return subjects;

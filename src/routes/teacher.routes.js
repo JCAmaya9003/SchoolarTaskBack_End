@@ -65,6 +65,17 @@ router.delete(
     teacherController.deleteTeacher
 );
 
+// Ruta para eliminar un profesor por ID - solo ADMIN
+router.delete(
+    '/id',
+    validateToken,
+    checkRole(['admin']),
+    [
+        body('id').isString().withMessage('Id inválido'),
+    ],
+    teacherController.deleteById
+);
+
 // Obtener información del profesor y sus materias - requiere autenticación teacher
 router.get('/get-teacherInfo', validateToken, checkRole(['teacher']), teacherController.getTeacherSubjectInfo);
 
