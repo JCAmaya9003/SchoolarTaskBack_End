@@ -82,12 +82,10 @@ export const deleteParent = async (email) =>{
 
 export const getParentByUserIdAndEmail = async (email) =>{
     const parentUser = await userService.searchUserByEmail(email);
-    if(parentUser){
-        const parent = await parentRepository.findParentByUserId(parentUser.id);
-        return parent;
-    }else{
-        throw new Error("EL usuario no existe");
+    if(!parentUser){
+        return null;
     }
+    return await parentRepository.findParentByUserId(parentUser.id);
 };
 
 export const deleteWithId = async ({id}) =>{

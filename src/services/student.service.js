@@ -6,6 +6,7 @@ import * as evaluationGradeService from '../services/evaluation_grade.service.js
 import * as evaluationService from '../services/evaluation.service.js';
 import { hardDeleteUserById } from '../repositories/user-repository.js';
 import logger from '../config/logger.js';
+import { NotFoundError, ConflictError } from '../errors/errors.js';
 
 export const getStudents = async (page, limit) =>{
     return await studentRepository.findAllStudents(page, limit);
@@ -50,7 +51,7 @@ export const createStudent = async ({nombre, apellido, email, password, fecha_na
                                 },
                             });
                         } else {
-                            throw new Error("El estudiante ya existe");
+                            throw new ConflictError("El estudiante ya existe");
                         }
                     } catch (error) {
                         // Rollback: eliminar el usuario creado si falla la creación del estudiante
@@ -59,13 +60,13 @@ export const createStudent = async ({nombre, apellido, email, password, fecha_na
                         throw error;
                     }
                 } else {
-                    throw new Error("El usuario ya existe");
+                    throw new ConflictError("El usuario ya existe");
                 }
         } else {
-            throw new Error("El grado y sección no existe");
+            throw new NotFoundError("El grado y sección no existe");
         }
     } else {
-        throw new Error("El padre no existe");
+        throw new NotFoundError("El padre no existe");
     }
 };
 
@@ -80,16 +81,16 @@ export const updateStudent = async ({email, grado, seccion, alergias, condicione
             const gradeSection = await gradeSectionService.getGradeAndSection(grado, seccion);
 
             if(gradeSection){
-                return await studentRepository.updateStudentByUserId(studentExists.id, 
+                return await studentRepository.updateStudentByUserId(studentExists.id,
                     {grado_seccion: gradeSection, alergias, condiciones_medicas, contacto_emergencia});
             }else{
-                throw new Error("Grado y seccion inexistentes");
+                throw new NotFoundError("Grado y seccion inexistentes");
             }
         }else{
-            throw new Error("El estudiante no existe");
+            throw new NotFoundError("El estudiante no existe");
         }
     }else{
-        throw new Error("Usuario inexistente");
+        throw new NotFoundError("Usuario inexistente");
     }
 };
 
@@ -101,10 +102,10 @@ export const deleteStudent = async (email) =>{
         if(studentExists){
             return await studentRepository.deleteStudentByUserId(studentExists.id);
         }else{
-            throw new Error("El Estudiante no existe!");
+            throw new NotFoundError("El Estudiante no existe!");
         }
     }else{
-        throw new Error("Usuario inexistente");
+        throw new NotFoundError("Usuario inexistente");
     }
 };
 
@@ -114,36 +115,39 @@ export const getStudentByUserIdAndEmail = async (email) =>{
         const student = await studentRepository.findStudentByUserId(studentUser.id);
         return student;
     }else{
-        throw new Error("El usuario no existe");
+        throw new NotFoundError("El usuario no existe");
     }
 };
 
 export const deleteWithId = async ({id}) =>{
     const deleted = await studentRepository.deleteStudentById(id);
+    if (!deleted) {
+        throw new NotFoundError("No se encontró un estudiante con ese id");
+    }
     return deleted;
 };
 
 export const getStudentGradesInfo = async (email) => {
     const studentUser = await userService.searchUserByEmail(email);
     if (!studentUser) {
-        throw new Error("Usuario no encontrado");
+        throw new NotFoundError("Usuario no encontrado");
     }
 
     const student = await studentRepository.findStudentByUserId(studentUser.id);
     if (!student) {
-        throw new Error("Estudiante no encontrado");
+        throw new NotFoundError("Estudiante no encontrado");
     }
 
     // Obtener la combinación de grado y sección
     const gradeSection = student.grado_seccion;
     if (!gradeSection) {
-        throw new Error("Grado y sección no encontrados para el estudiante");
+        throw new NotFoundError("Grado y sección no encontrados para el estudiante");
     }
 
     // Obtener las materias del grado y sección
     const subjects = await gradeSectionService.getSubjectsByGradeAndSection(gradeSection.grado, gradeSection.seccion);
     if (!subjects.length) {
-        throw new Error("No se encontraron materias para el grado y sección del estudiante");
+        throw new NotFoundError("No se encontraron materias para el grado y sección del estudiante");
     }
 
     // OPTIMIZACIÓN: Obtener todas las evaluaciones de todas las materias en una sola consulta
@@ -192,13 +196,13 @@ export const getStudentsByParentEmail = async (email_padre) => {
     // Verificar si el padre existe
     const parent = await parentService.getParentByUserIdAndEmail(email_padre);
     if (!parent) {
-        throw new Error("Padre no encontrado");
+        throw new NotFoundError("Padre no encontrado");
     }
 
     // Buscar estudiantes relacionados con el padre
     const students = await studentRepository.findStudentsByParentId(parent._id);
     if (!students.length) {
-        throw new Error("No se encontraron estudiantes relacionados con el padre");
+        throw new NotFoundError("No se encontraron estudiantes relacionados con el padre");
     }
 
     return students;
