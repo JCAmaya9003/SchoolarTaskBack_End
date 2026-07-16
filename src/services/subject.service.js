@@ -38,13 +38,7 @@ export const eraseSubject = async (nombre)=>{
 };
 
 export const searchSubjectByName = async (nombre) =>{
-    const subjectExists = await subjectRepository.findSubjectByName(nombre);
-
-    if(subjectExists){
-        return subjectExists;
-    }else{
-        throw new Error("Materia inexistente");
-    }
+    return await subjectRepository.findSubjectByName(nombre);
 };
 
 export const getSubjects = async () =>{

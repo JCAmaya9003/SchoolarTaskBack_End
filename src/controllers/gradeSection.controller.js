@@ -96,6 +96,9 @@ export const getGradeAndSection = async (req, res) => {
     const { grado, seccion } = req.body;
     try {
         const GradeSections = await gradeSectionService.getGradeAndSection(grado, seccion);
+        if (!GradeSections) {
+            return res.status(404).json({ message: 'El grado y sección no existe' });
+        }
         res.status(200).json(GradeSections);
     } catch (error) {
         res.status(500).json({ message: 'Error al obtener grado y sección', error: error.message });

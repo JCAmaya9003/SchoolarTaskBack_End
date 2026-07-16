@@ -107,7 +107,7 @@ export const updateTeacher = async ({ email, asignaciones, telefono, especialida
                     if (subject) {
                         validSubjects.push(subject._id);
                     } else {
-                        throw new Error(`Materia inválida: ${subjectName}`);
+                        throw new NotFoundError(`Materia inválida: ${subjectName}`);
                     }
                 }
 
@@ -117,7 +117,7 @@ export const updateTeacher = async ({ email, asignaciones, telefono, especialida
                     if (gradeSection) {
                         validGradeSections.push(gradeSection._id);
                     } else {
-                        throw new Error(`Grado y sección inválidos: Grado=${grado}, Sección=${seccion}`);
+                        throw new NotFoundError(`Grado y sección inválidos: Grado=${grado}, Sección=${seccion}`);
                     }
                 }
 
