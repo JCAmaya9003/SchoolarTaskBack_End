@@ -1,6 +1,24 @@
 import * as parentService from '../services/parent.service.js'
 import * as userService from '../services/user-service.js'
 import { validationResult } from 'express-validator';
+import { sendSuccess } from '../utils/apiResponse.js';
+
+// Forma consistente para exponer un padre en las respuestas (antes variaba: Nombre/userPadreNombre, domicilio apuntaba mal...)
+const formatParentResponse = (parent) => ({
+    id: parent._id,
+    nombre: parent.usuario.nombre,
+    apellido: parent.usuario.apellido,
+    email: parent.usuario.email,
+    genero: parent.usuario.genero,
+    domicilio: parent.usuario.domicilio,
+    nacionalidad: parent.usuario.nacionalidad,
+    fecha_nacimiento: parent.usuario.fecha_nacimiento,
+    rol: parent.usuario.rol,
+    telefono: parent.telefono,
+    telefono_trabajo: parent.telefono_trabajo,
+    lugar_trabajo: parent.lugar_trabajo,
+    profesion: parent.profesion,
+});
 
 export const getAllParents = async (req, res) =>{
     const errors = validationResult(req);
@@ -9,8 +27,8 @@ export const getAllParents = async (req, res) =>{
     }
     try {
         const { page, limit } = req.query;
-        const result = await parentService.getParents(page, limit);
-        res.json(result);
+        const { data, pagination } = await parentService.getParents(page, limit);
+        return sendSuccess(res, 200, 'Padres obtenidos con éxito', { items: data.map(formatParentResponse), pagination });
     } catch (e) {
         res.status(500).json({ message: 'Error al mostrar los padres', error: e.message });
     }
@@ -28,26 +46,11 @@ export const createParent = async (req, res) =>{
     try {
         const newParent = await parentService.createParent({
             nombre, apellido, email, password, fecha_nacimiento, rolNombre,
-            genero, domicilio, nacionalidad, 
-            telefono, telefono_trabajo, lugar_trabajo, profesion 
+            genero, domicilio, nacionalidad,
+            telefono, telefono_trabajo, lugar_trabajo, profesion
         });
-        
-        return res.status(200).json({
-            message: 'Padre creado con éxito',
-            Nombre: newParent.usuario.nombre,
-            Apellido: newParent.usuario.apellido,
-            Email: newParent.usuario.email,
-            genero: newParent.usuario.genero,
-            domicilio: newParent.usuario.domicilio,
-            nacionalidad: newParent.usuario.nacionalidad,
-            userFecha: newParent.usuario.fecha_nacimiento,
-            userRol: newParent.usuario.rol,
-            telefono: newParent.telefono,
-            telefono_trabajo: newParent.telefono_trabajo,
-            lugar_trabajo: newParent.lugar_trabajo,
-            profesion: newParent.profesion,
-        });
-                
+
+        return sendSuccess(res, 201, 'Padre creado con éxito', formatParentResponse(newParent));
     }catch (error) {
         res.status(500).json({ message: 'Error al crear el padre', error: error.message });
     }
@@ -60,34 +63,13 @@ export const deleteParent = async (req, res) =>{
     }
     const { email } = req.body;
     try {
-        if(email){
-            const parentDeleted = await parentService.deleteParent(email);
-            await userService.eraseUser(email);
+        const parentDeleted = await parentService.deleteParent(email);
+        await userService.eraseUser(email);
 
-            if(parentDeleted){
-                return res.status(200).json({
-                    message: 'Padre eliminado con éxito',
-                    userPadreNombre: parentDeleted.usuario.nombre,
-                    userPadreApellido: parentDeleted.usuario.apellido,
-                    userPadreEmail: parentDeleted.usuario.email,
-                    domicilio: parentDeleted.domicilio,
-                    genero: parentDeleted.usuario.genero,
-                    nacionalidad: parentDeleted.usuario.nacionalidad,
-                    telefono: parentDeleted.telefono,
-                    telefono_trabajo: parentDeleted.telefono_trabajo,
-                    lugar_trabajo: parentDeleted.lugar_trabajo,
-                    profesion: parentDeleted.profesion,
-                });
-            }else{
-                return res.status(409).json({ message: 'Datos Invalidos para eliminar padre' });
-            }
-        }else{
-            return res.status(404).json({ message: 'Porfavor ingrese un email!' });
-        }
+        return sendSuccess(res, 200, 'Padre eliminado con éxito', formatParentResponse(parentDeleted));
     }catch (error) {
-        res.status(500).json({ message: 'Error al crear el padre', error: error.message });
+        res.status(500).json({ message: 'Error al eliminar el padre', error: error.message });
     }
-
 }
 
 export const updateParent = async (req, res) =>{
@@ -98,36 +80,18 @@ export const updateParent = async (req, res) =>{
     const { email, //datos para el user
         telefono, telefono_trabajo, lugar_trabajo, profesion} = req.body;
 
-try {
+    try {
         const editedParent = await parentService.updateParent({
-            email, 
-            telefono, 
-            telefono_trabajo, 
-            lugar_trabajo, 
+            email,
+            telefono,
+            telefono_trabajo,
+            lugar_trabajo,
             profesion
         });
-    if(editedParent){
-        return res.status(200).json({
-            message: 'Padre editado con éxito',
-            Nombre: editedParent.usuario.nombre,
-            Apellido: editedParent.usuario.apellido,
-            Email: editedParent.usuario.email,
-            genero: editedParent.usuario.genero,
-            domicilio: editedParent.usuario.domicilio,
-            nacionalidad: editedParent.usuario.nacionalidad,
-            userFecha: editedParent.usuario.fecha_nacimiento,
-            userRol: editedParent.usuario.rol,
-            telefono: editedParent.telefono,
-            telefono_trabajo: editedParent.telefono_trabajo,
-            lugar_trabajo: editedParent.lugar_trabajo,
-            profesion: editedParent.profesion,
-          });
-    }else{
-        return res.status(409).json({ message: 'Datos Invalidos para editar el padre' });
+        return sendSuccess(res, 200, 'Padre editado con éxito', formatParentResponse(editedParent));
+    }catch (error) {
+        res.status(500).json({ message: 'Error al editar el padre', error: error.message });
     }
-}catch (error) {
-    res.status(500).json({ message: 'Error al editar el padre', error: error.message });
-}
 };
 
 export const deleteById= async(req, res) =>{
@@ -137,23 +101,10 @@ export const deleteById= async(req, res) =>{
     }
     const { id } = req.body;
 
-try {
-
-        const deleted = await parentService.deleteWithId({
-            id
-        });
-    if(deleted){
-        return res.status(200).json({
-            message: 'Padre eliminado con éxito',
-            telefono: deleted.telefono,
-            telefono_trabajo: deleted.telefono_trabajo, 
-            lugar_trabajo: deleted.lugar_trabajo, 
-            profesion: deleted.profesion, 
-          });
-    }else{
-        return res.status(409).json({ message: 'Datos Invalidos para eliminar el padre' });
+    try {
+        const deleted = await parentService.deleteWithId({ id });
+        return sendSuccess(res, 200, 'Padre eliminado con éxito', formatParentResponse(deleted));
+    }catch (error) {
+        res.status(500).json({ message: 'Error al eliminar el padre', error: error.message });
     }
-}catch (error) {
-    res.status(500).json({ message: 'Error al eliminar el padre', error: error.message });
-}
 }
