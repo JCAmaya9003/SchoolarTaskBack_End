@@ -3,7 +3,7 @@ import * as studentService from '../services/student.service.js';
 import * as userService from '../services/user-service.js';
 import { sendSuccess } from '../utils/apiResponse.js';
 
-// Forma consistente para exponer un estudiante en las respuestas (antes variaba: Nombre/userRol/userParentnombre...)
+// Forma consistente para exponer un estudiante en las respuestas
 const formatStudentResponse = (student) => ({
     id: student._id,
     nombre: student.usuario.nombre,
@@ -117,7 +117,7 @@ export const getStudentGradesInfoParent = async (req, res, next) => {
     try {
         const { email } = req.user;
 
-        // Obtener estudiantes relacionados con el padre (el service ya valida que el padre exista)
+        // El service ya valida que el padre exista
         const students = await studentService.getStudentsByParentEmail(email);
 
         // Preparar la respuesta

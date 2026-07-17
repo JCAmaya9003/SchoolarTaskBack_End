@@ -109,9 +109,8 @@ export const deleteStudent = async (email) =>{
     }
 };
 
-// Lookup helper usado por evaluation_grade.service.js y user-controller.js: devuelve null
-// (no throw) tanto si el usuario no existe como si no tiene perfil de student, para no dejar
-// ramas muertas en quien la llama (mismo patrón que parentService/teacherService).
+// Devuelve null si el usuario no existe o si no tiene perfil de student,
+// para no dejar ramas muertas en quien la llama.
 export const getStudentByUserIdAndEmail = async (email) =>{
     const studentUser = await userService.searchUserByEmail(email);
     if(!studentUser){

@@ -62,7 +62,7 @@ afterAll(async () => {
   await teardownTestDB();
 });
 
-describe('POST /api/parents (admin)', () => {
+describe('POST /api/parents, admin', () => {
   it('debe crear un padre - 201', async () => {
     const cookie = await loginAsAdmin();
 
@@ -78,7 +78,7 @@ describe('POST /api/parents (admin)', () => {
     expect(res.body.data.domicilio).toBe('Calle 1');
   });
 
-  it('rechaza HTML/scripts en campos de texto libre (lugar_trabajo) - 400 (defensa XSS)', async () => {
+  it('rechaza HTML/scripts en campos de texto libre, lugar_trabajo - 400, defensa XSS', async () => {
     const cookie = await loginAsAdmin();
 
     const res = await request
@@ -99,7 +99,7 @@ describe('POST /api/parents (admin)', () => {
   });
 });
 
-describe('GET /api/parents (admin)', () => {
+describe('GET /api/parents, admin', () => {
   it('debe listar padres paginados - 200', async () => {
     const cookie = await loginAsAdmin();
     await request.post('/api/parents').set('Cookie', cookie).send(buildParent('padre3@test.com'));
@@ -112,7 +112,7 @@ describe('GET /api/parents (admin)', () => {
   });
 });
 
-describe('PUT /api/parents (admin)', () => {
+describe('PUT /api/parents, admin', () => {
   it('debe actualizar un padre - 200', async () => {
     const cookie = await loginAsAdmin();
     await request.post('/api/parents').set('Cookie', cookie).send(buildParent('padre4@test.com'));
@@ -150,7 +150,7 @@ describe('PUT /api/parents (admin)', () => {
   });
 });
 
-describe('DELETE /api/parents (admin)', () => {
+describe('DELETE /api/parents, admin', () => {
   it('debe eliminar un padre por email - 200', async () => {
     const cookie = await loginAsAdmin();
     await request.post('/api/parents').set('Cookie', cookie).send(buildParent('padre5@test.com'));
@@ -176,7 +176,7 @@ describe('DELETE /api/parents (admin)', () => {
   });
 });
 
-describe('DELETE /api/parents/id (admin)', () => {
+describe('DELETE /api/parents/id, admin', () => {
   it('debe eliminar un padre por id - 200', async () => {
     const cookie = await loginAsAdmin();
     const createRes = await request

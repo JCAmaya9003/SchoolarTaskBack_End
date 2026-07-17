@@ -5,19 +5,18 @@ export const findUserByEmail = async (email) => {
   return await User.findOne({ email }).populate('rol', 'nombre');
 };
 
-// password tiene select:false a nivel de schema (defensa en profundidad para que ningún otro
-// query lo devuelva por accidente); esta función es la única que lo trae explícitamente,
-// para los dos únicos casos que lo necesitan: comparar contraseña en login y en editUser.
-// También trae los campos de control de fuerza bruta (select:false por el mismo motivo),
-// que loginUser necesita para decidir si la cuenta está bloqueada.
+// password tiene select:false a nivel de schema, para que ningún otro query lo devuelva
+// por accidente. Esta función es la única que lo trae explícitamente, para los dos únicos
+// casos que lo necesitan: comparar contraseña en login y en editUser. También trae los
+// campos de control de fuerza bruta que loginUser necesita para saber si la cuenta está bloqueada.
 export const findUserByEmailWithPassword = async (email) => {
   return await User.findOne({ email })
     .select('+password +failedLoginAttempts +lockUntil +lastFailedLoginAt')
     .populate('rol', 'nombre');
 };
 
-// Actualiza el estado de intentos de login fallidos/bloqueo sin pasar por las validaciones
-// completas del usuario (no es una edición de perfil, es solo control interno de fuerza bruta).
+// Actualiza el estado de intentos fallidos y bloqueo sin pasar por las validaciones
+// completas del usuario, ya que esto no es una edición de perfil.
 export const updateLoginAttemptState = async (id, { failedLoginAttempts, lockUntil, lastFailedLoginAt }) => {
   return await User.findByIdAndUpdate(id, { failedLoginAttempts, lockUntil, lastFailedLoginAt });
 };

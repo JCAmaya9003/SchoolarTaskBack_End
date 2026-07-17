@@ -79,14 +79,14 @@ describe('POST /oauth', () => {
   });
 });
 
-describe('GET /oauth (callback)', () => {
+describe('GET /oauth, callback', () => {
   it('falla si falta el code - 400', async () => {
     const res = await request.get('/oauth').query({ state: 'cualquiera' });
 
     expect(res.status).toBe(400);
   });
 
-  it('rechaza si falta el state - 400 (regresión: CSRF, antes no se validaba state)', async () => {
+  it('rechaza si falta el state - 400, antes no se validaba y era vulnerable a CSRF', async () => {
     mockGoogleResponds({ email: existingUser.email });
 
     const res = await request.get('/oauth').query({ code: 'algun-code' });
@@ -94,7 +94,7 @@ describe('GET /oauth (callback)', () => {
     expect(res.status).toBe(400);
   });
 
-  it('rechaza si el state no coincide con la cookie - 400 (regresión: CSRF)', async () => {
+  it('rechaza si el state no coincide con la cookie - 400, protección CSRF', async () => {
     mockGoogleResponds({ email: existingUser.email });
     const stateCookie = await getStateCookie(request);
 
@@ -106,7 +106,7 @@ describe('GET /oauth (callback)', () => {
     expect(res.status).toBe(400);
   });
 
-  it('rechaza si el email de Google no está verificado - 400 (regresión: email_verified nunca se chequeaba)', async () => {
+  it('rechaza si el email de Google no está verificado - 400, antes email_verified nunca se chequeaba', async () => {
     mockGoogleResponds({ email: existingUser.email, email_verified: false });
     const stateCookie = await getStateCookie(request);
     const res = await request.post('/oauth');

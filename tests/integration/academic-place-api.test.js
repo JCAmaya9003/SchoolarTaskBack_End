@@ -42,7 +42,7 @@ afterAll(async () => {
   await teardownTestDB();
 });
 
-describe('POST /api/academic_places (admin)', () => {
+describe('POST /api/academic_places, admin', () => {
   it('debe crear un lugar - 201', async () => {
     const cookie = await loginAsAdmin();
 
@@ -53,7 +53,7 @@ describe('POST /api/academic_places (admin)', () => {
     expect(res.body.data.lugar).toBe('Cancha');
   });
 
-  it('rechaza HTML/scripts en el lugar - 400 (defensa XSS)', async () => {
+  it('rechaza HTML/scripts en el lugar - 400, defensa XSS', async () => {
     const cookie = await loginAsAdmin();
 
     const res = await request.post('/api/academic_places').set('Cookie', cookie).send({ lugar: '<script>alert(1)</script>' });
@@ -82,7 +82,7 @@ describe('GET /api/academic_places', () => {
   });
 });
 
-describe('PUT /api/academic_places (admin)', () => {
+describe('PUT /api/academic_places, admin', () => {
   it('debe editar un lugar - 200', async () => {
     const cookie = await loginAsAdmin();
 
@@ -106,7 +106,7 @@ describe('PUT /api/academic_places (admin)', () => {
     expect(res.status).toBe(404);
   });
 
-  it('debe fallar si se renombra a un nombre ya existente - 409 (regresión: lugar no tenía unique en el modelo, permitía duplicados)', async () => {
+  it('debe fallar si se renombra a un nombre ya existente - 409, antes lugar no tenía unique en el modelo y permitía duplicados', async () => {
     const cookie = await loginAsAdmin();
     await request.post('/api/academic_places').set('Cookie', cookie).send({ lugar: 'Biblioteca' });
     await request.post('/api/academic_places').set('Cookie', cookie).send({ lugar: 'Gimnasio' });
@@ -144,7 +144,7 @@ describe('POST /api/academic_places/get-name', () => {
   });
 });
 
-describe('DELETE /api/academic_places (admin)', () => {
+describe('DELETE /api/academic_places, admin', () => {
   it('debe eliminar un lugar - 200', async () => {
     const cookie = await loginAsAdmin();
     await request.post('/api/academic_places').set('Cookie', cookie).send({ lugar: 'Sala de música' });

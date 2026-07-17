@@ -22,7 +22,7 @@ router.post(
     evaluation_gradeController.createEvaluationGrade
 );
 
-// Ruta para obtener todas las calificaciones de evaluación paginadas (teacher solo ve las de sus materias)
+// Calificaciones paginadas; un teacher solo ve las de sus propias materias
 router.get('/all', validateToken, enrichUserContext, checkRole(['admin', 'teacher']), evaluation_gradeController.getAllEvaluationGrades);
 
 // Ruta para obtener calificaciones de un estudiante por email

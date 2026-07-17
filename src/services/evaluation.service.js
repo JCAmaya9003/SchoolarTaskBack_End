@@ -73,8 +73,7 @@ export const deleteEvaluation = async ({nombre, nombreMateria}) =>{
     };
 };
 
-// Lookup helper usado por evaluation_grade.service.js: devuelve null (no throw) para no dejar
-// ramas muertas en quien la llama (mismo patrón que subjectService.searchSubjectByName).
+// Devuelve null en vez de tirar, para no dejar ramas muertas en quien la llama
 export const searchEvaluationbyNameAndSubject = async (nombre, nombreMateria) =>{
     const materia = await subjectService.searchSubjectByName(nombreMateria);
     if(!materia){
@@ -83,7 +82,7 @@ export const searchEvaluationbyNameAndSubject = async (nombre, nombreMateria) =>
     return await evaluationRepository.findEvaluationByNameAndSubject(materia, nombre);
 };
 
-// Si requestingUser es teacher, filtra a solo las materias que dicta (admin ve todo).
+// Si requestingUser es teacher, filtra a solo las materias que dicta; admin ve todo
 export const getAllEvaluations = async (page, limit, requestingUser) =>{
     let subjectIds = null;
     if (requestingUser?.role === 'teacher') {

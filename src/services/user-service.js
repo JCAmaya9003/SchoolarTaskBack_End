@@ -5,8 +5,8 @@ import crypto from 'crypto';
 import logger from '../config/logger.js';
 import { ValidationError, InvalidCredentialsError, NotFoundError, UserAlreadyExistsError } from '../errors/errors.js';
 
-// Bloqueo de cuenta por fuerza bruta, independiente de la IP (el rate limiter por IP no
-// alcanza contra un atacante distribuido que rota de IP contra la misma cuenta).
+// Bloqueo de cuenta por fuerza bruta, independiente de la IP. El rate limiter por IP no
+// alcanza contra un atacante distribuido que rota de IP contra la misma cuenta.
 const LOCKOUT_THRESHOLD = 5; // intentos fallidos a ritmo humano antes de bloquear
 const LOCKOUT_DURATION_MS = 10 * 60 * 1000; // 10 minutos
 // Dos intentos fallidos separados por menos de esto casi seguro no son un humano tipeando
@@ -24,9 +24,8 @@ export const loginUser = async( {email, password} ) => {
 
     const now = new Date();
 
-    // Cuenta bloqueada: mismo error genérico de siempre, nunca revelar que está bloqueada
-    // (si no, un atacante podría usar la respuesta para confirmar que el email existe y que
-    // ya está siendo atacado).
+    // Cuenta bloqueada: mismo error genérico de siempre, nunca revelar que está bloqueada.
+    // Si no, un atacante podría confirmar que el email existe y que ya lo está atacando.
     if (user.lockUntil && user.lockUntil > now) {
       logger.warn(`[AUTH] Intento de login sobre cuenta bloqueada: ${email}`);
       throw new InvalidCredentialsError();
@@ -103,7 +102,7 @@ export const editUser = async (email, nombre, apellido, password, fecha_nacimien
     const rol = await roleService.searchRoleByName(rolNombre);
 
     if(rol){
-      // Solo re-hashear si el password cambió (no es el hash actual)
+      // Solo re-hashear si el password cambió
       const isSamePassword = await verifyPassword(password, user.password);
       const finalPassword = isSamePassword ? user.password : await hashPassword(password);
 
@@ -159,7 +158,7 @@ export const forgotPassword = async (email) => {
   const user = await findUserByEmail(email);
 
   if(!user){
-    // No revelar si el email existe o no (anti user-enumeration)
+    // No revelar si el email existe o no
     logger.warn(`[PASSWORD RESET] Intento con email no registrado: ${email}`);
     return null;
   }
@@ -175,9 +174,8 @@ export const forgotPassword = async (email) => {
 
   await saveResetToken(user._id, hashedToken, expires);
 
-  // El token en texto plano solo se loguea fuera de producción (mismo criterio que el
-  // controller para exponerlo en la respuesta) - en logs de producción no debe quedar
-  // nunca, ya que permitiría secuestrar un reset en curso a quien tenga acceso a ellos.
+  // El token en texto plano solo se loguea fuera de producción. En producción no debe
+  // quedar nunca en los logs, porque permitiría secuestrar un reset en curso.
   if (process.env.NODE_ENV !== 'production') {
     logger.info(`[PASSWORD RESET] Token generado para ${email}: ${resetToken}`);
   }

@@ -1,20 +1,16 @@
 import sanitizeHtml from 'sanitize-html';
 
-// No usamos regex propio para detectar HTML/scripts: un regex casero es fácil de esquivar
-// (encoding, SVG, atributos de evento, etc.) y da falsos positivos con texto legítimo como
-// "si x < 10". sanitize-html parsea el HTML de verdad.
+// Nada de regex propio: es fácil de esquivar y da falsos positivos con texto normal
+// como "si x < 10". sanitize-html parsea el HTML de verdad.
 //
-// Comparar sanitizeHtml(value, sinTags) contra el value original da falsos positivos: el
-// parser siempre re-codifica entidades (ej. "&" -> "&amp;", "<" suelto -> "&lt;") aunque no
-// haya ninguna etiqueta real, así que ese solo cambio ya lo marcaría como "HTML". Por eso
-// comparamos dos pasadas por el MISMO parser (una que no permite ninguna etiqueta, otra que
-// las permite todas): si no había etiquetas reales, ambas pasadas re-codifican las entidades
-// exactamente igual y el resultado es idéntico entre sí; solo difieren si sí había una
-// etiqueta real que la primera pasada eliminó.
+// Tampoco comparamos contra el valor original: el parser re-codifica entidades aunque
+// no haya ninguna etiqueta, así que eso solo ya marcaría cualquier texto como HTML.
+// Por eso comparamos dos pasadas del mismo parser, una que no permite ninguna etiqueta
+// y otra que las permite todas. Si no había etiquetas reales, ambas re-codifican las
+// entidades igual y el resultado coincide. Si difieren, es porque había una etiqueta real.
 const STRIP_ALL_TAGS = { allowedTags: [], allowedAttributes: {} };
-// allowVulnerableTags: silencia el warning de sanitize-html por permitir <script>/<style> acá -
-// esta versión "permisiva" nunca se guarda ni se devuelve, solo se usa como referencia para
-// detectar si el input tenía alguna etiqueta real (ver comentario de containsHtml).
+// allowVulnerableTags silencia el warning de sanitize-html por permitir script y style acá.
+// Esta versión permisiva nunca se guarda ni se devuelve, solo sirve de referencia.
 const ALLOW_ALL_TAGS = { allowedTags: false, allowedAttributes: false, allowVulnerableTags: true };
 
 export const containsHtml = (value) => {

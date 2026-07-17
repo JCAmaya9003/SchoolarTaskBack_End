@@ -99,7 +99,7 @@ describe('POST /api/evaluations', () => {
     expect(res.status).toBe(404);
   });
 
-  it('rechaza HTML/scripts en campos de texto libre (descripcion) - 400 (defensa XSS)', async () => {
+  it('rechaza HTML/scripts en campos de texto libre, descripcion - 400, defensa XSS', async () => {
     const cookie = await loginAsAdmin();
 
     const res = await request
@@ -232,7 +232,7 @@ describe('PUT /api/evaluations', () => {
     expect(res.status).toBe(403);
   });
 
-  it('un teacher NO puede reasignar su propia evaluación a una materia ajena via nuevaMateria - 403 (regresión: verifyTeacherSubject solo validaba nombreMateria, no nuevaMateria)', async () => {
+  it('un teacher NO puede reasignar su propia evaluación a una materia ajena vía nuevaMateria - 403, antes verifyTeacherSubject solo validaba nombreMateria', async () => {
     const cookie = await loginAs('prof-mate-eval@test.com', 'password123');
 
     const res = await request

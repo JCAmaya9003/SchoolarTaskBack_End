@@ -39,7 +39,7 @@ export const createEvaluationGrade = async ({ email, nombreMateria, nombreEvalua
 
 /**
  * Obtener todas las calificaciones de evaluación, paginadas.
- * Si requestingUser es teacher, filtra a solo las calificaciones de sus propias materias (admin ve todo).
+ * Si requestingUser es teacher, filtra a solo las calificaciones de sus propias materias; admin ve todo.
  * @returns {Promise<{data: Array, pagination: Object}>}
  */
 export const getAllEvaluationGrades = async (page, limit, requestingUser) => {

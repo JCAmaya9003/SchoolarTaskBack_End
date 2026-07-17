@@ -56,7 +56,7 @@ afterAll(async () => {
   await teardownTestDB();
 });
 
-describe('POST /api/news (admin)', () => {
+describe('POST /api/news, admin', () => {
   it('debe crear una noticia sobre un usuario existente - 201', async () => {
     const cookie = await loginAsAdmin();
     await request.post('/api/users/register').send(buildStudentUser('estudiante1-news@test.com'));
@@ -73,7 +73,7 @@ describe('POST /api/news (admin)', () => {
     expect(res.body.data.autor.email).toBe('estudiante1-news@test.com');
   });
 
-  it('rechaza HTML/scripts en el contenido - 400 (defensa XSS)', async () => {
+  it('rechaza HTML/scripts en el contenido - 400, defensa XSS', async () => {
     const cookie = await loginAsAdmin();
 
     const res = await request
@@ -88,7 +88,7 @@ describe('POST /api/news (admin)', () => {
     expect(res.status).toBe(400);
   });
 
-  it('rechaza HTML/scripts en el título - 400 (defensa XSS)', async () => {
+  it('rechaza HTML/scripts en el título - 400, defensa XSS', async () => {
     const cookie = await loginAsAdmin();
 
     const res = await request
@@ -124,7 +124,7 @@ describe('POST /api/news (admin)', () => {
   });
 });
 
-describe('GET /api/news (admin/teacher/student)', () => {
+describe('GET /api/news, admin/teacher/student', () => {
   it('debe listar noticias paginadas - 200', async () => {
     const cookie = await loginAsAdmin();
     await request.post('/api/users/register').send(buildStudentUser('estudiante2-news@test.com'));
@@ -197,7 +197,7 @@ describe('GET /api/news/by-user', () => {
   });
 });
 
-describe('PUT /api/news (admin)', () => {
+describe('PUT /api/news, admin', () => {
   it('debe editar una noticia - 200', async () => {
     const cookie = await loginAsAdmin();
     await request.post('/api/users/register').send(buildStudentUser('estudiante4-news@test.com'));
@@ -238,7 +238,7 @@ describe('PUT /api/news (admin)', () => {
   });
 });
 
-describe('DELETE /api/news (admin)', () => {
+describe('DELETE /api/news, admin', () => {
   it('debe eliminar una noticia - 200', async () => {
     const cookie = await loginAsAdmin();
     await request.post('/api/users/register').send(buildStudentUser('estudiante5-news@test.com'));

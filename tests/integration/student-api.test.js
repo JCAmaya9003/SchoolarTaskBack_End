@@ -84,7 +84,7 @@ afterAll(async () => {
   await teardownTestDB();
 });
 
-describe('POST /api/students (admin)', () => {
+describe('POST /api/students, admin', () => {
   it('debe crear un estudiante - 201', async () => {
     const cookie = await loginAsAdmin();
 
@@ -98,8 +98,8 @@ describe('POST /api/students (admin)', () => {
     expect(res.body.data.email).toBe('est1@test.com');
     expect(res.body.data.id).toBeDefined();
 
-    // Regresión: estos campos no se populaban (genero/domicilio/nacionalidad/fecha_nacimiento
-    // faltaban en TODAS las queries, y createStudent en particular no anidaba padre.usuario)
+    // Antes estos campos no se populaban en ninguna query, y createStudent tampoco
+    // anidaba padre.usuario
     expect(res.body.data.genero).toBe('Masculino');
     expect(res.body.data.domicilio).toBe('Casa 1');
     expect(res.body.data.nacionalidad).toBe('Venezolana');
@@ -109,7 +109,7 @@ describe('POST /api/students (admin)', () => {
     expect(res.body.data.grado_seccion.materias).toBeDefined();
   });
 
-  it('rechaza HTML/scripts en campos de texto libre (domicilio) - 400 (defensa XSS)', async () => {
+  it('rechaza HTML/scripts en campos de texto libre, domicilio - 400, defensa XSS', async () => {
     const cookie = await loginAsAdmin();
 
     const res = await request
@@ -151,7 +151,7 @@ describe('POST /api/students (admin)', () => {
   });
 });
 
-describe('GET /api/students (admin)', () => {
+describe('GET /api/students, admin', () => {
   it('debe listar estudiantes paginados - 200', async () => {
     const cookie = await loginAsAdmin();
     await request.post('/api/students').set('Cookie', cookie).send(buildStudent('est3@test.com'));
@@ -164,7 +164,7 @@ describe('GET /api/students (admin)', () => {
   });
 });
 
-describe('PUT /api/students (admin)', () => {
+describe('PUT /api/students, admin', () => {
   it('debe actualizar un estudiante - 200', async () => {
     const cookie = await loginAsAdmin();
     await request.post('/api/students').set('Cookie', cookie).send(buildStudent('est4@test.com'));
@@ -204,7 +204,7 @@ describe('PUT /api/students (admin)', () => {
   });
 });
 
-describe('DELETE /api/students (admin)', () => {
+describe('DELETE /api/students, admin', () => {
   it('debe eliminar un estudiante por email - 200', async () => {
     const cookie = await loginAsAdmin();
     await request.post('/api/students').set('Cookie', cookie).send(buildStudent('est5@test.com'));
@@ -230,7 +230,7 @@ describe('DELETE /api/students (admin)', () => {
   });
 });
 
-describe('DELETE /api/students/id (admin)', () => {
+describe('DELETE /api/students/id, admin', () => {
   it('debe eliminar un estudiante por id - 200', async () => {
     const cookie = await loginAsAdmin();
     const createRes = await request
@@ -247,7 +247,7 @@ describe('DELETE /api/students/id (admin)', () => {
     expect(res.status).toBe(200);
   });
 
-  it('debe devolver el padre con su usuario populado al eliminar por id - 200 (regresión: deleteStudentById no populaba padre.usuario)', async () => {
+  it('debe devolver el padre con su usuario populado al eliminar por id - 200, antes deleteStudentById no lo populaba', async () => {
     const cookie = await loginAsAdmin();
     const createRes = await request
       .post('/api/students')
@@ -277,7 +277,7 @@ describe('DELETE /api/students/id (admin)', () => {
   });
 });
 
-describe('POST /api/students/get-all (autorización)', () => {
+describe('POST /api/students/get-all, autorización', () => {
   it('un estudiante no puede pedir las notas de otro estudiante - 403', async () => {
     await request.post('/api/students').set('Cookie', await loginAsAdmin()).send(buildStudent('est7@test.com'));
     await request.post('/api/students').set('Cookie', await loginAsAdmin()).send(buildStudent('est8@test.com'));
@@ -296,7 +296,7 @@ describe('POST /api/students/get-all (autorización)', () => {
     expect(res.status).toBe(403);
   });
 
-  it('rechaza un email mal formado - 400 (regresión: getStudentGradesInfo nunca llamaba validationResult)', async () => {
+  it('rechaza un email mal formado - 400, antes getStudentGradesInfo nunca llamaba validationResult', async () => {
     const cookie = await loginAsAdmin();
 
     const res = await request
@@ -308,8 +308,8 @@ describe('POST /api/students/get-all (autorización)', () => {
   });
 });
 
-describe('POST /api/students/get-all (con materias asignadas)', () => {
-  it('debe devolver las notas sin crashear - 200 (regresión: subject._id undefined por remapeo a subject.id)', async () => {
+describe('POST /api/students/get-all, con materias asignadas', () => {
+  it('debe devolver las notas sin crashear - 200, antes subject._id quedaba undefined por un remapeo a subject.id', async () => {
     const cookie = await loginAsAdmin();
     await request.post('/api/subjects').set('Cookie', cookie).send({ nombre: 'MateriaConNotas' });
     await request
@@ -347,7 +347,7 @@ describe('POST /api/students/get-all (con materias asignadas)', () => {
     expect(res.body.data[0].evaluaciones).toEqual([]);
   });
 
-  it('debe devolver una nota de 0 como 0, no como null (regresión: gradesMap.get() || null colapsaba 0)', async () => {
+  it('debe devolver una nota de 0 como 0 y no como null, antes gradesMap.get() con || la colapsaba', async () => {
     const cookie = await loginAsAdmin();
     await request.post('/api/subjects').set('Cookie', cookie).send({ nombre: 'MateriaConNotaCero' });
     await request

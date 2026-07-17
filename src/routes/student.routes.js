@@ -11,7 +11,7 @@ const router = express.Router();
  * @swagger
  * /students:
  *   get:
- *     summary: Obtener todos los estudiantes (solo admin)
+ *     summary: Obtener todos los estudiantes, solo admin
  *     tags: [Estudiantes]
  *     security:
  *       - cookieAuth: []
@@ -30,7 +30,7 @@ const router = express.Router();
  *       200:
  *         description: Lista paginada de estudiantes
  *   post:
- *     summary: Crear nuevo estudiante (solo admin)
+ *     summary: Crear nuevo estudiante, solo admin
  *     tags: [Estudiantes]
  *     security:
  *       - cookieAuth: []
@@ -48,7 +48,7 @@ const router = express.Router();
  *       500:
  *         description: Error en creación
  *   put:
- *     summary: Actualizar estudiante (solo admin)
+ *     summary: Actualizar estudiante, solo admin
  *     tags: [Estudiantes]
  *     security:
  *       - cookieAuth: []
@@ -56,7 +56,7 @@ const router = express.Router();
  *       200:
  *         description: Estudiante actualizado
  *   delete:
- *     summary: Eliminar estudiante (solo admin)
+ *     summary: Eliminar estudiante, solo admin
  *     tags: [Estudiantes]
  *     security:
  *       - cookieAuth: []
@@ -162,7 +162,7 @@ router.post('/get-all',
     studentController.getStudentGradesInfo
 );
 
-// Obtener estudiantes y calificaciones del padre (desde token) - para PARENT
+// Obtener estudiantes y calificaciones del padre logueado - para PARENT
 router.get('/get-students-filterWithParent', validateToken, checkRole(['parent']), studentController.getStudentGradesInfoParent);
 
 export default router;

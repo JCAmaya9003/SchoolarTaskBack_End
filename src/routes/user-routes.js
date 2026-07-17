@@ -155,7 +155,7 @@ router.post(
   resetPassword
 );
 
-// Rutas protegidas (requieren autenticación)
+// Rutas protegidas, requieren autenticación
 
 /**
  * @swagger
@@ -190,7 +190,7 @@ router.post('/get-info',
  * @swagger
  * /users:
  *   get:
- *     summary: Obtener todos los usuarios (solo admin)
+ *     summary: Obtener todos los usuarios, solo admin
  *     tags: [Usuarios]
  *     security:
  *       - cookieAuth: []
@@ -236,7 +236,7 @@ router.put('/',
  * @swagger
  * /users:
  *   delete:
- *     summary: Eliminar usuario - soft delete (solo admin)
+ *     summary: Eliminar usuario con soft delete, solo admin
  *     tags: [Usuarios]
  *     security:
  *       - cookieAuth: []
@@ -253,7 +253,7 @@ router.put('/',
  *                 format: email
  *     responses:
  *       200:
- *         description: Usuario eliminado (soft delete)
+ *         description: Usuario eliminado con soft delete
  *       404:
  *         description: Usuario no encontrado
  */
@@ -270,7 +270,7 @@ router.delete('/',
  * @swagger
  * /users/restore:
  *   patch:
- *     summary: Restaurar usuario eliminado (solo admin)
+ *     summary: Restaurar usuario eliminado, solo admin
  *     tags: [Usuarios]
  *     security:
  *       - cookieAuth: []

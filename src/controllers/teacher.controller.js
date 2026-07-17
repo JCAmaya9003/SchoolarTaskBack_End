@@ -148,7 +148,7 @@ export const getTeacherSubjectInfo = async (req, res, next) => {
     try {
         const { email } = req.user;
 
-        // Obtener materias relacionadas con el profesor (el service ya lanza NotFoundError si no hay)
+        // El service ya lanza NotFoundError si no hay materias
         const subjects = await teacherService.getSubjectsByTeacherEmail(email);
 
         // Preparar la respuesta

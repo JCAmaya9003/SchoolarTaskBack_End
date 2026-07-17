@@ -10,7 +10,7 @@ const router = express.Router();
 // Obtener todas las noticias paginadas
 router.get('/', validateToken, checkRole(['admin', 'teacher', 'student']), newsController.getAllNews);
 
-// Obtener las noticias de un usuario puntual (admin/teacher pueden pedir cualquiera, student solo la propia)
+// Noticias de un usuario puntual; admin/teacher piden cualquiera, student solo la propia
 router.get(
     '/by-user',
     validateToken,

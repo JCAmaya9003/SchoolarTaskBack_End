@@ -71,7 +71,7 @@ describe('POST /api/users/register', () => {
     expect(res.body.data.email).toBe('maria@test.com');
   });
 
-  it('rechaza HTML/scripts en campos de texto libre (domicilio) - 400 (defensa XSS)', async () => {
+  it('rechaza HTML/scripts en campos de texto libre, domicilio - 400, defensa XSS', async () => {
     const res = await request
       .post('/api/users/register')
       .send({ ...testUser, email: 'maria-xss@test.com', domicilio: '<script>alert(document.cookie)</script>' });
@@ -96,7 +96,7 @@ describe('POST /api/users/register', () => {
     expect(res.status).toBe(400);
   });
 
-  it('debe rechazar rolNombre=admin en el auto-registro público - 400 (regresión: escalada de privilegios)', async () => {
+  it('debe rechazar rolNombre=admin en el auto-registro público - 400, cierra una escalada de privilegios', async () => {
     const res = await request.post('/api/users/register').send({
       ...testUser,
       email: 'quiere-ser-admin@test.com',
@@ -106,7 +106,7 @@ describe('POST /api/users/register', () => {
     expect(res.status).toBe(400);
   });
 
-  it('debe rechazar si falta rolNombre - 400 (regresión: antes asignaba el primer rol de la colección, admin)', async () => {
+  it('debe rechazar si falta rolNombre - 400, antes asignaba el primer rol de la colección', async () => {
     const { rolNombre, ...payloadSinRol } = testUser;
 
     const res = await request.post('/api/users/register').send({
@@ -173,7 +173,7 @@ describe('POST /api/users/forgot-password', () => {
     expect(res.body.data.resetToken).toHaveLength(64);
   });
 
-  it('debe responder igual con email inexistente (anti user-enumeration) - 200', async () => {
+  it('debe responder igual con email inexistente, anti user-enumeration - 200', async () => {
     const res = await request.post('/api/users/forgot-password').send({
       email: 'noexiste@test.com',
     });
@@ -222,7 +222,7 @@ describe('POST /api/users/reset-password/:token', () => {
   });
 });
 
-describe('GET /api/users (admin)', () => {
+describe('GET /api/users, admin', () => {
   it('debe retornar todos los usuarios paginados si es admin - 200', async () => {
     const cookies = await loginAsAdmin();
 
@@ -242,7 +242,7 @@ describe('GET /api/users (admin)', () => {
   });
 });
 
-describe('PUT /api/users (admin)', () => {
+describe('PUT /api/users, admin', () => {
   it('debe actualizar un usuario - 200', async () => {
     const cookies = await loginAsAdmin();
     await request.post('/api/users/register').send(testUser);
@@ -274,8 +274,8 @@ describe('PUT /api/users (admin)', () => {
   });
 });
 
-describe('DELETE /api/users (admin, soft delete)', () => {
-  it('debe eliminar (soft delete) un usuario - 200', async () => {
+describe('DELETE /api/users, admin, soft delete', () => {
+  it('debe eliminar, soft delete un usuario - 200', async () => {
     const cookies = await loginAsAdmin();
     await request.post('/api/users/register').send(testUser);
 
@@ -301,7 +301,7 @@ describe('DELETE /api/users (admin, soft delete)', () => {
   });
 });
 
-describe('PATCH /api/users/restore (admin)', () => {
+describe('PATCH /api/users/restore, admin', () => {
   it('debe restaurar un usuario eliminado - 200', async () => {
     const cookies = await loginAsAdmin();
     await request.post('/api/users/register').send(testUser);
@@ -383,7 +383,7 @@ describe('Autorización: accesos cruzados no autorizados devuelven 403', () => {
       .set('Cookie', cookies)
       .send({ email: testUser.email, rolNombre: 'student' });
 
-    // No debe ser bloqueado por autorización (puede dar 404 si no tiene perfil de Student, pero nunca 403)
+    // No debe ser bloqueado por autorización, puede dar 404 si no tiene perfil de Student, pero nunca 403
     expect(res.status).not.toBe(403);
   });
 

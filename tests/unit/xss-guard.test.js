@@ -8,12 +8,12 @@ describe('containsHtml', () => {
     expect(containsHtml('Descripción normal, sin nada raro.')).toBe(false);
   });
 
-  it('no marca comparaciones matemáticas con < y > como HTML (regresión: falso positivo detectado durante el diseño)', () => {
+  it('no marca comparaciones matemáticas con < y > como HTML', () => {
     expect(containsHtml('si x < 10 entonces...')).toBe(false);
     expect(containsHtml('5 < 10 y 20 > 15')).toBe(false);
   });
 
-  it('no marca texto con ampersand suelto como HTML (regresión: falso positivo por re-codificación de entidades)', () => {
+  it('no marca texto con ampersand suelto como HTML', () => {
     expect(containsHtml('texto & con ampersand')).toBe(false);
   });
 
@@ -25,7 +25,7 @@ describe('containsHtml', () => {
     expect(containsHtml('<script>alert(1)</script>')).toBe(true);
   });
 
-  it('detecta un atributo de evento (onerror) en una etiqueta real', () => {
+  it('detecta un atributo de evento, onerror en una etiqueta real', () => {
     expect(containsHtml('<img src=x onerror=alert(1)>')).toBe(true);
   });
 
@@ -49,8 +49,8 @@ describe('containsHtml', () => {
   });
 });
 
-describe('rejectHtml (validador de express-validator)', () => {
-  it('devuelve true (pasa la validación) para texto sin HTML', () => {
+describe('rejectHtml, validador de express-validator', () => {
+  it('devuelve true, pasa la validación para texto sin HTML', () => {
     expect(rejectHtml('Texto normal')).toBe(true);
   });
 

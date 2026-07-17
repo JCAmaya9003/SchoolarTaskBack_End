@@ -22,7 +22,7 @@ describe('getPaginationParams', () => {
     expect(result.limit).toBe(100);
   });
 
-  it('debe usar default cuando limit es 0 (falsy)', () => {
+  it('debe usar default cuando limit es 0, falsy', () => {
     const result = getPaginationParams(1, 0);
     expect(result.limit).toBe(20); // 0 es falsy, parseInt(0) || 20 = 20
   });

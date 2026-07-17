@@ -17,8 +17,8 @@ export const generateAuthUrl = async (req, res, next) => {
   try {
     // Protección CSRF: se genera un state aleatorio, se guarda en una cookie httpOnly de corta
     // duración y se exige que vuelva sin cambios en el callback. Sin esto, un atacante podía
-    // iniciar su propio flujo de OAuth y engañar a la víctima para que complete el callback con
-    // el code del atacante (login CSRF).
+    // iniciar su propio flujo de OAuth y engañar a la víctima para que complete el callback
+    // con su code, robándole la sesión.
     const state = crypto.randomBytes(32).toString('hex');
 
     res.cookie(OAUTH_STATE_COOKIE, state, {

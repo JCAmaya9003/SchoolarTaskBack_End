@@ -11,7 +11,7 @@ afterAll(async () => {
   await teardownTestDB();
 });
 
-describe('Evaluation_grade model (regresión: calificacion no tenía min/max, dependía únicamente del validador de la ruta)', () => {
+describe('Evaluation_grade model, regresión: calificacion no tenía min/max, dependía únicamente del validador de la ruta', () => {
   const fakeStudentId = new mongoose.Types.ObjectId();
   const fakeEvaluationId = new mongoose.Types.ObjectId();
 
@@ -25,7 +25,7 @@ describe('Evaluation_grade model (regresión: calificacion no tenía min/max, de
     await expect(grade.validate()).rejects.toThrow();
   });
 
-  it('acepta una calificación de 0 (no debe rechazarla como si fuera falsy)', async () => {
+  it('acepta una calificación de 0, no debe rechazarla como si fuera falsy', async () => {
     const grade = new EvaluationGrade({ estudiante: fakeStudentId, evaluacion: fakeEvaluationId, calificacion: 0 });
     await expect(grade.validate()).resolves.toBeUndefined();
   });
