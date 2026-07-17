@@ -1,4 +1,5 @@
 import express from 'express';
+import helmet from 'helmet';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import mongoSanitize from 'express-mongo-sanitize';
@@ -26,6 +27,13 @@ import swaggerSpec from './src/config/swagger.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Headers de seguridad estándar (X-Frame-Options, X-Content-Type-Options, HSTS, oculta
+// X-Powered-By, etc.). CSP se deja desactivada porque rompe la UI de Swagger en /api-docs
+// (necesita scripts/estilos inline); el resto de la API es JSON puro, donde CSP no aplica.
+app.use(helmet({
+  contentSecurityPolicy: false,
+}));
 
 // Solo conectar a la BD si no estamos en modo test
 if (process.env.NODE_ENV !== 'test') {
