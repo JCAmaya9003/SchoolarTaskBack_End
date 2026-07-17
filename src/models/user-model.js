@@ -24,6 +24,7 @@ const UserSchema = new mongoose.Schema({
         // Password es requerido solo si NO hay googleId
         return !this.googleId;
       },
+      select: false,
     },
     googleId: {
       type: String,
@@ -55,6 +56,7 @@ const UserSchema = new mongoose.Schema({
     resetPasswordToken: {
       type: String,
       default: null,
+      select: false,
     },
     resetPasswordExpires: {
       type: Date,

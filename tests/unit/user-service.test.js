@@ -1,7 +1,9 @@
-import { describe, it, expect, beforeAll, beforeEach, afterAll, afterEach } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterAll, afterEach, vi } from 'vitest';
 import { setupTestDB, teardownTestDB, clearTestDB } from '../setup.js';
 import * as userService from '../../src/services/user-service.js';
+import * as userRepository from '../../src/repositories/user-repository.js';
 import Role from '../../src/models/role-model.js';
+import logger from '../../src/config/logger.js';
 
 // Datos de prueba
 const testUserData = {
@@ -127,6 +129,22 @@ describe('restoreUser', () => {
   });
 });
 
+describe('password select:false (defensa en profundidad)', () => {
+  beforeEach(async () => {
+    await userService.registerUser(testUserData);
+  });
+
+  it('findUserByEmail (uso general) NO debe traer el hash de password', async () => {
+    const user = await userRepository.findUserByEmail('juan@test.com');
+    expect(user.password).toBeUndefined();
+  });
+
+  it('findUserByEmailWithPassword (solo login/editUser) sí debe traerlo', async () => {
+    const user = await userRepository.findUserByEmailWithPassword('juan@test.com');
+    expect(user.password).toBeDefined();
+  });
+});
+
 describe('forgotPassword y resetPassword', () => {
   beforeEach(async () => {
     await userService.registerUser(testUserData);
@@ -164,5 +182,31 @@ describe('forgotPassword y resetPassword', () => {
 
     await expect(userService.resetPassword(fakeToken, 'newPassword123'))
       .rejects.toThrow('Token inválido o expirado');
+  });
+
+  it('NO debe loguear el token en texto plano cuando NODE_ENV=production (regresión: antes se logueaba siempre, sin importar el entorno)', async () => {
+    const infoSpy = vi.spyOn(logger, 'info');
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+
+    try {
+      await userService.forgotPassword('juan@test.com');
+    } finally {
+      process.env.NODE_ENV = originalEnv;
+    }
+
+    const loggedPlainToken = infoSpy.mock.calls.some(([msg]) => msg.includes('[PASSWORD RESET] Token generado'));
+    expect(loggedPlainToken).toBe(false);
+    infoSpy.mockRestore();
+  });
+
+  it('sí loguea el token en texto plano fuera de producción (comportamiento existente, sin regresión)', async () => {
+    const infoSpy = vi.spyOn(logger, 'info');
+
+    await userService.forgotPassword('juan@test.com');
+
+    const loggedPlainToken = infoSpy.mock.calls.some(([msg]) => msg.includes('[PASSWORD RESET] Token generado'));
+    expect(loggedPlainToken).toBe(true);
+    infoSpy.mockRestore();
   });
 });

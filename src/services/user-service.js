@@ -1,4 +1,4 @@
-import {findUserByEmail, createUser, updateUserById, deleteUserById, findAllusers, restoreUserById, findDeletedUserByEmail, saveResetToken, findUserByResetToken, resetUserPassword } from '../repositories/user-repository.js';
+import {findUserByEmail, findUserByEmailWithPassword, createUser, updateUserById, deleteUserById, findAllusers, restoreUserById, findDeletedUserByEmail, saveResetToken, findUserByResetToken, resetUserPassword } from '../repositories/user-repository.js';
 import {hashPassword,verifyPassword} from '../middlewares/auth-middleware.js';
 import * as roleService from '../services/role-service.js'
 import crypto from 'crypto';
@@ -6,7 +6,7 @@ import logger from '../config/logger.js';
 import { ValidationError, InvalidCredentialsError, NotFoundError, UserAlreadyExistsError } from '../errors/errors.js';
 
 export const loginUser = async( {email, password} ) => {
-    const user = await findUserByEmail(email);
+    const user = await findUserByEmailWithPassword(email);
 
     if(user){
       const isPasswordValid = await verifyPassword(password, user.password);
@@ -57,7 +57,7 @@ export const registerUser = async ( {nombre, apellido, email, password, fecha_na
 };
 
 export const editUser = async (email, nombre, apellido, password, fecha_nacimiento, rolNombre, genero, domicilio, nacionalidad) => {
-  const user = await findUserByEmail(email);
+  const user = await findUserByEmailWithPassword(email);
 
   if(user){
     const rol = await roleService.searchRoleByName(rolNombre);
@@ -135,8 +135,12 @@ export const forgotPassword = async (email) => {
 
   await saveResetToken(user._id, hashedToken, expires);
 
-  // En desarrollo, loguear el token para testing
-  logger.info(`[PASSWORD RESET] Token generado para ${email}: ${resetToken}`);
+  // El token en texto plano solo se loguea fuera de producción (mismo criterio que el
+  // controller para exponerlo en la respuesta) - en logs de producción no debe quedar
+  // nunca, ya que permitiría secuestrar un reset en curso a quien tenga acceso a ellos.
+  if (process.env.NODE_ENV !== 'production') {
+    logger.info(`[PASSWORD RESET] Token generado para ${email}: ${resetToken}`);
+  }
 
   return resetToken;
 };

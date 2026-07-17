@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import * as userService from '../services/user-service.js';
 import { config } from '../config/config.js';
 import { OAuth2Client } from 'google-auth-library';
@@ -9,9 +10,24 @@ import { AppError, ValidationError, NotFoundError } from '../errors/errors.js';
 const CLIENT_ID = config.googleClientId;
 const client = new OAuth2Client(config.googleClientId, config.googleClientSecret, config.googleRedirectUrl);
 
+const OAUTH_STATE_COOKIE = 'oauth_state';
+const OAUTH_STATE_MAX_AGE = 10 * 60 * 1000; // 10 minutos, tiempo suficiente para completar el flujo con Google
 
 export const generateAuthUrl = async (req, res, next) => {
   try {
+    // Protección CSRF: se genera un state aleatorio, se guarda en una cookie httpOnly de corta
+    // duración y se exige que vuelva sin cambios en el callback. Sin esto, un atacante podía
+    // iniciar su propio flujo de OAuth y engañar a la víctima para que complete el callback con
+    // el code del atacante (login CSRF).
+    const state = crypto.randomBytes(32).toString('hex');
+
+    res.cookie(OAUTH_STATE_COOKIE, state, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax', // 'strict' no se envía tras la redirección de vuelta desde Google
+      maxAge: OAUTH_STATE_MAX_AGE,
+    });
+
     const authorizeUrl = client.generateAuthUrl({
       access_type: 'offline',
       scope: [
@@ -20,6 +36,7 @@ export const generateAuthUrl = async (req, res, next) => {
         'openid',
       ],
       prompt: 'consent',
+      state,
     });
 
     return sendSuccess(res, 200, 'URL de autenticación generada con éxito', { url: authorizeUrl });
@@ -31,10 +48,18 @@ export const generateAuthUrl = async (req, res, next) => {
 
 
 export const handleOAuthCallback = async (req, res, next) => {
-  const { code } = req.query;
+  const { code, state } = req.query;
 
   if (!code) {
     return next(new ValidationError('Authorization code is required'));
+  }
+
+  const expectedState = req.cookies?.[OAUTH_STATE_COOKIE];
+  res.clearCookie(OAUTH_STATE_COOKIE);
+
+  if (!state || !expectedState || state !== expectedState) {
+    logger.warn('OAuth callback con state inválido o ausente (posible CSRF)', { ip: req.ip });
+    return next(new ValidationError('Solicitud de OAuth inválida o expirada'));
   }
 
   try {
@@ -57,6 +82,11 @@ export const handleOAuthCallback = async (req, res, next) => {
 
     if (!email) {
       return next(new ValidationError('Email not found in Google token'));
+    }
+
+    // No confiar en un email que Google mismo no marca como verificado
+    if (!payload.email_verified) {
+      return next(new ValidationError('El email de la cuenta de Google no está verificado'));
     }
 
     // Match the email with the database
