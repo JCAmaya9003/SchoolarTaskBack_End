@@ -220,6 +220,25 @@ describe('PUT /api/evaluations', () => {
 
     expect(res.status).toBe(403);
   });
+
+  it('un teacher NO puede reasignar su propia evaluación a una materia ajena via nuevaMateria - 403 (regresión: verifyTeacherSubject solo validaba nombreMateria, no nuevaMateria)', async () => {
+    const cookie = await loginAs('prof-mate-eval@test.com', 'password123');
+
+    const res = await request
+      .put('/api/evaluations')
+      .set('Cookie', cookie)
+      .send({
+        nombre: 'Quiz 1',
+        nuevoNombre: 'Quiz 1',
+        nombreMateria: 'Matematicas',
+        nuevaMateria: 'Historia',
+        descripcion: 'Intento de reasignar a materia ajena',
+        fecha: '2026-08-05',
+        peso: 0.1,
+      });
+
+    expect(res.status).toBe(403);
+  });
 });
 
 describe('DELETE /api/evaluations', () => {

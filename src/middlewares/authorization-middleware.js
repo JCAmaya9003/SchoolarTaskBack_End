@@ -141,9 +141,16 @@ export const verifyTeacherSubject = async (req, res, next) => {
 
     // Si es teacher, verificar que la materia sea suya
     if (userRole === 'teacher') {
-      const subjectName = req.body?.nombreMateria || req.query?.nombreMateria || req.params?.nombreMateria;
+      // Se valida tanto nombreMateria (materia actual) como nuevaMateria (si la evaluación
+      // se está moviendo a otra materia, ej. PUT /evaluations) - regresión: antes solo se
+      // validaba nombreMateria, permitiendo a un teacher reasignar su evaluación a una
+      // materia que no dicta mediante nuevaMateria.
+      const subjectNames = [
+        req.body?.nombreMateria || req.query?.nombreMateria || req.params?.nombreMateria,
+        req.body?.nuevaMateria || req.query?.nuevaMateria || req.params?.nuevaMateria,
+      ].filter(Boolean);
 
-      if (!subjectName) {
+      if (subjectNames.length === 0) {
         return next(); // Si no hay materia, continuar
       }
 
@@ -160,23 +167,25 @@ export const verifyTeacherSubject = async (req, res, next) => {
       // Obtener todas las materias del teacher
       const teacherSubjects = teacher.grado_encargado.flatMap(gc => gc.materias);
 
-      // Buscar la materia solicitada
-      const subject = await Subject.findOne({ nombre: subjectName });
+      for (const subjectName of subjectNames) {
+        // Buscar la materia solicitada
+        const subject = await Subject.findOne({ nombre: subjectName });
 
-      if (!subject) {
-        throw new ForbiddenError('Materia no encontrada');
-      }
+        if (!subject) {
+          throw new ForbiddenError('Materia no encontrada');
+        }
 
-      // Verificar que el teacher tenga esa materia
-      const hasSubject = teacherSubjects.some(s => s._id.toString() === subject._id.toString());
+        // Verificar que el teacher tenga esa materia
+        const hasSubject = teacherSubjects.some(s => s._id.toString() === subject._id.toString());
 
-      if (!hasSubject) {
-        logger.warn('Intento de acceso no autorizado a materia de otro profesor:', {
-          teacherEmail: userEmail,
-          subjectName,
-          endpoint: req.originalUrl,
-        });
-        throw new ForbiddenError('No tienes permiso para acceder a esta materia');
+        if (!hasSubject) {
+          logger.warn('Intento de acceso no autorizado a materia de otro profesor:', {
+            teacherEmail: userEmail,
+            subjectName,
+            endpoint: req.originalUrl,
+          });
+          throw new ForbiddenError('No tienes permiso para acceder a esta materia');
+        }
       }
     }
 
