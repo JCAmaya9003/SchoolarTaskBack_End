@@ -5,6 +5,13 @@ export const findUserByEmail = async (email) => {
   return await User.findOne({ email }).populate('rol', 'nombre');
 };
 
+// password tiene select:false a nivel de schema (defensa en profundidad para que ningún otro
+// query lo devuelva por accidente); esta función es la única que lo trae explícitamente,
+// para los dos únicos casos que lo necesitan: comparar contraseña en login y en editUser.
+export const findUserByEmailWithPassword = async (email) => {
+  return await User.findOne({ email }).select('+password').populate('rol', 'nombre');
+};
+
 export const findAllusers = async (page, limit) => {
   const { skip, limit: validLimit, page: validPage } = getPaginationParams(page, limit);
 
