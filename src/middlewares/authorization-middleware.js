@@ -20,7 +20,7 @@ export const verifyOwnResource = (emailSource = 'body') => {
       }
 
       if (!requestEmail) {
-        // Si no hay email en el request, continuar (el recurso no requiere verificación)
+        // Sin email en el request, el recurso no requiere verificación
         return next();
       }
 
@@ -61,8 +61,8 @@ export const verifyOwnResource = (emailSource = 'body') => {
 
 /**
  * Verifica que el email del recurso coincida con el email del usuario autenticado.
- * A diferencia de verifyOwnResource, acá SOLO admin bypassea la verificación:
- * cualquier otro rol (incluido teacher) tiene que ser dueño del recurso.
+ * A diferencia de verifyOwnResource, acá solo admin bypassea la verificación.
+ * Cualquier otro rol, incluido teacher, tiene que ser dueño del recurso.
  * Usado para recursos donde un teacher no debería poder gestionar los de otro teacher.
  * @param {string} emailSource - Fuente del email ('body', 'query', 'params')
  * @param {string} emailField - Nombre del campo que contiene el email en esa fuente (default 'email')
@@ -78,7 +78,7 @@ export const verifyResourceOwnerOrAdmin = (emailSource = 'body', emailField = 'e
       }
 
       if (!requestEmail) {
-        // Si no hay email en el request, continuar (el recurso no requiere verificación)
+        // Sin email en el request, el recurso no requiere verificación
         return next();
       }
 
@@ -141,10 +141,9 @@ export const verifyTeacherSubject = async (req, res, next) => {
 
     // Si es teacher, verificar que la materia sea suya
     if (userRole === 'teacher') {
-      // Se valida tanto nombreMateria (materia actual) como nuevaMateria (si la evaluación
-      // se está moviendo a otra materia, ej. PUT /evaluations) - regresión: antes solo se
-      // validaba nombreMateria, permitiendo a un teacher reasignar su evaluación a una
-      // materia que no dicta mediante nuevaMateria.
+      // Valida tanto la materia actual como la nueva, si la evaluación se está moviendo.
+      // Antes solo se validaba la materia actual, y un teacher podía reasignar su
+      // evaluación a una materia que no dicta.
       const subjectNames = [
         req.body?.nombreMateria || req.query?.nombreMateria || req.params?.nombreMateria,
         req.body?.nuevaMateria || req.query?.nuevaMateria || req.params?.nuevaMateria,

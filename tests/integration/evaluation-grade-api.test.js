@@ -135,7 +135,7 @@ describe('POST /api/evaluation_grades', () => {
     expect(res.body.data.estudiante.email).toBe(studentEmail);
   });
 
-  it('rechaza una calificación fuera de rango (0-10) - 400 (regresión: evaluation_grade.controller.js nunca llamaba validationResult)', async () => {
+  it('rechaza una calificación fuera de rango 0-10 al crear - 400, antes el controller nunca llamaba validationResult', async () => {
     const cookie = await loginAsAdmin();
 
     const res = await request
@@ -146,13 +146,24 @@ describe('POST /api/evaluation_grades', () => {
     expect(res.status).toBe(400);
   });
 
-  it('rechaza una calificación negativa - 400 (regresión: evaluation_grade.controller.js nunca llamaba validationResult)', async () => {
+  it('rechaza una calificación negativa - 400, antes el controller nunca llamaba validationResult', async () => {
     const cookie = await loginAsAdmin();
 
     const res = await request
       .post('/api/evaluation_grades')
       .set('Cookie', cookie)
       .send({ email: studentEmail, nombreMateria: 'Matematicas', nombreEvaluacion: 'Parcial Mate', calificacion: -5 });
+
+    expect(res.status).toBe(400);
+  });
+
+  it('rechaza HTML/scripts en nombreMateria - 400, defensa XSS', async () => {
+    const cookie = await loginAsAdmin();
+
+    const res = await request
+      .post('/api/evaluation_grades')
+      .set('Cookie', cookie)
+      .send({ email: studentEmail, nombreMateria: '<script>alert(1)</script>', nombreEvaluacion: 'Parcial Mate', calificacion: 8 });
 
     expect(res.status).toBe(400);
   });
@@ -277,7 +288,7 @@ describe('PUT /api/evaluation_grades', () => {
     expect(res.status).toBe(404);
   });
 
-  it('rechaza una calificación fuera de rango al editar - 400 (regresión: evaluation_grade.controller.js nunca llamaba validationResult)', async () => {
+  it('rechaza una calificación fuera de rango al editar - 400, antes el controller nunca llamaba validationResult', async () => {
     const cookie = await loginAsAdmin();
 
     const res = await request

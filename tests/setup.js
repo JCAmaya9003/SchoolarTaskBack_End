@@ -25,9 +25,8 @@ export async function clearTestDB() {
   }
 }
 
-// POST /api/users/register (público) solo permite auto-registro como student/parent.
-// Para sembrar un usuario admin/teacher en tests, se llama al service directamente
-// (mismo hasheo de password y lookup de rol que el endpoint real, sin pasar por esa restricción).
+// El registro público solo permite auto-registro como student o parent. Para sembrar un
+// admin o teacher en tests, se llama al service directo, sin pasar por esa restricción.
 export async function registerUserDirectly(userData) {
   return await userService.registerUser(userData);
 }

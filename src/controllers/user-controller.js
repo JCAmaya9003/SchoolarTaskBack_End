@@ -9,7 +9,7 @@ import { sendSuccess } from '../utils/apiResponse.js';
 
 const LOGIN_COOKIE_MAX_AGE = 60 * 60 * 1000; // 1 hora, igual que la cookie de OAuth
 
-// Forma consistente para exponer un usuario en las respuestas del CRUD (antes variaba: Nombre/userNombre/genero/Genero...)
+// Forma consistente para exponer un usuario en las respuestas del CRUD
 const formatUserResponse = (user) => ({
   id: user._id,
   nombre: user.nombre,
@@ -60,10 +60,9 @@ export const register = async (req, res, next) => {
 
   const { nombre, apellido, email, password, fecha_nacimiento, rolNombre, genero, domicilio, nacionalidad } = req.body;
   try {
-    // Defensa en profundidad: userService.registerUser es compartida con los flujos admin-only
-    // (POST /teachers, /parents, /students), que sí pueden asignar cualquier rol, así que la
-    // restricción a student/parent no puede vivir en el service. Este chequeo no debe depender
-    // únicamente del validador de la ruta (isIn) para el único punto público sin autenticación.
+    // Defensa en profundidad: registerUser también la usan los flujos admin-only, que sí
+    // pueden asignar cualquier rol, así que esta restricción no puede vivir en el service.
+    // No hay que depender solo del validador de la ruta para el único punto público.
     const rolesAutoRegistrables = ['student', 'parent'];
     if (!rolesAutoRegistrables.includes(rolNombre)) {
       return res.status(400).json({ message: 'El auto-registro solo permite los roles student o parent.' });
@@ -281,7 +280,7 @@ export const forgotPassword = async (req, res, next) => {
     const { email } = req.body;
     const resetToken = await userService.forgotPassword(email);
 
-    // Respuesta genérica siempre, exista o no el usuario (anti user-enumeration)
+    // Respuesta genérica siempre, exista o no el usuario, para no filtrar cuáles emails están registrados
     const data = {};
     if (resetToken && process.env.NODE_ENV !== 'production') {
       data.resetToken = resetToken;

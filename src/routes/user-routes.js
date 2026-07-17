@@ -4,6 +4,7 @@ import { login, register, updateUser, deleteUser, getAllUsers, getUserRole, getU
 import { validateToken, checkRole } from '../middlewares/auth-middleware.js';
 import { authLimiter } from '../middlewares/rate-limiter.js';
 import { verifyOwnResource, enrichUserContext } from '../middlewares/authorization-middleware.js';
+import { rejectHtml } from '../utils/xss-guard.js';
 
 const router = express.Router();
 
@@ -75,8 +76,8 @@ router.post(
     body('email').isEmail().withMessage('Email inválido'),
     body('password').isLength({ min: 6 }).withMessage('La contraseña debe tener al menos 6 caracteres'),
     body('genero').isString().matches(/^(Masculino|Femenino)$/).withMessage('Género inválido. Valores aceptados: Masculino, Femenino.'),
-    body('domicilio').isString().withMessage('Domicilio Incorrecto'),
-    body('nacionalidad').isString().withMessage('Nacionalidad Incorrecto'),
+    body('domicilio').isString().withMessage('Domicilio Incorrecto').custom(rejectHtml),
+    body('nacionalidad').isString().withMessage('Nacionalidad Incorrecto').custom(rejectHtml),
     body('rolNombre').isIn(['student', 'parent']).withMessage('Rol inválido. El auto-registro solo permite los roles student o parent.'),
   ],
   register
@@ -154,7 +155,7 @@ router.post(
   resetPassword
 );
 
-// Rutas protegidas (requieren autenticación)
+// Rutas protegidas, requieren autenticación
 
 /**
  * @swagger
@@ -189,7 +190,7 @@ router.post('/get-info',
  * @swagger
  * /users:
  *   get:
- *     summary: Obtener todos los usuarios (solo admin)
+ *     summary: Obtener todos los usuarios, solo admin
  *     tags: [Usuarios]
  *     security:
  *       - cookieAuth: []
@@ -224,8 +225,8 @@ router.put('/',
     body('email').isEmail().withMessage('Email inválido'),
     body('password').isLength({ min: 6 }).withMessage('La contraseña debe tener al menos 6 caracteres'),
     body('genero').isString().matches(/^(Masculino|Femenino)$/).withMessage('Género inválido. Valores aceptados: Masculino, Femenino.'),
-    body('domicilio').isString().withMessage('Domicilio Incorrecto'),
-    body('nacionalidad').isString().withMessage('Nacionalidad Incorrecto'),
+    body('domicilio').isString().withMessage('Domicilio Incorrecto').custom(rejectHtml),
+    body('nacionalidad').isString().withMessage('Nacionalidad Incorrecto').custom(rejectHtml),
     body('rolNombre').isString().withMessage('Rol inválido.'),
   ],
   updateUser
@@ -235,7 +236,7 @@ router.put('/',
  * @swagger
  * /users:
  *   delete:
- *     summary: Eliminar usuario - soft delete (solo admin)
+ *     summary: Eliminar usuario con soft delete, solo admin
  *     tags: [Usuarios]
  *     security:
  *       - cookieAuth: []
@@ -252,7 +253,7 @@ router.put('/',
  *                 format: email
  *     responses:
  *       200:
- *         description: Usuario eliminado (soft delete)
+ *         description: Usuario eliminado con soft delete
  *       404:
  *         description: Usuario no encontrado
  */
@@ -269,7 +270,7 @@ router.delete('/',
  * @swagger
  * /users/restore:
  *   patch:
- *     summary: Restaurar usuario eliminado (solo admin)
+ *     summary: Restaurar usuario eliminado, solo admin
  *     tags: [Usuarios]
  *     security:
  *       - cookieAuth: []

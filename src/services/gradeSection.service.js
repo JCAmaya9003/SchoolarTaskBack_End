@@ -39,7 +39,7 @@ export const newGradeSection = async (grado, seccion, materias = []) => {
 export const getSubjectsByGradeAndSection = async (grado, seccion) => {
     const materias = await gradeSectionRepository.findSubjectsByGradeAndSection(grado, seccion);
 
-    // _id (no id): el resto del código interno (student.service.js) espera este campo como en cualquier doc de Mongo
+    // Devuelve _id, no id, para que coincida con el resto de docs de Mongo
     return materias.map((materia) => ({ _id: materia._id, nombre: materia.nombre }));
 };
 
@@ -162,8 +162,8 @@ export const removeSubjectsFromGradeSection = async (grado, seccion, materias = 
     return await gradeSectionRepository.removeSubjectsFromGradeSection(gradeSection.id, validSubjects);
 };
 
-// Devuelve [] (no throw) si la materia no está asignada a ningún grado/sección todavía:
-// es un estado válido (ej. materia recién creada), no un error.
+// Devuelve un array vacío si la materia aún no está asignada a ningún grado o sección,
+// eso es un estado válido, no un error.
 export const getGradeSectionsBySubject = async (subjectId) => {
     return await gradeSectionRepository.findGradeSectionsBySubject(subjectId);
 };

@@ -45,7 +45,7 @@ afterAll(async () => {
   await teardownTestDB();
 });
 
-describe('POST /api/gradeSections (admin)', () => {
+describe('POST /api/gradeSections, admin', () => {
   it('debe crear un grado y sección - 201', async () => {
     const cookie = await loginAsAdmin();
 
@@ -58,6 +58,17 @@ describe('POST /api/gradeSections (admin)', () => {
     expect(res.body.data.id).toBeDefined();
     expect(res.body.data.grado).toBe('5');
     expect(res.body.data.materias[0].nombre).toBe('Geografia');
+  });
+
+  it('rechaza HTML/scripts en el grado - 400, defensa XSS', async () => {
+    const cookie = await loginAsAdmin();
+
+    const res = await request
+      .post('/api/gradeSections')
+      .set('Cookie', cookie)
+      .send({ grado: '<script>alert(1)</script>', seccion: 'A', materias: [] });
+
+    expect(res.status).toBe(400);
   });
 
   it('debe fallar si el grado y sección ya existe - 409', async () => {
@@ -95,7 +106,7 @@ describe('GET /api/gradeSections', () => {
   });
 });
 
-describe('PUT /api/gradeSections (admin)', () => {
+describe('PUT /api/gradeSections, admin', () => {
   it('debe actualizar un grado y sección - 200', async () => {
     const cookie = await loginAsAdmin();
 
@@ -120,7 +131,7 @@ describe('PUT /api/gradeSections (admin)', () => {
   });
 });
 
-describe('POST /api/gradeSections/add-subjects y /remove-subjects (admin)', () => {
+describe('POST /api/gradeSections/add-subjects y /remove-subjects, admin', () => {
   it('debe agregar materias a un grado y sección - 200', async () => {
     const cookie = await loginAsAdmin();
     await request.post('/api/subjects').set('Cookie', cookie).send({ nombre: 'Arte' });
@@ -147,7 +158,7 @@ describe('POST /api/gradeSections/add-subjects y /remove-subjects (admin)', () =
   });
 });
 
-describe('DELETE /api/gradeSections (admin)', () => {
+describe('DELETE /api/gradeSections, admin', () => {
   it('debe eliminar un grado y sección - 200', async () => {
     const cookie = await loginAsAdmin();
     await request
@@ -174,7 +185,7 @@ describe('DELETE /api/gradeSections (admin)', () => {
     expect(res.status).toBe(404);
   });
 
-  it('debe devolver las materias populadas al eliminar un grado y sección que sí tiene materias asignadas - 200 (regresión: deleteGradeAndSectionById no populaba materias)', async () => {
+  it('debe devolver las materias populadas al eliminar un grado y sección que sí tiene materias asignadas - 200, antes deleteGradeAndSectionById no las populaba', async () => {
     const cookie = await loginAsAdmin();
     await request
       .post('/api/gradeSections')

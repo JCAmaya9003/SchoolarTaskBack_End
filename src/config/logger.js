@@ -23,7 +23,7 @@ const colors = {
 
 winston.addColors(colors);
 
-// Formato para consola (desarrollo)
+// Formato para consola en desarrollo
 const consoleFormat = winston.format.combine(
   winston.format.colorize(),
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
@@ -33,7 +33,7 @@ const consoleFormat = winston.format.combine(
   })
 );
 
-// Formato para archivos (producción)
+// Formato para archivos en producción
 const fileFormat = winston.format.combine(
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
   winston.format.errors({ stack: true }),
@@ -66,7 +66,7 @@ if (process.env.NODE_ENV === 'production') {
     })
   );
 
-  // Logs combinados (todos los niveles)
+  // Logs combinados de todos los niveles
   transports.push(
     new winston.transports.File({
       filename: path.join(__dirname, '../../logs/combined.log'),

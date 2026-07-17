@@ -86,6 +86,23 @@ describe('POST /api/reservations/create', () => {
     expect(res.body.data.lugar).toBe('Laboratorio A');
   });
 
+  it('rechaza HTML/scripts en campos de texto libre, descripcion - 400, defensa XSS', async () => {
+    const cookie = await loginAsAdmin();
+
+    const res = await request
+      .post('/api/reservations/create')
+      .set('Cookie', cookie)
+      .send({
+        lugar: 'Laboratorio A',
+        usuarioEmail: 'prof-a-reserva@test.com',
+        descripcion: '<script>alert(document.cookie)</script>',
+        fecha_inicio: '2026-09-01T10:00:00.000Z',
+        fecha_fin: '2026-09-01T12:00:00.000Z',
+      });
+
+    expect(res.status).toBe(400);
+  });
+
   it('falla si el lugar ya está reservado en esas fechas - 409', async () => {
     const cookie = await loginAsAdmin();
 
@@ -231,11 +248,11 @@ describe('PUT /api/reservations', () => {
     expect(res.status).toBe(403);
   });
 
-  it('admin puede reeditar una reserva sin moverla fuera de su propio horario - 200 (regresión: self-conflict al no excluir la propia reserva del chequeo de solapamiento)', async () => {
+  it('admin puede reeditar una reserva sin moverla fuera de su propio horario - 200, antes el chequeo de solapamiento no excluía la propia reserva', async () => {
     const cookie = await loginAsAdmin();
 
-    // La reserva ya quedó en Laboratorio A, 2026-09-01T14:00-16:00 tras el test anterior de este describe.
-    // Reeditarla manteniendo el mismo lugar y el mismo horario (que se solapa consigo misma) no debe fallar.
+    // La reserva quedó en Laboratorio A, 2026-09-01T14:00-16:00, tras el test anterior.
+    // Reeditarla manteniendo el mismo lugar y horario, que se solapa consigo misma, no debe fallar.
     const res = await request
       .put('/api/reservations')
       .set('Cookie', cookie)
@@ -252,7 +269,7 @@ describe('PUT /api/reservations', () => {
     expect(res.body.data.descripcion).toBe('Segunda edición sin mover el horario');
   });
 
-  it('rechaza datos inválidos (email mal formado) - 400 (regresión: reservation.controller.js nunca llamaba validationResult)', async () => {
+  it('rechaza un email mal formado - 400, antes el controller nunca llamaba validationResult', async () => {
     const cookie = await loginAsAdmin();
 
     const res = await request
@@ -271,8 +288,8 @@ describe('PUT /api/reservations', () => {
   });
 });
 
-describe('GET /api/reservations/by-time-range (validación)', () => {
-  it('rechaza fechas inválidas - 400 (regresión: reservation.controller.js nunca llamaba validationResult)', async () => {
+describe('GET /api/reservations/by-time-range, validación', () => {
+  it('rechaza fechas inválidas - 400, antes el controller nunca llamaba validationResult', async () => {
     const cookie = await loginAsAdmin();
 
     const res = await request
@@ -283,7 +300,7 @@ describe('GET /api/reservations/by-time-range (validación)', () => {
     expect(res.status).toBe(400);
   });
 
-  it('debe devolver las reservas del rango sin importar el lugar - 200 (regresión: findReservationsByTimeRange filtraba por lugar: undefined, que Mongo/Mongoose no ignora y nunca hace match, dejando esta ruta siempre vacía)', async () => {
+  it('debe devolver las reservas del rango sin importar el lugar - 200, antes filtraba por lugar undefined y esta ruta siempre quedaba vacía', async () => {
     const cookie = await loginAsAdmin();
 
     await request.post('/api/reservations/create').set('Cookie', cookie).send({
@@ -340,7 +357,7 @@ describe('DELETE /api/reservations', () => {
   });
 });
 
-describe('DELETE /api/reservations/id (admin)', () => {
+describe('DELETE /api/reservations/id, admin', () => {
   it('admin puede eliminar una reserva por id - 200', async () => {
     const cookie = await loginAsAdmin();
     const createRes = await request

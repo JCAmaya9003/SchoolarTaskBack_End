@@ -45,7 +45,7 @@ afterAll(async () => {
   await teardownTestDB();
 });
 
-describe('GET /api/roles (admin)', () => {
+describe('GET /api/roles, admin', () => {
   it('debe listar los 4 roles del catálogo fijo - 200', async () => {
     const cookie = await loginAsAdmin();
 
@@ -65,7 +65,7 @@ describe('GET /api/roles (admin)', () => {
   });
 });
 
-describe('Uso de un rol inexistente en un flujo admin-only (regresión: searchRoleByName tiraba throw en vez de null)', () => {
+describe('Uso de un rol inexistente en un flujo admin-only, regresión: searchRoleByName tiraba throw en vez de null', () => {
   it('debe devolver 404 en vez de 500 si rolNombre no existe', async () => {
     const cookie = await loginAsAdmin();
 

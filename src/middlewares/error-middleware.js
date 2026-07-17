@@ -21,8 +21,8 @@ export const errorHandler = (err, req, res, next) => {
     ip: req.ip,
   });
 
-  // Los errores ya tipados (AppError y subclases) ya traen su statusCode correcto;
-  // solo hace falta traducir errores "crudos" de librerías externas (Mongoose, JWT, express-validator).
+  // Los errores ya tipados como AppError ya traen su statusCode correcto.
+  // Solo hace falta traducir errores crudos de librerías externas.
   if (!(err instanceof AppError)) {
     // Error de validación de Mongoose
     if (err.name === 'ValidationError' && err.errors) {
@@ -75,7 +75,7 @@ export const errorHandler = (err, req, res, next) => {
 };
 
 /**
- * Middleware para manejar rutas no encontradas (404)
+ * Middleware para manejar rutas no encontradas, responde 404
  * Debe ir ANTES del errorHandler en app.js
  */
 export const notFound = (req, res, next) => {

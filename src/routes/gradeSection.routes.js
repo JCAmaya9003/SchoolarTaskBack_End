@@ -2,6 +2,7 @@ import express from 'express';
 import { body } from 'express-validator';
 import * as gradeSectionController from '../controllers/gradeSection.controller.js';
 import { validateToken, checkRole } from '../middlewares/auth-middleware.js';
+import { rejectHtml } from '../utils/xss-guard.js';
 
 const router = express.Router();
 
@@ -14,10 +15,10 @@ router.post(
     validateToken,
     checkRole(['admin']),
     [
-        body('grado').isString().withMessage('Grado inválido.'),
+        body('grado').isString().withMessage('Grado inválido.').custom(rejectHtml),
         body('seccion').isString().isLength({ min: 1, max: 1 }).matches(/^[A-Za-z]$/).withMessage('Sección inválida.'),
         body('materias').isArray().withMessage('Las materias deben ser un arreglo de nombres.'),
-        body('materias.*').isString().withMessage('Cada materia debe ser una cadena válida.'),
+        body('materias.*').isString().withMessage('Cada materia debe ser una cadena válida.').custom(rejectHtml),
     ],
     gradeSectionController.createGradeSection
 );
@@ -28,12 +29,12 @@ router.put(
     validateToken,
     checkRole(['admin']),
     [
-        body('grado').isString().withMessage('Grado inválido.'),
+        body('grado').isString().withMessage('Grado inválido.').custom(rejectHtml),
         body('seccion').isString().isLength({ min: 1, max: 1 }).matches(/^[A-Za-z]$/).withMessage('Sección inválida.'),
-        body('nuevoGrado').isString().withMessage('Nuevo grado inválido.'),
+        body('nuevoGrado').isString().withMessage('Nuevo grado inválido.').custom(rejectHtml),
         body('nuevaSeccion').isString().isLength({ min: 1, max: 1 }).matches(/^[A-Za-z]$/).withMessage('Nueva sección inválida.'),
         body('materias').isArray().withMessage('Las materias deben ser un arreglo de nombres.'),
-        body('materias.*').isString().withMessage('Cada materia debe ser una cadena válida.'),
+        body('materias.*').isString().withMessage('Cada materia debe ser una cadena válida.').custom(rejectHtml),
     ],
     gradeSectionController.updateGradeAndSection
 );
@@ -44,7 +45,7 @@ router.delete(
     validateToken,
     checkRole(['admin']),
     [
-        body('grado').isString().withMessage('Grado inválido.'),
+        body('grado').isString().withMessage('Grado inválido.').custom(rejectHtml),
         body('seccion').isString().isLength({ min: 1, max: 1 }).matches(/^[A-Za-z]$/).withMessage('Sección inválida.'),
     ],
     gradeSectionController.deleteGradeAndSection
@@ -56,10 +57,10 @@ router.post(
     validateToken,
     checkRole(['admin']),
     [
-        body('grado').isString().withMessage('Grado inválido.'),
+        body('grado').isString().withMessage('Grado inválido.').custom(rejectHtml),
         body('seccion').isString().isLength({ min: 1, max: 1 }).matches(/^[A-Za-z]$/).withMessage('Sección inválida.'),
         body('materias').isArray().withMessage('Las materias deben ser un arreglo de nombres.'),
-        body('materias.*').isString().withMessage('Cada materia debe ser una cadena válida.'),
+        body('materias.*').isString().withMessage('Cada materia debe ser una cadena válida.').custom(rejectHtml),
     ],
     gradeSectionController.addSubjectsToGradeSection
 );
@@ -70,10 +71,10 @@ router.post(
     validateToken,
     checkRole(['admin']),
     [
-        body('grado').isString().withMessage('Grado inválido.'),
+        body('grado').isString().withMessage('Grado inválido.').custom(rejectHtml),
         body('seccion').isString().isLength({ min: 1, max: 1 }).matches(/^[A-Za-z]$/).withMessage('Sección inválida.'),
         body('materias').isArray().withMessage('Las materias deben ser un arreglo de nombres.'),
-        body('materias.*').isString().withMessage('Cada materia debe ser una cadena válida.'),
+        body('materias.*').isString().withMessage('Cada materia debe ser una cadena válida.').custom(rejectHtml),
     ],
     gradeSectionController.removeSubjectsFromGradeSection
 );

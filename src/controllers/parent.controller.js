@@ -3,7 +3,7 @@ import * as userService from '../services/user-service.js'
 import { validationResult } from 'express-validator';
 import { sendSuccess } from '../utils/apiResponse.js';
 
-// Forma consistente para exponer un padre en las respuestas (antes variaba: Nombre/userPadreNombre, domicilio apuntaba mal...)
+// Forma consistente para exponer un padre en las respuestas
 const formatParentResponse = (parent) => ({
     id: parent._id,
     nombre: parent.usuario.nombre,

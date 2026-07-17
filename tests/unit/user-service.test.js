@@ -105,7 +105,7 @@ describe('loginUser - bloqueo por fuerza bruta', () => {
   const failedAttempt = () => userService.loginUser({ email: 'juan@test.com', password: 'wrongpassword' });
   const advance = (ms) => vi.setSystemTime(new Date(Date.now() + ms));
 
-  it('NO bloquea con intentos normales por debajo del umbral (5)', async () => {
+  it('NO bloquea con intentos normales por debajo del umbral, 5', async () => {
     for (let i = 0; i < 3; i++) {
       await expect(failedAttempt()).rejects.toThrow('Credenciales inválidas');
       advance(3000); // 3s entre intentos, ritmo humano
@@ -127,13 +127,13 @@ describe('loginUser - bloqueo por fuerza bruta', () => {
     ).rejects.toThrow('Credenciales inválidas');
   });
 
-  it('detecta un patrón de intentos automatizados (menos de 1s de diferencia) y bloquea de inmediato', async () => {
+  it('detecta un patrón de intentos automatizados con menos de 1s de diferencia y bloquea de inmediato', async () => {
     await expect(failedAttempt()).rejects.toThrow('Credenciales inválidas');
     advance(200); // 200ms - imposible a ritmo humano
 
     await expect(failedAttempt()).rejects.toThrow('Credenciales inválidas');
 
-    // Con solo 2 intentos (muy por debajo del umbral de 5) ya debería estar bloqueada
+    // Con solo 2 intentos, muy por debajo del umbral de 5, ya debería estar bloqueada
     await expect(
       userService.loginUser({ email: 'juan@test.com', password: 'password123' })
     ).rejects.toThrow('Credenciales inválidas');
@@ -148,8 +148,8 @@ describe('loginUser - bloqueo por fuerza bruta', () => {
     await userService.loginUser({ email: 'juan@test.com', password: 'password123' });
     advance(3000);
 
-    // Después de un login exitoso, 3 fallos más no deberían alcanzar para bloquear
-    // (si el contador no se hubiera reseteado, este sería el 4to-6to intento acumulado)
+    // Después de un login exitoso, 3 fallos más no deberían alcanzar para bloquear.
+    // Si el contador no se hubiera reseteado, este sería el 4to a 6to intento acumulado.
     for (let i = 0; i < 3; i++) {
       await expect(failedAttempt()).rejects.toThrow('Credenciales inválidas');
       advance(3000);
@@ -173,7 +173,7 @@ describe('loginUser - bloqueo por fuerza bruta', () => {
   });
 });
 
-describe('eraseUser (soft delete)', () => {
+describe('eraseUser, soft delete', () => {
   it('debe hacer soft delete del usuario', async () => {
     await userService.registerUser(testUserData);
 
@@ -211,17 +211,17 @@ describe('restoreUser', () => {
   });
 });
 
-describe('password select:false (defensa en profundidad)', () => {
+describe('password select:false, defensa en profundidad', () => {
   beforeEach(async () => {
     await userService.registerUser(testUserData);
   });
 
-  it('findUserByEmail (uso general) NO debe traer el hash de password', async () => {
+  it('findUserByEmail, uso general NO debe traer el hash de password', async () => {
     const user = await userRepository.findUserByEmail('juan@test.com');
     expect(user.password).toBeUndefined();
   });
 
-  it('findUserByEmailWithPassword (solo login/editUser) sí debe traerlo', async () => {
+  it('findUserByEmailWithPassword, solo login/editUser sí debe traerlo', async () => {
     const user = await userRepository.findUserByEmailWithPassword('juan@test.com');
     expect(user.password).toBeDefined();
   });
@@ -240,7 +240,7 @@ describe('forgotPassword y resetPassword', () => {
     expect(token).toHaveLength(64); // 32 bytes en hex = 64 chars
   });
 
-  it('debe devolver null si el email no existe (anti user-enumeration)', async () => {
+  it('debe devolver null si el email no existe, anti user-enumeration', async () => {
     const token = await userService.forgotPassword('noexiste@test.com');
     expect(token).toBeNull();
   });
@@ -266,7 +266,7 @@ describe('forgotPassword y resetPassword', () => {
       .rejects.toThrow('Token inválido o expirado');
   });
 
-  it('NO debe loguear el token en texto plano cuando NODE_ENV=production (regresión: antes se logueaba siempre, sin importar el entorno)', async () => {
+  it('NO debe loguear el token en texto plano en producción, antes se logueaba siempre sin importar el entorno', async () => {
     const infoSpy = vi.spyOn(logger, 'info');
     const originalEnv = process.env.NODE_ENV;
     process.env.NODE_ENV = 'production';
@@ -282,7 +282,7 @@ describe('forgotPassword y resetPassword', () => {
     infoSpy.mockRestore();
   });
 
-  it('sí loguea el token en texto plano fuera de producción (comportamiento existente, sin regresión)', async () => {
+  it('sí loguea el token en texto plano fuera de producción, comportamiento existente, sin regresión', async () => {
     const infoSpy = vi.spyOn(logger, 'info');
 
     await userService.forgotPassword('juan@test.com');

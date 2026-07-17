@@ -69,7 +69,7 @@ afterAll(async () => {
   await teardownTestDB();
 });
 
-describe('POST /api/teachers (admin)', () => {
+describe('POST /api/teachers, admin', () => {
   it('debe crear un profesor - 201', async () => {
     const cookie = await loginAsAdmin();
 
@@ -84,6 +84,17 @@ describe('POST /api/teachers (admin)', () => {
     expect(res.body.data.id).toBeDefined();
   });
 
+  it('rechaza HTML/scripts en campos de texto libre, especialidad - 400, defensa XSS', async () => {
+    const cookie = await loginAsAdmin();
+
+    const res = await request
+      .post('/api/teachers')
+      .set('Cookie', cookie)
+      .send({ ...buildTeacher('prof-xss@test.com'), especialidad: '<script>alert(document.cookie)</script>' });
+
+    expect(res.status).toBe(400);
+  });
+
   it('debe fallar si la materia no existe - 404', async () => {
     const cookie = await loginAsAdmin();
     const payload = buildTeacher('prof2@test.com');
@@ -95,7 +106,7 @@ describe('POST /api/teachers (admin)', () => {
   });
 });
 
-describe('GET /api/teachers (admin)', () => {
+describe('GET /api/teachers, admin', () => {
   it('debe listar profesores paginados - 200', async () => {
     const cookie = await loginAsAdmin();
     await request.post('/api/teachers').set('Cookie', cookie).send(buildTeacher('prof3@test.com'));
@@ -107,7 +118,7 @@ describe('GET /api/teachers (admin)', () => {
     expect(res.body.data.pagination.currentPage).toBe(1);
   });
 
-  it('debe incluir genero/domicilio/nacionalidad/rol en el listado - 200 (regresión: findAllTeachers no los populaba)', async () => {
+  it('debe incluir genero, domicilio, nacionalidad y rol en el listado - 200, antes findAllTeachers no los populaba', async () => {
     const cookie = await loginAsAdmin();
     await request.post('/api/teachers').set('Cookie', cookie).send(buildTeacher('prof-populate@test.com'));
 
@@ -121,8 +132,8 @@ describe('GET /api/teachers (admin)', () => {
   });
 });
 
-describe('POST /api/users/get-info (teacher)', () => {
-  it('debe devolver grado_encargado con las materias del profesor - 200 (regresión: campos direccion/materias/grados_secciones inexistentes)', async () => {
+describe('POST /api/users/get-info, teacher', () => {
+  it('debe devolver grado_encargado con las materias del profesor - 200, antes leía campos que no existían en el modelo', async () => {
     const cookie = await loginAsAdmin();
     await request.post('/api/teachers').set('Cookie', cookie).send(buildTeacher('prof-getinfo@test.com'));
 
@@ -140,7 +151,7 @@ describe('POST /api/users/get-info (teacher)', () => {
   });
 });
 
-describe('PUT /api/teachers (admin)', () => {
+describe('PUT /api/teachers, admin', () => {
   it('debe actualizar un profesor - 200', async () => {
     const cookie = await loginAsAdmin();
     await request.post('/api/teachers').set('Cookie', cookie).send(buildTeacher('prof4@test.com'));
@@ -186,7 +197,7 @@ describe('PUT /api/teachers (admin)', () => {
   });
 });
 
-describe('DELETE /api/teachers (admin)', () => {
+describe('DELETE /api/teachers, admin', () => {
   it('debe eliminar un profesor por email - 200', async () => {
     const cookie = await loginAsAdmin();
     await request.post('/api/teachers').set('Cookie', cookie).send(buildTeacher('prof5@test.com'));
@@ -212,7 +223,7 @@ describe('DELETE /api/teachers (admin)', () => {
   });
 });
 
-describe('DELETE /api/teachers/id (admin)', () => {
+describe('DELETE /api/teachers/id, admin', () => {
   it('debe eliminar un profesor por id - 200', async () => {
     const cookie = await loginAsAdmin();
     const createRes = await request

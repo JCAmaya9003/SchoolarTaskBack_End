@@ -42,7 +42,7 @@ afterAll(async () => {
   await teardownTestDB();
 });
 
-describe('POST /api/subjects (admin)', () => {
+describe('POST /api/subjects, admin', () => {
   it('debe crear una materia - 201', async () => {
     const cookie = await loginAsAdmin();
 
@@ -51,6 +51,14 @@ describe('POST /api/subjects (admin)', () => {
     expect(res.status).toBe(201);
     expect(res.body.data.id).toBeDefined();
     expect(res.body.data.nombre).toBe('Fisica');
+  });
+
+  it('rechaza HTML/scripts en el nombre - 400, defensa XSS', async () => {
+    const cookie = await loginAsAdmin();
+
+    const res = await request.post('/api/subjects').set('Cookie', cookie).send({ nombre: '<script>alert(1)</script>' });
+
+    expect(res.status).toBe(400);
   });
 
   it('debe fallar si la materia ya existe - 409', async () => {
@@ -74,7 +82,7 @@ describe('GET /api/subjects', () => {
   });
 });
 
-describe('PUT /api/subjects (admin)', () => {
+describe('PUT /api/subjects, admin', () => {
   it('debe editar una materia - 200', async () => {
     const cookie = await loginAsAdmin();
 
@@ -99,7 +107,7 @@ describe('PUT /api/subjects (admin)', () => {
   });
 });
 
-describe('DELETE /api/subjects (admin)', () => {
+describe('DELETE /api/subjects, admin', () => {
   it('debe eliminar una materia - 200', async () => {
     const cookie = await loginAsAdmin();
     await request.post('/api/subjects').set('Cookie', cookie).send({ nombre: 'Quimica' });

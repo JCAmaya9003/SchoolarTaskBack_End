@@ -3,10 +3,10 @@ import express from 'express';
 import supertest from 'supertest';
 import rateLimit from 'express-rate-limit';
 
-// authLimiter/apiLimiter son passthrough en NODE_ENV=test (ver rate-limiter.js),
-// así que acá probamos la misma configuración (windowMs/max) montada en un
-// mini servidor propio para verificar que efectivamente bloquea al superar el límite.
-describe('authLimiter (configuración de límite)', () => {
+// authLimiter y apiLimiter son passthrough en modo test, así que acá probamos la misma
+// configuración montada en un mini servidor propio, para verificar que sí bloquea al
+// superar el límite.
+describe('authLimiter, configuración de límite', () => {
   it('permite 5 intentos y bloquea el 6to con 429', async () => {
     const app = express();
     app.use(rateLimit({
