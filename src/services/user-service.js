@@ -1,27 +1,67 @@
-import {findUserByEmail, findUserByEmailWithPassword, createUser, updateUserById, deleteUserById, findAllusers, restoreUserById, findDeletedUserByEmail, saveResetToken, findUserByResetToken, resetUserPassword } from '../repositories/user-repository.js';
+import {findUserByEmail, findUserByEmailWithPassword, createUser, updateUserById, deleteUserById, findAllusers, restoreUserById, findDeletedUserByEmail, saveResetToken, findUserByResetToken, resetUserPassword, updateLoginAttemptState } from '../repositories/user-repository.js';
 import {hashPassword,verifyPassword} from '../middlewares/auth-middleware.js';
 import * as roleService from '../services/role-service.js'
 import crypto from 'crypto';
 import logger from '../config/logger.js';
 import { ValidationError, InvalidCredentialsError, NotFoundError, UserAlreadyExistsError } from '../errors/errors.js';
 
+// Bloqueo de cuenta por fuerza bruta, independiente de la IP (el rate limiter por IP no
+// alcanza contra un atacante distribuido que rota de IP contra la misma cuenta).
+const LOCKOUT_THRESHOLD = 5; // intentos fallidos a ritmo humano antes de bloquear
+const LOCKOUT_DURATION_MS = 10 * 60 * 1000; // 10 minutos
+// Dos intentos fallidos separados por menos de esto casi seguro no son un humano tipeando
+// de nuevo su contraseña - se trata como bot y se bloquea de inmediato, más tiempo.
+const BOT_INTERVAL_THRESHOLD_MS = 1000;
+const BOT_LOCKOUT_DURATION_MS = 15 * 60 * 1000;
+
 export const loginUser = async( {email, password} ) => {
     const user = await findUserByEmailWithPassword(email);
 
-    if(user){
-      const isPasswordValid = await verifyPassword(password, user.password);
-
-      if (isPasswordValid) {
-        logger.info(`[AUTH] Login exitoso: ${email}`);
-        return user;
-      }else{
-        logger.warn(`[AUTH] Login fallido (contraseña incorrecta): ${email}`);
-        throw new InvalidCredentialsError();
-      }
-    }else{
+    if(!user){
       logger.warn(`[AUTH] Login fallido (usuario inexistente): ${email}`);
       throw new InvalidCredentialsError();
     }
+
+    const now = new Date();
+
+    // Cuenta bloqueada: mismo error genérico de siempre, nunca revelar que está bloqueada
+    // (si no, un atacante podría usar la respuesta para confirmar que el email existe y que
+    // ya está siendo atacado).
+    if (user.lockUntil && user.lockUntil > now) {
+      logger.warn(`[AUTH] Intento de login sobre cuenta bloqueada: ${email}`);
+      throw new InvalidCredentialsError();
+    }
+
+    const isPasswordValid = await verifyPassword(password, user.password);
+
+    if (isPasswordValid) {
+      if (user.failedLoginAttempts > 0 || user.lockUntil || user.lastFailedLoginAt) {
+        await updateLoginAttemptState(user._id, { failedLoginAttempts: 0, lockUntil: null, lastFailedLoginAt: null });
+      }
+      logger.info(`[AUTH] Login exitoso: ${email}`);
+      return user;
+    }
+
+    // Si el bloqueo previo ya expiró, el contador arranca de nuevo desde cero
+    const attemptsBeforeThis = (user.lockUntil && user.lockUntil <= now) ? 0 : user.failedLoginAttempts;
+    const failedLoginAttempts = attemptsBeforeThis + 1;
+
+    const msSinceLastFailure = user.lastFailedLoginAt ? now - user.lastFailedLoginAt : null;
+    const looksAutomated = msSinceLastFailure !== null && msSinceLastFailure < BOT_INTERVAL_THRESHOLD_MS;
+
+    let lockUntil = null;
+    if (looksAutomated) {
+      lockUntil = new Date(now.getTime() + BOT_LOCKOUT_DURATION_MS);
+      logger.warn(`[AUTH] Patrón de fuerza bruta automatizada (intentos con <1s de diferencia), cuenta bloqueada: ${email}`);
+    } else if (failedLoginAttempts >= LOCKOUT_THRESHOLD) {
+      lockUntil = new Date(now.getTime() + LOCKOUT_DURATION_MS);
+      logger.warn(`[AUTH] Cuenta bloqueada temporalmente por intentos fallidos repetidos: ${email}`);
+    }
+
+    await updateLoginAttemptState(user._id, { failedLoginAttempts, lockUntil, lastFailedLoginAt: now });
+
+    logger.warn(`[AUTH] Login fallido (contraseña incorrecta): ${email}`);
+    throw new InvalidCredentialsError();
 };
 
 export const registerUser = async ( {nombre, apellido, email, password, fecha_nacimiento, rolNombre, genero, domicilio, nacionalidad}) => {
