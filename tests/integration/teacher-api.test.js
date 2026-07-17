@@ -84,6 +84,17 @@ describe('POST /api/teachers (admin)', () => {
     expect(res.body.data.id).toBeDefined();
   });
 
+  it('rechaza HTML/scripts en campos de texto libre (especialidad) - 400 (defensa XSS)', async () => {
+    const cookie = await loginAsAdmin();
+
+    const res = await request
+      .post('/api/teachers')
+      .set('Cookie', cookie)
+      .send({ ...buildTeacher('prof-xss@test.com'), especialidad: '<script>alert(document.cookie)</script>' });
+
+    expect(res.status).toBe(400);
+  });
+
   it('debe fallar si la materia no existe - 404', async () => {
     const cookie = await loginAsAdmin();
     const payload = buildTeacher('prof2@test.com');

@@ -53,6 +53,14 @@ describe('POST /api/academic_places (admin)', () => {
     expect(res.body.data.lugar).toBe('Cancha');
   });
 
+  it('rechaza HTML/scripts en el lugar - 400 (defensa XSS)', async () => {
+    const cookie = await loginAsAdmin();
+
+    const res = await request.post('/api/academic_places').set('Cookie', cookie).send({ lugar: '<script>alert(1)</script>' });
+
+    expect(res.status).toBe(400);
+  });
+
   it('debe fallar si el lugar ya existe - 409', async () => {
     const cookie = await loginAsAdmin();
 

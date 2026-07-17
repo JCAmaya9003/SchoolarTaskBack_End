@@ -53,6 +53,14 @@ describe('POST /api/subjects (admin)', () => {
     expect(res.body.data.nombre).toBe('Fisica');
   });
 
+  it('rechaza HTML/scripts en el nombre - 400 (defensa XSS)', async () => {
+    const cookie = await loginAsAdmin();
+
+    const res = await request.post('/api/subjects').set('Cookie', cookie).send({ nombre: '<script>alert(1)</script>' });
+
+    expect(res.status).toBe(400);
+  });
+
   it('debe fallar si la materia ya existe - 409', async () => {
     const cookie = await loginAsAdmin();
 

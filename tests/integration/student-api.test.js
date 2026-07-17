@@ -109,6 +109,17 @@ describe('POST /api/students (admin)', () => {
     expect(res.body.data.grado_seccion.materias).toBeDefined();
   });
 
+  it('rechaza HTML/scripts en campos de texto libre (domicilio) - 400 (defensa XSS)', async () => {
+    const cookie = await loginAsAdmin();
+
+    const res = await request
+      .post('/api/students')
+      .set('Cookie', cookie)
+      .send({ ...buildStudent('est-xss@test.com'), domicilio: '<script>alert(document.cookie)</script>' });
+
+    expect(res.status).toBe(400);
+  });
+
   it('debe fallar si el padre no existe - 404', async () => {
     const cookie = await loginAsAdmin();
     const payload = buildStudent('est2@test.com');

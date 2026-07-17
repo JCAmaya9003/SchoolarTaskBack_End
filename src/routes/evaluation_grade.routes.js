@@ -3,6 +3,7 @@ import { body, query } from 'express-validator';
 import * as evaluation_gradeController from '../controllers/evaluation_grade.controller.js';
 import { validateToken, checkRole } from '../middlewares/auth-middleware.js';
 import { verifyTeacherSubject, verifyOwnResource, enrichUserContext } from '../middlewares/authorization-middleware.js';
+import { rejectHtml } from '../utils/xss-guard.js';
 
 const router = express.Router();
 
@@ -14,8 +15,8 @@ router.post(
     verifyTeacherSubject,
     [
         body('email').isEmail().withMessage('El email debe ser válido.'),
-        body('nombreMateria').isString().withMessage('El nombre de la materia debe ser una cadena válida.'),
-        body('nombreEvaluacion').isString().withMessage('El nombre de la evaluación debe ser una cadena válida.'),
+        body('nombreMateria').isString().withMessage('El nombre de la materia debe ser una cadena válida.').custom(rejectHtml),
+        body('nombreEvaluacion').isString().withMessage('El nombre de la evaluación debe ser una cadena válida.').custom(rejectHtml),
         body('calificacion').isNumeric().withMessage('La calificación debe ser un número.').custom((value) => value >= 0 && value <= 10).withMessage('La calificación debe estar entre 0 y 10.'),
     ],
     evaluation_gradeController.createEvaluationGrade
@@ -45,8 +46,8 @@ router.get(
     checkRole(['admin', 'teacher']),
     verifyTeacherSubject,
     [
-        query('nombre').isString().withMessage('El nombre de la evaluación debe ser una cadena válida.'),
-        query('nombreMateria').isString().withMessage('El nombre de la materia debe ser una cadena válida.'),
+        query('nombre').isString().withMessage('El nombre de la evaluación debe ser una cadena válida.').custom(rejectHtml),
+        query('nombreMateria').isString().withMessage('El nombre de la materia debe ser una cadena válida.').custom(rejectHtml),
     ],
     evaluation_gradeController.getEvaluationGradesByEvaluation
 );
@@ -60,8 +61,8 @@ router.put(
     verifyTeacherSubject,
     [
         body('email').isEmail().withMessage('El email debe ser válido.'),
-        body('nombreMateria').isString().withMessage('El nombre de la materia debe ser una cadena válida.'),
-        body('nombreEvaluacion').isString().withMessage('El nombre de la evaluación debe ser una cadena válida.'),
+        body('nombreMateria').isString().withMessage('El nombre de la materia debe ser una cadena válida.').custom(rejectHtml),
+        body('nombreEvaluacion').isString().withMessage('El nombre de la evaluación debe ser una cadena válida.').custom(rejectHtml),
         body('calificacion').isNumeric().withMessage('La calificación debe ser un número.').custom((value) => value >= 0 && value <= 10)
     ],
     evaluation_gradeController.updateEvaluationGradeById
@@ -76,8 +77,8 @@ router.delete(
     verifyTeacherSubject,
     [
         body('email').isEmail().withMessage('El email debe ser válido.'),
-        body('nombreMateria').isString().withMessage('El nombre de la materia debe ser una cadena válida.'),
-        body('nombreEvaluacion').isString().withMessage('El nombre de la evaluación debe ser una cadena válida.'),
+        body('nombreMateria').isString().withMessage('El nombre de la materia debe ser una cadena válida.').custom(rejectHtml),
+        body('nombreEvaluacion').isString().withMessage('El nombre de la evaluación debe ser una cadena válida.').custom(rejectHtml),
     ],
     evaluation_gradeController.deleteEvaluationGradeById
 );

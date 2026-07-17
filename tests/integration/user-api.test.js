@@ -71,6 +71,14 @@ describe('POST /api/users/register', () => {
     expect(res.body.data.email).toBe('maria@test.com');
   });
 
+  it('rechaza HTML/scripts en campos de texto libre (domicilio) - 400 (defensa XSS)', async () => {
+    const res = await request
+      .post('/api/users/register')
+      .send({ ...testUser, email: 'maria-xss@test.com', domicilio: '<script>alert(document.cookie)</script>' });
+
+    expect(res.status).toBe(400);
+  });
+
   it('debe rechazar registro duplicado - 409', async () => {
     await request.post('/api/users/register').send(testUser);
     const res = await request.post('/api/users/register').send(testUser);

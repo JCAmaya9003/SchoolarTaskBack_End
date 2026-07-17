@@ -157,6 +157,17 @@ describe('POST /api/evaluation_grades', () => {
     expect(res.status).toBe(400);
   });
 
+  it('rechaza HTML/scripts en nombreMateria - 400 (defensa XSS)', async () => {
+    const cookie = await loginAsAdmin();
+
+    const res = await request
+      .post('/api/evaluation_grades')
+      .set('Cookie', cookie)
+      .send({ email: studentEmail, nombreMateria: '<script>alert(1)</script>', nombreEvaluacion: 'Parcial Mate', calificacion: 8 });
+
+    expect(res.status).toBe(400);
+  });
+
   it('falla si ya existe una nota para ese estudiante y evaluación - 409', async () => {
     const cookie = await loginAsAdmin();
 

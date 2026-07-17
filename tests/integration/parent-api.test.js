@@ -78,6 +78,17 @@ describe('POST /api/parents (admin)', () => {
     expect(res.body.data.domicilio).toBe('Calle 1');
   });
 
+  it('rechaza HTML/scripts en campos de texto libre (lugar_trabajo) - 400 (defensa XSS)', async () => {
+    const cookie = await loginAsAdmin();
+
+    const res = await request
+      .post('/api/parents')
+      .set('Cookie', cookie)
+      .send({ ...buildParent('padre-xss@test.com'), lugar_trabajo: '<script>alert(document.cookie)</script>' });
+
+    expect(res.status).toBe(400);
+  });
+
   it('debe fallar si el usuario ya existe - 409', async () => {
     const cookie = await loginAsAdmin();
     const payload = buildParent('padre1@test.com'); // ya creado en el test anterior

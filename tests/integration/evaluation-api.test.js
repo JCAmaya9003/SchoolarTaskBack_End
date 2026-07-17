@@ -99,6 +99,17 @@ describe('POST /api/evaluations', () => {
     expect(res.status).toBe(404);
   });
 
+  it('rechaza HTML/scripts en campos de texto libre (descripcion) - 400 (defensa XSS)', async () => {
+    const cookie = await loginAsAdmin();
+
+    const res = await request
+      .post('/api/evaluations')
+      .set('Cookie', cookie)
+      .send({ nombre: 'Parcial XSS', nombreMateria: 'Matematicas', descripcion: '<script>alert(document.cookie)</script>', fecha: '2026-08-01', peso: 0.3 });
+
+    expect(res.status).toBe(400);
+  });
+
   it('falla si la evaluación ya existe para esa materia - 409', async () => {
     const cookie = await loginAsAdmin();
 

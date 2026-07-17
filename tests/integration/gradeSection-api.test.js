@@ -60,6 +60,17 @@ describe('POST /api/gradeSections (admin)', () => {
     expect(res.body.data.materias[0].nombre).toBe('Geografia');
   });
 
+  it('rechaza HTML/scripts en el grado - 400 (defensa XSS)', async () => {
+    const cookie = await loginAsAdmin();
+
+    const res = await request
+      .post('/api/gradeSections')
+      .set('Cookie', cookie)
+      .send({ grado: '<script>alert(1)</script>', seccion: 'A', materias: [] });
+
+    expect(res.status).toBe(400);
+  });
+
   it('debe fallar si el grado y sección ya existe - 409', async () => {
     const cookie = await loginAsAdmin();
 

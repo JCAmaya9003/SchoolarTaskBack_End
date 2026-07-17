@@ -3,6 +3,7 @@ import { body } from 'express-validator';
 import * as studentController from '../controllers/student.controller.js';
 import { validateToken, checkRole } from '../middlewares/auth-middleware.js';
 import { verifyOwnResource, enrichUserContext } from '../middlewares/authorization-middleware.js';
+import { rejectHtml } from '../utils/xss-guard.js';
 
 const router = express.Router();
 
@@ -77,13 +78,13 @@ router.post(
         body('password').isLength({ min: 6 }).withMessage('La contraseña debe tener al menos 6 caracteres'),
         body('rolNombre').isString().withMessage('Rol Invalido!'),
         body('genero').isString().matches(/^(Masculino|Femenino)$/).withMessage('Género inválido. Valores aceptados: Masculino, Femenino.'),
-        body('domicilio').isString().withMessage('Domicilio Incorrecto'),
-        body('nacionalidad').isString().withMessage('Nacionalidad Incorrecto'),
+        body('domicilio').isString().withMessage('Domicilio Incorrecto').custom(rejectHtml),
+        body('nacionalidad').isString().withMessage('Nacionalidad Incorrecto').custom(rejectHtml),
         body('email_padre').isEmail().withMessage('Email inválido'),
-        body('grado').isString().withMessage('Grado Invalido!'),
+        body('grado').isString().withMessage('Grado Invalido!').custom(rejectHtml),
         body('seccion').isString().isLength({ min: 1, max: 1 }).matches(/^[A-Za-z]$/).withMessage('Grado Invalido!'),
-        body('alergias').isString().withMessage('Alergia/s Invalida/s!'),
-        body('condiciones_medicas').isString().withMessage('Condiones Medicas Invalidas! Si no tiene debe de escribir algo!'),
+        body('alergias').isString().withMessage('Alergia/s Invalida/s!').custom(rejectHtml),
+        body('condiciones_medicas').isString().withMessage('Condiones Medicas Invalidas! Si no tiene debe de escribir algo!').custom(rejectHtml),
         body('contacto_emergencia.nombre').isString().matches(/^[A-Za-z\s]+$/).withMessage('Nombre del contaco de emergencia invalido! No use caracteres especiales!'),
         body('contacto_emergencia.telefono').isString().matches(/^\+?[1-9]\d{1,14}$/).withMessage('Teléfono inválido. Debe incluir el prefijo del país y ser un número válido (e.g., +50312345678).'),
     ],
@@ -96,10 +97,10 @@ router.put('/',
     checkRole(['admin']),
     [
         body('email').isEmail().withMessage('Email inválido'),
-        body('grado').isString().withMessage('Grado Invalido!'),
+        body('grado').isString().withMessage('Grado Invalido!').custom(rejectHtml),
         body('seccion').isString().isLength({ min: 1, max: 1 }).matches(/^[A-Za-z]$/).withMessage('Grado Invalido!'),
-        body('alergias').isString().withMessage('Alergia/s Invalida/s!'),
-        body('condiciones_medicas').isString().withMessage('Condiones Medicas Invalidas! Si no tiene debe de escribir algo!'),
+        body('alergias').isString().withMessage('Alergia/s Invalida/s!').custom(rejectHtml),
+        body('condiciones_medicas').isString().withMessage('Condiones Medicas Invalidas! Si no tiene debe de escribir algo!').custom(rejectHtml),
         body('contacto_emergencia.nombre').isString().matches(/^[A-Za-z\s]+$/).withMessage('Nombre del contaco de emergencia invalido! No use caracteres especiales!'),
         body('contacto_emergencia.telefono').isString().matches(/^\+?[1-9]\d{1,14}$/).withMessage('Teléfono inválido. Debe incluir el prefijo del país y ser un número válido (e.g., +50312345678).'),
     ],

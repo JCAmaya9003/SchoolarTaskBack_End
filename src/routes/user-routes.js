@@ -4,6 +4,7 @@ import { login, register, updateUser, deleteUser, getAllUsers, getUserRole, getU
 import { validateToken, checkRole } from '../middlewares/auth-middleware.js';
 import { authLimiter } from '../middlewares/rate-limiter.js';
 import { verifyOwnResource, enrichUserContext } from '../middlewares/authorization-middleware.js';
+import { rejectHtml } from '../utils/xss-guard.js';
 
 const router = express.Router();
 
@@ -75,8 +76,8 @@ router.post(
     body('email').isEmail().withMessage('Email inválido'),
     body('password').isLength({ min: 6 }).withMessage('La contraseña debe tener al menos 6 caracteres'),
     body('genero').isString().matches(/^(Masculino|Femenino)$/).withMessage('Género inválido. Valores aceptados: Masculino, Femenino.'),
-    body('domicilio').isString().withMessage('Domicilio Incorrecto'),
-    body('nacionalidad').isString().withMessage('Nacionalidad Incorrecto'),
+    body('domicilio').isString().withMessage('Domicilio Incorrecto').custom(rejectHtml),
+    body('nacionalidad').isString().withMessage('Nacionalidad Incorrecto').custom(rejectHtml),
     body('rolNombre').isIn(['student', 'parent']).withMessage('Rol inválido. El auto-registro solo permite los roles student o parent.'),
   ],
   register
@@ -224,8 +225,8 @@ router.put('/',
     body('email').isEmail().withMessage('Email inválido'),
     body('password').isLength({ min: 6 }).withMessage('La contraseña debe tener al menos 6 caracteres'),
     body('genero').isString().matches(/^(Masculino|Femenino)$/).withMessage('Género inválido. Valores aceptados: Masculino, Femenino.'),
-    body('domicilio').isString().withMessage('Domicilio Incorrecto'),
-    body('nacionalidad').isString().withMessage('Nacionalidad Incorrecto'),
+    body('domicilio').isString().withMessage('Domicilio Incorrecto').custom(rejectHtml),
+    body('nacionalidad').isString().withMessage('Nacionalidad Incorrecto').custom(rejectHtml),
     body('rolNombre').isString().withMessage('Rol inválido.'),
   ],
   updateUser

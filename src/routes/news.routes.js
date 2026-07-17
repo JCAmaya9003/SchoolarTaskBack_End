@@ -3,6 +3,7 @@ import { body, query } from 'express-validator';
 import * as newsController from '../controllers/news.controller.js'
 import { validateToken, checkRole } from '../middlewares/auth-middleware.js';
 import { verifyOwnResource, enrichUserContext } from '../middlewares/authorization-middleware.js';
+import { rejectHtml } from '../utils/xss-guard.js';
 
 const router = express.Router();
 
@@ -28,8 +29,8 @@ router.post('/',
     checkRole(['admin']),
     [
         body('email').isEmail().withMessage('Email inválido'),
-        body('titulo').isString().withMessage('Titulo inválido'),
-        body('contenido').isString().withMessage('Contenido inválido'),
+        body('titulo').isString().withMessage('Titulo inválido').custom(rejectHtml),
+        body('contenido').isString().withMessage('Contenido inválido').custom(rejectHtml),
     ],
     newsController.createNews);
 
@@ -39,9 +40,9 @@ router.put('/',
     checkRole(['admin']),
     [
         body('email').isEmail().withMessage('Email inválido'),
-        body('titulo').isString().withMessage('Titulo inválido'),
-        body('nuevoTitulo').isString().withMessage('Titulo inválido'),
-        body('contenido').isString().withMessage('Contenido inválido'),
+        body('titulo').isString().withMessage('Titulo inválido').custom(rejectHtml),
+        body('nuevoTitulo').isString().withMessage('Titulo inválido').custom(rejectHtml),
+        body('contenido').isString().withMessage('Contenido inválido').custom(rejectHtml),
     ],
     newsController.updateNews);
 
@@ -51,7 +52,7 @@ router.delete('/',
     checkRole(['admin']),
     [
         body('email').isEmail().withMessage('Email inválido'),
-        body('titulo').isString().withMessage('Titulo inválido'),
+        body('titulo').isString().withMessage('Titulo inválido').custom(rejectHtml),
     ],
     newsController.deleteNews);
 

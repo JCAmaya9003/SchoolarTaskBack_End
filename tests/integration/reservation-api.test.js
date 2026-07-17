@@ -86,6 +86,23 @@ describe('POST /api/reservations/create', () => {
     expect(res.body.data.lugar).toBe('Laboratorio A');
   });
 
+  it('rechaza HTML/scripts en campos de texto libre (descripcion) - 400 (defensa XSS)', async () => {
+    const cookie = await loginAsAdmin();
+
+    const res = await request
+      .post('/api/reservations/create')
+      .set('Cookie', cookie)
+      .send({
+        lugar: 'Laboratorio A',
+        usuarioEmail: 'prof-a-reserva@test.com',
+        descripcion: '<script>alert(document.cookie)</script>',
+        fecha_inicio: '2026-09-01T10:00:00.000Z',
+        fecha_fin: '2026-09-01T12:00:00.000Z',
+      });
+
+    expect(res.status).toBe(400);
+  });
+
   it('falla si el lugar ya está reservado en esas fechas - 409', async () => {
     const cookie = await loginAsAdmin();
 

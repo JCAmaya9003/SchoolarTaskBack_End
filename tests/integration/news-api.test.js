@@ -73,6 +73,36 @@ describe('POST /api/news (admin)', () => {
     expect(res.body.data.autor.email).toBe('estudiante1-news@test.com');
   });
 
+  it('rechaza HTML/scripts en el contenido - 400 (defensa XSS)', async () => {
+    const cookie = await loginAsAdmin();
+
+    const res = await request
+      .post('/api/news')
+      .set('Cookie', cookie)
+      .send({
+        email: 'estudiante1-news@test.com',
+        titulo: 'Bienvenida',
+        contenido: '<script>alert(document.cookie)</script>',
+      });
+
+    expect(res.status).toBe(400);
+  });
+
+  it('rechaza HTML/scripts en el título - 400 (defensa XSS)', async () => {
+    const cookie = await loginAsAdmin();
+
+    const res = await request
+      .post('/api/news')
+      .set('Cookie', cookie)
+      .send({
+        email: 'estudiante1-news@test.com',
+        titulo: '<img src=x onerror=alert(1)>',
+        contenido: 'Contenido normal',
+      });
+
+    expect(res.status).toBe(400);
+  });
+
   it('debe fallar si la noticia ya existe para ese usuario - 409', async () => {
     const cookie = await loginAsAdmin();
     const payload = { email: 'estudiante1-news@test.com', titulo: 'Bienvenida', contenido: 'Otro contenido' };
