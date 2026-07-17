@@ -8,8 +8,18 @@ export const findUserByEmail = async (email) => {
 // password tiene select:false a nivel de schema (defensa en profundidad para que ningún otro
 // query lo devuelva por accidente); esta función es la única que lo trae explícitamente,
 // para los dos únicos casos que lo necesitan: comparar contraseña en login y en editUser.
+// También trae los campos de control de fuerza bruta (select:false por el mismo motivo),
+// que loginUser necesita para decidir si la cuenta está bloqueada.
 export const findUserByEmailWithPassword = async (email) => {
-  return await User.findOne({ email }).select('+password').populate('rol', 'nombre');
+  return await User.findOne({ email })
+    .select('+password +failedLoginAttempts +lockUntil +lastFailedLoginAt')
+    .populate('rol', 'nombre');
+};
+
+// Actualiza el estado de intentos de login fallidos/bloqueo sin pasar por las validaciones
+// completas del usuario (no es una edición de perfil, es solo control interno de fuerza bruta).
+export const updateLoginAttemptState = async (id, { failedLoginAttempts, lockUntil, lastFailedLoginAt }) => {
+  return await User.findByIdAndUpdate(id, { failedLoginAttempts, lockUntil, lastFailedLoginAt });
 };
 
 export const findAllusers = async (page, limit) => {
@@ -71,5 +81,10 @@ export const resetUserPassword = async (id, hashedPassword) => {
     password: hashedPassword,
     resetPasswordToken: null,
     resetPasswordExpires: null,
+    // Probar la propiedad del email vía el token de reset es una señal suficiente para
+    // desbloquear la cuenta, aunque haya quedado bloqueada por intentos fallidos previos.
+    failedLoginAttempts: 0,
+    lockUntil: null,
+    lastFailedLoginAt: null,
   }, { new: true });
 };

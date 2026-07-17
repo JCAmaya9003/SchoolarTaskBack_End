@@ -91,6 +91,88 @@ describe('loginUser', () => {
   });
 });
 
+describe('loginUser - bloqueo por fuerza bruta', () => {
+  beforeEach(async () => {
+    await userService.registerUser(testUserData);
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-01-01T12:00:00.000Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const failedAttempt = () => userService.loginUser({ email: 'juan@test.com', password: 'wrongpassword' });
+  const advance = (ms) => vi.setSystemTime(new Date(Date.now() + ms));
+
+  it('NO bloquea con intentos normales por debajo del umbral (5)', async () => {
+    for (let i = 0; i < 3; i++) {
+      await expect(failedAttempt()).rejects.toThrow('Credenciales inválidas');
+      advance(3000); // 3s entre intentos, ritmo humano
+    }
+
+    const user = await userService.loginUser({ email: 'juan@test.com', password: 'password123' });
+    expect(user).toBeDefined();
+  });
+
+  it('bloquea la cuenta tras 5 intentos fallidos a ritmo humano, incluso con la contraseña correcta después', async () => {
+    for (let i = 0; i < 5; i++) {
+      await expect(failedAttempt()).rejects.toThrow('Credenciales inválidas');
+      advance(3000);
+    }
+
+    // La cuenta ya está bloqueada: ni siquiera la contraseña correcta debe pasar
+    await expect(
+      userService.loginUser({ email: 'juan@test.com', password: 'password123' })
+    ).rejects.toThrow('Credenciales inválidas');
+  });
+
+  it('detecta un patrón de intentos automatizados (menos de 1s de diferencia) y bloquea de inmediato', async () => {
+    await expect(failedAttempt()).rejects.toThrow('Credenciales inválidas');
+    advance(200); // 200ms - imposible a ritmo humano
+
+    await expect(failedAttempt()).rejects.toThrow('Credenciales inválidas');
+
+    // Con solo 2 intentos (muy por debajo del umbral de 5) ya debería estar bloqueada
+    await expect(
+      userService.loginUser({ email: 'juan@test.com', password: 'password123' })
+    ).rejects.toThrow('Credenciales inválidas');
+  });
+
+  it('un login exitoso resetea el contador de intentos fallidos', async () => {
+    for (let i = 0; i < 3; i++) {
+      await expect(failedAttempt()).rejects.toThrow('Credenciales inválidas');
+      advance(3000);
+    }
+
+    await userService.loginUser({ email: 'juan@test.com', password: 'password123' });
+    advance(3000);
+
+    // Después de un login exitoso, 3 fallos más no deberían alcanzar para bloquear
+    // (si el contador no se hubiera reseteado, este sería el 4to-6to intento acumulado)
+    for (let i = 0; i < 3; i++) {
+      await expect(failedAttempt()).rejects.toThrow('Credenciales inválidas');
+      advance(3000);
+    }
+
+    const user = await userService.loginUser({ email: 'juan@test.com', password: 'password123' });
+    expect(user).toBeDefined();
+  });
+
+  it('resetPassword desbloquea la cuenta aunque haya sido bloqueada por intentos fallidos', async () => {
+    for (let i = 0; i < 5; i++) {
+      await expect(failedAttempt()).rejects.toThrow('Credenciales inválidas');
+      advance(3000);
+    }
+
+    const token = await userService.forgotPassword('juan@test.com');
+    await userService.resetPassword(token, 'newPassword123');
+
+    const user = await userService.loginUser({ email: 'juan@test.com', password: 'newPassword123' });
+    expect(user).toBeDefined();
+  });
+});
+
 describe('eraseUser (soft delete)', () => {
   it('debe hacer soft delete del usuario', async () => {
     await userService.registerUser(testUserData);

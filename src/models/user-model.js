@@ -62,6 +62,23 @@ const UserSchema = new mongoose.Schema({
       type: Date,
       default: null,
     },
+    // Protección de fuerza bruta: bloqueo de cuenta independiente de la IP (complementa el
+    // rate limiter por IP, que un atacante distribuido puede esquivar rotando de IP).
+    failedLoginAttempts: {
+      type: Number,
+      default: 0,
+      select: false,
+    },
+    lockUntil: {
+      type: Date,
+      default: null,
+      select: false,
+    },
+    lastFailedLoginAt: {
+      type: Date,
+      default: null,
+      select: false,
+    },
   },
   {
     timestamps: true, // Agrega createdAt y updatedAt
