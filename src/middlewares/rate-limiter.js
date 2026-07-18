@@ -7,6 +7,10 @@ const passthrough = (req, res, next) => next();
 
 // Rate limiter para endpoints de autenticación
 // Limita a 5 intentos por 15 minutos
+// No se define un keyGenerator propio: el default de express-rate-limit ya identifica por IP
+// y además normaliza IPv6 agrupando por subred (/56), evitando que un usuario IPv6 esquive
+// el límite rotando entre las miles de direcciones de su prefijo. Un `req.ip` a mano no hacía
+// esa normalización y disparaba el warning ERR_ERL_KEY_GEN_IPV6.
 export const authLimiter = isTest ? passthrough : rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
   max: 5, // Máximo 5 intentos
@@ -15,10 +19,6 @@ export const authLimiter = isTest ? passthrough : rateLimit({
   },
   standardHeaders: true, // Incluye headers RateLimit-*
   legacyHeaders: false, // Desactiva headers X-RateLimit-*
-  // Identificar por IP
-  keyGenerator: (req) => {
-    return req.ip;
-  },
 });
 
 // Rate limiter general para APIs
@@ -31,7 +31,4 @@ export const apiLimiter = isTest ? passthrough : rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => {
-    return req.ip;
-  },
 });
