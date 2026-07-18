@@ -36,6 +36,14 @@ El `MONGO_URI` dentro del compose apunta al servicio `mongo` por red interna, as
 
 `GET /health` (público, sin auth ni rate limit) responde `200` con `{ status, db, uptime }` cuando la conexión a MongoDB está activa, o `503` si la base no está disponible. Lo usan el healthcheck de Docker y puede usarlo cualquier balanceador u orquestador.
 
+## Email (reset de contraseña)
+
+El flujo de recuperación de contraseña (`POST /users/forgot-password`) genera un token de un solo uso, con expiración de 1 hora, y envía por email un enlace `FRONT_URL/reset-password/<token>`.
+
+El envío usa SMTP vía `nodemailer` y es agnóstico del proveedor: sirve cualquier servicio con SMTP (Resend, SendGrid, Mailtrap, Gmail, etc.). Se configura con las variables `SMTP_*` y `EMAIL_FROM` del `.env` (ver `.env.example`).
+
+Si el SMTP **no** está configurado (desarrollo local, CI, tests), el envío se omite con un warning en el log en vez de fallar, y fuera de producción el token se loguea para poder probar el flujo de punta a punta sin un servidor de correo real.
+
 ## Tests
 
 ```

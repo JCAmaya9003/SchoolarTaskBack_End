@@ -1,6 +1,8 @@
 import {findUserByEmail, findUserByEmailWithPassword, createUser, updateUserById, deleteUserById, findAllusers, restoreUserById, findDeletedUserByEmail, saveResetToken, findUserByResetToken, resetUserPassword, updateLoginAttemptState } from '../repositories/user-repository.js';
 import {hashPassword,verifyPassword} from '../middlewares/auth-middleware.js';
 import * as roleService from '../services/role-service.js'
+import { sendPasswordResetEmail } from './email.service.js';
+import { config } from '../config/config.js';
 import crypto from 'crypto';
 import logger from '../config/logger.js';
 import { ValidationError, InvalidCredentialsError, NotFoundError, UserAlreadyExistsError } from '../errors/errors.js';
@@ -173,6 +175,17 @@ export const forgotPassword = async (email) => {
   const expires = new Date(Date.now() + 60 * 60 * 1000);
 
   await saveResetToken(user._id, hashedToken, expires);
+
+  // Enviar el email con el enlace de reset. El envío se hace best-effort: si el SMTP no está
+  // configurado se omite (no-op con warning), y si falla el envío se loguea pero NO se propaga
+  // el error, porque el endpoint responde siempre lo mismo exista o no el usuario (anti-enumeración)
+  // y un 500 solo cuando el email existe filtraría cuáles direcciones están registradas.
+  const resetUrl = `${config.frontUrl}/reset-password/${resetToken}`;
+  try {
+    await sendPasswordResetEmail(user.email, resetUrl);
+  } catch (err) {
+    logger.error(`[PASSWORD RESET] Falló el envío del email de reset a ${email}: ${err.message}`);
+  }
 
   // El token en texto plano solo se loguea fuera de producción. En producción no debe
   // quedar nunca en los logs, porque permitiría secuestrar un reset en curso.
