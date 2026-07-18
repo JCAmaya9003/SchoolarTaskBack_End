@@ -1,5 +1,7 @@
 # SchoolarTaskBack_End
 
+[![CI](https://github.com/JCAmaya9003/SchoolarTaskBack_End/actions/workflows/ci.yml/badge.svg)](https://github.com/JCAmaya9003/SchoolarTaskBack_End/actions/workflows/ci.yml)
+
 Backend de SchoolarTask: API REST en Node.js/Express con MongoDB (Mongoose), autenticación por JWT (cookie httpOnly) y login con Google OAuth.
 
 ## Setup
