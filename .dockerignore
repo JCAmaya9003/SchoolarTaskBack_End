@@ -1,0 +1,29 @@
+# Dependencias: se reinstalan dentro de la imagen con npm ci
+node_modules
+npm-debug.log
+
+# Secretos y entornos locales: nunca deben entrar a la imagen
+.env
+.env.*
+!.env.example
+
+# Logs
+logs
+*.log
+
+# Git y metadata
+.git
+.gitignore
+.github
+
+# Tooling / editor
+.claude
+.vscode
+
+# Cosas que no se necesitan en runtime
+tests
+coverage
+*.md
+Dockerfile
+.dockerignore
+docker-compose.yml

@@ -1,4 +1,5 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import helmet from 'helmet';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -51,6 +52,18 @@ app.use(mongoSanitize()); // Sanitiza inputs para prevenir NoSQL injection
 
 // Documentación Swagger - disponible en /api-docs
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+// Health check para orquestadores (Docker/compose, CI, load balancers). Sin auth ni rate
+// limit a propósito: tiene que responder siempre. Devuelve 200 solo si la conexión a Mongo
+// está lista (readyState === 1), así el contenedor no se marca sano hasta que la BD responde.
+app.get('/health', (req, res) => {
+  const dbConnected = mongoose.connection.readyState === 1;
+  return res.status(dbConnected ? 200 : 503).json({
+    status: dbConnected ? 'ok' : 'degraded',
+    db: dbConnected ? 'connected' : 'disconnected',
+    uptime: process.uptime(),
+  });
+});
 
 app.use('/api', apiLimiter);
 

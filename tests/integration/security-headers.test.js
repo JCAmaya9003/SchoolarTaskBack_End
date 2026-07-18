@@ -34,3 +34,18 @@ describe('Headers de seguridad, helmet', () => {
     expect(res.headers['content-security-policy']).toBeUndefined();
   });
 });
+
+describe('Health check, GET /health', () => {
+  it('devuelve 200 y el estado de la BD cuando la conexión a Mongo está activa', async () => {
+    const res = await request.get('/health');
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ status: 'ok', db: 'connected' });
+    expect(typeof res.body.uptime).toBe('number');
+  });
+
+  it('es público, no requiere autenticación', async () => {
+    // Sin cookie de sesión: no debe responder 401/403.
+    const res = await request.get('/health');
+    expect(res.status).toBe(200);
+  });
+});

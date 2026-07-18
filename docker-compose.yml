@@ -1,0 +1,48 @@
+# Levanta el backend + una instancia de MongoDB con un solo comando:
+#   docker compose up --build
+#
+# Las variables sensibles (JWT_SECRET, credenciales de Google) se leen del archivo .env
+# local vía interpolación ${...}. Copiá .env.example a .env antes de levantar.
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    # No se publica el puerto de Mongo al host: solo es accesible dentro de la red del compose.
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  app:
+    build: .
+    restart: unless-stopped
+    # No arranca hasta que Mongo pasa su healthcheck, así seedRoles() no falla en el primer boot.
+    depends_on:
+      mongo:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # Apunta al servicio 'mongo' por nombre dentro de la red del compose, no a localhost.
+      MONGO_URI: mongodb://mongo:27017/schoolartask
+      JWT_SECRET: ${JWT_SECRET:?Definí JWT_SECRET en tu .env}
+      FRONT_URL: ${FRONT_URL:-http://localhost:5173}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URL: ${GOOGLE_REDIRECT_URL:-http://localhost:3000/oauth}
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  mongo-data:
