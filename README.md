@@ -4,19 +4,27 @@
 
 Backend de SchoolarTask: API REST en Node.js/Express con MongoDB (Mongoose), autenticación por JWT (cookie httpOnly) y login con Google OAuth.
 
-## Setup
+## Requisitos
+
+- **Node.js 22+** (la versión está fijada en `.nvmrc`) y npm.
+- **MongoDB corriendo** (local o en la nube, ej. MongoDB Atlas). Si no querés instalar MongoDB, usá el camino con [Docker](#docker), que ya lo incluye.
+
+## Setup (local)
 
 1. Instalar dependencias:
    ```
    npm install
    ```
-2. Copiar `.env.example` a `.env` y completar las variables (Mongo URI, JWT secret, credenciales de Google OAuth, URL del frontend).
-3. Levantar el servidor:
+2. Copiar `.env.example` a `.env`. Lo mínimo para arrancar es `MONGO_URI`, `JWT_SECRET` y `FRONT_URL`. Las credenciales de **Google OAuth** y el **SMTP** de email son **opcionales**: sin ellas la app arranca igual, solo quedan deshabilitados el login con Google y el envío del email de reset (ver secciones más abajo). Si falta alguna variable recomendada, la app avisa en el log al arrancar.
+3. Tener MongoDB corriendo y que `MONGO_URI` apunte a él.
+4. Levantar el servidor:
    ```
    npm run dev
    ```
    Al conectar a la base de datos se crean automáticamente los roles por defecto (`admin`, `teacher`, `parent`, `student`) si no existen.
-4. Documentación interactiva de la API disponible en `/api-docs` (Swagger).
+5. Documentación interactiva de la API disponible en `/api-docs` (Swagger).
+
+> ¿No querés instalar Node ni MongoDB? Saltá directo a [Docker](#docker): levanta el backend y la base con un solo comando.
 
 ## Docker
 
@@ -31,6 +39,23 @@ Para levantar el backend junto con una instancia de MongoDB sin instalar nada m�
 3. La API queda disponible en `http://localhost:3000` y el health check en `http://localhost:3000/health`.
 
 El `MONGO_URI` dentro del compose apunta al servicio `mongo` por red interna, así que no hace falta tener MongoDB instalado en la máquina.
+
+## Despliegue en la nube
+
+El backend corre en cualquier plataforma que ejecute Node (Render, Railway, Fly.io, una VM, etc.) o contenedores (con el `Dockerfile` incluido). Checklist de variables de entorno en el panel del proveedor:
+
+- `NODE_ENV=production`
+- `MONGO_URI` apuntando a tu base gestionada (ej. MongoDB Atlas).
+- `JWT_SECRET` fuerte (generalo con `node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"`).
+- `FRONT_URL` con la URL real del frontend (necesaria para CORS y para el enlace del email de reset).
+- `TRUST_PROXY=1` — casi todas las plataformas ponen un reverse proxy delante; sin esto el rate limiter agrupa a todos los clientes bajo la IP del proxy y las cookies seguras no se setean bien.
+- Opcionales: `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`/`GOOGLE_REDIRECT_URL` para login con Google, y `SMTP_*`/`EMAIL_FROM` para el email de reset.
+
+Además:
+
+- **HTTPS obligatorio**: en producción las cookies se marcan `secure`, así que solo viajan por HTTPS (las plataformas tipo Render/Railway ya sirven HTTPS por defecto).
+- El proveedor suele inyectar el puerto por la variable `PORT`; la app ya la respeta.
+- Si usás login con Google, actualizá en Google Cloud Console la *redirect URI* a `https://tu-backend/oauth`.
 
 ## Health check
 

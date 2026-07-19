@@ -118,50 +118,25 @@ logger.debug('Procesando request', { route: req.path, method: req.method });
 
 ## 3. RESPUESTAS HTTP CONSISTENTES
 
-### Response Helpers
+### Helper de respuesta
 
-Ubicación: [src/utils/response-helper.js](src/utils/response-helper.js)
+Ubicación: [src/utils/apiResponse.js](src/utils/apiResponse.js)
 
-**Helpers disponibles**:
-
-#### Respuestas exitosas:
+Toda la API usa un único helper para las respuestas de éxito, `sendSuccess`, que mantiene el sobre estándar `{ success, message, data }`:
 
 ```javascript
-import { successResponse, createdResponse } from '../utils/response-helper.js';
+import { sendSuccess } from '../utils/apiResponse.js';
 
 // GET - 200
-successResponse(res, users, 'Usuarios obtenidos');
+sendSuccess(res, 200, 'Usuarios obtenidos', users);
 // { success: true, message: "Usuarios obtenidos", data: [...] }
 
 // POST - 201
-createdResponse(res, newUser, 'Usuario creado');
+sendSuccess(res, 201, 'Usuario creado', newUser);
 // { success: true, message: "Usuario creado", data: {...} }
 ```
 
-#### Respuestas de error:
-
-```javascript
-import { notFoundResponse, validationErrorResponse } from '../utils/response-helper.js';
-
-// 404
-notFoundResponse(res, 'Usuario');
-// { success: false, error: "Usuario no encontrado" }
-
-// 400 - Validación
-validationErrorResponse(res, errors.array());
-// { success: false, error: "Errores de validación", errors: [...] }
-```
-
-**Todos los helpers**:
-- `successResponse(res, data, message, statusCode)`
-- `createdResponse(res, data, message)`
-- `noContentResponse(res)`
-- `errorResponse(res, message, statusCode, errors)`
-- `validationErrorResponse(res, errors)`
-- `notFoundResponse(res, resource)`
-- `unauthorizedResponse(res, message)`
-- `forbiddenResponse(res, message)`
-- `conflictResponse(res, message)`
+Los errores **no** usan un helper: se lanzan como clases de [src/errors/errors.js](src/errors/errors.js) (ver sección 1) y el `error-middleware.js` global las traduce al mismo sobre `{ success: false, message }`. Así el shape de éxito y de error queda consistente sin necesidad de un helper por cada código HTTP.
 
 ---
 
@@ -206,7 +181,10 @@ src/
 ├── routes/
 ├── services/
 └── utils/
-    └── response-helper.js    (✓ NUEVO)
+    ├── apiResponse.js        (sendSuccess)
+    ├── pagination-helper.js
+    ├── soft-delete-plugin.js
+    └── xss-guard.js
 ```
 
 ---
@@ -316,16 +294,24 @@ Para verificar que el manejo de errores funciona:
 
 ---
 
-## 9. PRÓXIMAS MEJORAS (FASE 3+)
+## 9. MEJORAS
 
-- [ ] Índices en MongoDB
-- [ ] Paginación
+Ya implementadas desde que se escribió este documento:
+
+- [x] Paginación (ver [src/utils/pagination-helper.js](src/utils/pagination-helper.js))
+- [x] Rate limiting (ver [src/middlewares/rate-limiter.js](src/middlewares/rate-limiter.js))
+- [x] Autorización por usuario / ownership (ver [src/middlewares/authorization-middleware.js](src/middlewares/authorization-middleware.js))
+- [x] Soft delete y recuperación de contraseña
+- [x] Suite de tests (unit + integración con `mongodb-memory-server`)
+- [x] Docker + CI (GitHub Actions)
+
+Pendientes / ideas a futuro:
+
+- [ ] Índices en MongoDB más allá de los campos `unique` actuales
 - [ ] Optimización de queries
-- [ ] Rate limiting general
 - [ ] Compresión de respuestas
 - [ ] Request ID tracing
 
 ---
 
-**Fecha de actualización**: 2026-02-04
-**Fase completada**: FASE 2 - Arquitectura Básica
+**Fecha de actualización**: 2026-07-19
