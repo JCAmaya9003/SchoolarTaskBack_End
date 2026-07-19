@@ -102,9 +102,9 @@ router.post(
  *                 format: email
  *     responses:
  *       200:
- *         description: Token de reset generado
- *       500:
- *         description: Email no encontrado
+ *         description: Respuesta genérica de éxito. Por diseño (anti-enumeración) responde lo mismo exista o no el email; si el email está registrado, se le envía el enlace de recuperación.
+ *       400:
+ *         description: Email con formato inválido
  */
 router.post(
   '/forgot-password',

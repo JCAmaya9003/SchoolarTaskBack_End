@@ -11,8 +11,16 @@ export async function setupTestDB() {
 }
 
 export async function teardownTestDB() {
-  await mongoose.connection.dropDatabase();
-  await mongoose.disconnect();
+  // dropDatabase solo si la conexión sigue viva. Si ya se cerró, el mongoServer.stop() de abajo
+  // destruye igual toda la instancia en memoria, así que dropear es redundante. Hacerlo sobre una
+  // conexión no conectada disparaba "Connection operation buffering timed out" de forma flaky y
+  // rompía el CI (el teardown de un archivo caía aunque los 241 tests pasaran).
+  if (mongoose.connection.readyState === 1) {
+    await mongoose.connection.dropDatabase();
+  }
+  if (mongoose.connection.readyState !== 0) {
+    await mongoose.disconnect();
+  }
   if (mongoServer) {
     await mongoServer.stop();
   }

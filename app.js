@@ -29,12 +29,29 @@ import swaggerSpec from './src/config/swagger.js';
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Detrás de un reverse proxy (Render, Railway, nginx, etc.) Express necesita confiar en los
+// headers X-Forwarded-* para que req.ip, el rate limiter y las cookies `secure` funcionen bien.
+// Se controla por env: TRUST_PROXY=1 en la nube (un hop de proxy), 0 en local (sin proxy) para
+// que nadie pueda falsear su IP con X-Forwarded-For. Default 0 = seguro para desarrollo local.
+app.set('trust proxy', Number(process.env.TRUST_PROXY) || 0);
+
 // Headers de seguridad estándar (X-Frame-Options, X-Content-Type-Options, HSTS, oculta
 // X-Powered-By, etc.). CSP se deja desactivada porque rompe la UI de Swagger en /api-docs
 // (necesita scripts/estilos inline); el resto de la API es JSON puro, donde CSP no aplica.
 app.use(helmet({
   contentSecurityPolicy: false,
 }));
+
+// Aviso temprano si faltan variables de entorno recomendadas. No corta la ejecución (Mongo sí
+// es fatal, más abajo), pero deja un mensaje claro en el arranque en vez de fallar en runtime
+// con un error críptico. Se omite en tests, que setean su propio entorno.
+if (process.env.NODE_ENV !== 'test') {
+  const requiredEnv = { MONGO_URI: config.mongoUri, JWT_SECRET: config.jwtSecret, FRONT_URL: config.frontUrl };
+  const missing = Object.entries(requiredEnv).filter(([, value]) => !value).map(([key]) => key);
+  if (missing.length > 0) {
+    logger.warn(`[CONFIG] Faltan variables de entorno recomendadas: ${missing.join(', ')}. Revisá tu .env (ver .env.example).`);
+  }
+}
 
 // Solo conectar a la BD si no estamos en modo test
 if (process.env.NODE_ENV !== 'test') {

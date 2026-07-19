@@ -1,14 +1,14 @@
 # SEGURIDAD - SchoolarTask Backend
 
-## ACCIÓN URGENTE REQUERIDA
+## Checklist de seguridad para producción
 
-Este documento contiene instrucciones críticas para asegurar el backend antes de ir a producción.
+Este documento reúne los pasos para asegurar el backend antes de desplegarlo a producción y las medidas de seguridad ya implementadas.
 
 ---
 
-## 1. REGENERAR JWT_SECRET
+## 1. GENERAR UN JWT_SECRET PROPIO
 
-**POR QUÉ**: El JWT_SECRET actual puede estar expuesto en el historial de Git o en el código compartido.
+**POR QUÉ**: Cada entorno debe tener su propio `JWT_SECRET` fuerte y aleatorio. Nunca uses el valor de ejemplo ni subas el de producción a Git.
 
 **CÓMO HACERLO**:
 
@@ -32,9 +32,9 @@ JWT_SECRET=tu_nuevo_secret_aleatorio_de_64_caracteres_aqui
 
 ---
 
-## 2. REGENERAR CREDENCIALES DE GOOGLE OAUTH
+## 2. CREDENCIALES DE GOOGLE OAUTH
 
-**POR QUÉ**: Las credenciales actuales pueden estar comprometidas.
+**POR QUÉ**: Las credenciales de OAuth deben ser propias de tu proyecto de Google Cloud y nunca compartirse ni subirse a Git. Son opcionales: sin ellas el login con Google queda deshabilitado, pero el resto de la app funciona.
 
 **PASOS**:
 
@@ -104,19 +104,19 @@ node_modules/
 
 ## 6. MEDIDAS DE SEGURIDAD IMPLEMENTADAS
 
-### FASE 1 - Completada:
-- ✅ Eliminada exposición de passwords en respuestas API
-- ✅ Rate limiting en endpoints de autenticación (5 intentos/15min)
-- ✅ Sanitización de inputs MongoDB (previene NoSQL injection)
-- ✅ Cookies seguras en producción (HTTPS required)
+### Implementadas:
+- ✅ Passwords y tokens sensibles nunca se exponen en respuestas (`select: false` a nivel de schema)
+- ✅ Rate limiting por IP en autenticación (5/15min) + bloqueo de cuenta por fuerza bruta independiente de IP
+- ✅ Sanitización de inputs MongoDB (previene NoSQL injection) y defensa XSS en campos de texto libre
+- ✅ Cookies httpOnly, `secure` en producción (requiere HTTPS) y `sameSite`
+- ✅ Headers de seguridad con helmet
+- ✅ OAuth de Google con protección CSRF (state) y verificación de `email_verified`
+- ✅ Middleware global de errores, logging (winston), paginación, autorización por ownership, soft delete y recuperación de contraseña
+- ✅ `trust proxy` configurable (`TRUST_PROXY`) para desplegar detrás de un reverse proxy sin romper el rate limiting ni las cookies seguras
 
-### PRÓXIMAS FASES:
-- [ ] FASE 2: Middleware global de errores, logging
-- [ ] FASE 3: Índices MongoDB, paginación
-- [ ] FASE 4: Validación de autorización por usuario
-- [ ] FASE 5: Refactoring de código
-- [ ] FASE 6: Soft delete, recuperación de contraseña
-- [ ] FASE 7: Testing y documentación
+### Pendientes / a futuro:
+- [ ] Rotación automática de secrets
+- [ ] Auditoría/monitoreo de accesos en producción
 
 ---
 
@@ -149,5 +149,4 @@ Antes de desplegar a producción, verificar:
 
 ---
 
-**Fecha de última actualización**: 2026-02-04
-**Fase completada**: FASE 1 - Seguridad Crítica
+**Fecha de última actualización**: 2026-07-19

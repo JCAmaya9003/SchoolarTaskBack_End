@@ -1,9 +1,12 @@
 {
-  "name": "proyecto-de-web",
+  "name": "schoolartask-backend",
   "version": "1.0.0",
-  "description": "",
+  "description": "Backend de SchoolarTask: API REST de gestión escolar en Node.js/Express + MongoDB, con auth por JWT y Google OAuth.",
   "main": "app.js",
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js",
@@ -27,7 +30,6 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.8.3",
     "nodemailer": "^9.0.3",
-    "oauth2client": "^1.0.0",
     "sanitize-html": "^2.17.6",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
