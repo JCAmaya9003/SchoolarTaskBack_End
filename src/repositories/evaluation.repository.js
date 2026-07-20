@@ -8,9 +8,8 @@ export const findEvaluationByNameSubjectAndGradeSection = async (materia, nombre
       .populate('grado_seccion', 'grado seccion');
   };
 
-  export const findAllEvaluations = async (page, limit, subjectIds = null) =>{
+  export const findAllEvaluations = async (page, limit, filter = {}) =>{
     const { skip, limit: validLimit, page: validPage } = getPaginationParams(page, limit);
-    const filter = subjectIds ? { materia: { $in: subjectIds } } : {};
 
     const [evaluations, total] = await Promise.all([
       Evaluation.find(filter)
@@ -52,12 +51,10 @@ export const findEvaluationByNameSubjectAndGradeSection = async (materia, nombre
     return evaluations;
 };
 
-// Optimización: Obtener evaluaciones de múltiples materias de una vez
-export const findEvaluationsBySubjects = async (materiaIds) => {
-    const evaluations = await Evaluation.find({
-      materia: { $in: materiaIds }
-    }).populate('materia', 'nombre');
-    return evaluations;
+// IDs de las evaluaciones que matchean un filtro (usado para filtrar notas por las clases del profe).
+export const findEvaluationIdsByFilter = async (filter) => {
+    const evaluations = await Evaluation.find(filter).select('_id');
+    return evaluations.map((e) => e._id);
 };
 
 // Evaluaciones de una clase concreta (grado/sección). Usado por la vista de notas del alumno,

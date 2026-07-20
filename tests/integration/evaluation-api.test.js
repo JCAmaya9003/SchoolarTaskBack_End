@@ -324,4 +324,25 @@ describe('evaluaciones scopeadas por clase', () => {
     // Dicta Matematicas, pero NO en 6/C: antes esto pasaba (permiso solo por materia), ahora 403
     expect(res.status).toBe(403);
   });
+
+  it('un teacher NO ve en el listado evaluaciones de su materia en clases que no dicta - 200', async () => {
+    const adminCookie = await loginAsAdmin();
+    // Mate en su clase (3/A) y en una que no dicta (5/B, creada en un test anterior)
+    await request.post('/api/evaluations').set('Cookie', adminCookie).send({
+      nombre: 'Listado Clase', nombreMateria: 'Matematicas', grado: '3', seccion: 'A', descripcion: 'd', fecha: '2026-08-01', peso: 0.3,
+    });
+    await request.post('/api/evaluations').set('Cookie', adminCookie).send({
+      nombre: 'Listado Clase', nombreMateria: 'Matematicas', grado: '5', seccion: 'B', descripcion: 'd', fecha: '2026-08-01', peso: 0.3,
+    });
+
+    const cookie = await loginAs('prof-mate-eval@test.com', 'password123');
+    const res = await request.get('/api/evaluations').set('Cookie', cookie).query({ limit: 100 });
+
+    expect(res.status).toBe(200);
+    const clases = res.body.data.items
+      .filter((e) => e.nombre === 'Listado Clase')
+      .map((e) => `${e.grado_seccion.grado}${e.grado_seccion.seccion}`);
+    expect(clases).toContain('3A');       // su clase: la ve
+    expect(clases).not.toContain('5B');   // clase que no dicta: no la ve
+  });
 });

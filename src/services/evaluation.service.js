@@ -102,23 +102,33 @@ export const searchEvaluationbyNameSubjectAndGradeSection = async (nombre, nombr
     return await evaluationRepository.findEvaluationByNameSubjectAndGradeSection(materia, nombre, gradeSectionId);
 };
 
-// Si requestingUser es teacher, filtra a solo las materias que dicta; admin ve todo
-export const getAllEvaluations = async (page, limit, requestingUser) =>{
-    let subjectIds = null;
-    if (requestingUser?.role === 'teacher') {
-        subjectIds = await getTeacherSubjectIds(requestingUser.email);
+// Filtro Mongo de evaluaciones que el profesor dicta: por cada asignación, (materia ∈ sus
+// materias) Y (grado_seccion == esa clase). Así un profe de Mate en 3A no ve las de Mate en 6C.
+const buildTeacherEvaluationFilter = (assignments) => {
+    if (!assignments.length) {
+        return { _id: null }; // sin asignaciones: no matchea ninguna evaluación
     }
-    return await evaluationRepository.findAllEvaluations(page, limit, subjectIds);
+    return {
+        $or: assignments.map((a) => ({
+            materia: { $in: a.materias.map((m) => m._id) },
+            grado_seccion: a.grado_seccion._id,
+        })),
+    };
+};
+
+// Si requestingUser es teacher, filtra a las evaluaciones de sus materias EN sus clases; admin ve todo.
+export const getAllEvaluations = async (page, limit, requestingUser) =>{
+    let filter = {};
+    if (requestingUser?.role === 'teacher') {
+        const assignments = await teacherService.getTeacherAssignments(requestingUser.email);
+        filter = buildTeacherEvaluationFilter(assignments);
+    }
+    return await evaluationRepository.findAllEvaluations(page, limit, filter);
 }
 
-export const getTeacherSubjectIds = async (email) => {
-    try {
-        const subjects = await teacherService.getSubjectsByTeacherEmail(email);
-        return subjects.map((subject) => subject._id);
-    } catch (error) {
-        if (error instanceof NotFoundError) {
-            return [];
-        }
-        throw error;
-    }
+// IDs de las evaluaciones que el profesor dicta (sus materias en sus clases). Usado para filtrar notas.
+export const getTeacherEvaluationIds = async (email) => {
+    const assignments = await teacherService.getTeacherAssignments(email);
+    const filter = buildTeacherEvaluationFilter(assignments);
+    return await evaluationRepository.findEvaluationIdsByFilter(filter);
 };

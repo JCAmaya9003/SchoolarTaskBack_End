@@ -1,8 +1,8 @@
 import * as evaluationGradeRepository from '../repositories/evaluation_grade.repository.js';
-import * as evaluationRepository from '../repositories/evaluation.repository.js';
 import * as studentService from '../services/student.service.js';
 import * as evaluationService from '../services/evaluation.service.js';
 import * as gradeSectionService from '../services/gradeSection.service.js';
+import * as teacherService from '../services/teacher.service.js';
 import { NotFoundError, ConflictError } from '../errors/errors.js';
 
 /**
@@ -47,9 +47,8 @@ export const createEvaluationGrade = async ({ email, nombreMateria, nombreEvalua
 export const getAllEvaluationGrades = async (page, limit, requestingUser) => {
     let evaluationIds = null;
     if (requestingUser?.role === 'teacher') {
-        const subjectIds = await evaluationService.getTeacherSubjectIds(requestingUser.email);
-        const evaluations = await evaluationRepository.findEvaluationsBySubjects(subjectIds);
-        evaluationIds = evaluations.map((evaluation) => evaluation._id);
+        // Solo las notas de las evaluaciones que el profe dicta (sus materias en sus clases).
+        evaluationIds = await evaluationService.getTeacherEvaluationIds(requestingUser.email);
     }
     return await evaluationGradeRepository.findAllEvaluationGrades(page, limit, evaluationIds);
 };
@@ -66,12 +65,11 @@ export const getEvaluationGradesByStudent = async (email, requestingUser) => {
     }
     const grades = await evaluationGradeRepository.findEvaluationGradesByStudent(student);
 
-    // Un teacher solo puede ver las notas del alumno en las materias que dicta (consistente con
-    // /all y /by-evaluation). Antes veía todo el historial, incluidas materias de otros profesores.
-    // Admin y el propio alumno ven todas.
+    // Un teacher solo ve las notas del alumno en las materias que dicta EN la clase de ese alumno
+    // (consistente con /all y /by-evaluation). Admin y el propio alumno ven todas.
     if (requestingUser?.role === 'teacher') {
-        const subjectIds = await evaluationService.getTeacherSubjectIds(requestingUser.email);
-        const ownSubjects = new Set(subjectIds.map((id) => id.toString()));
+        const ownSubjectIds = await teacherService.getTeacherSubjectIdsInClass(requestingUser.email, student.grado_seccion?._id);
+        const ownSubjects = new Set(ownSubjectIds.map((id) => id.toString()));
         return grades.filter((g) => g.evaluacion?.materia && ownSubjects.has(g.evaluacion.materia.toString()));
     }
     return grades;
