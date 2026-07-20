@@ -391,3 +391,47 @@ describe('DELETE /api/reservations/id, admin', () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe('Reservas cuyo lugar fue borrado del catálogo', () => {
+  it('los listados siguen respondiendo 200 y no se caen - regresión', async () => {
+    const cookie = await loginAsAdmin();
+
+    // Lugar propio de este test, para no afectar a las reservas de los demás
+    await request.post('/api/academic_places').set('Cookie', cookie).send({ lugar: 'Gimnasio Temporal' });
+
+    await request
+      .post('/api/reservations/create')
+      .set('Cookie', cookie)
+      .send({
+        lugar: 'Gimnasio Temporal',
+        usuarioEmail: 'prof-a-reserva@test.com',
+        descripcion: 'Clase de educación física',
+        fecha_inicio: '2027-01-10T08:00:00.000Z',
+        fecha_fin: '2027-01-10T10:00:00.000Z',
+      });
+
+    // El admin borra el lugar: la reserva queda apuntando a un lugar inexistente
+    await request.delete('/api/academic_places').set('Cookie', cookie).send({ lugar: 'Gimnasio Temporal' });
+
+    // Antes esto tiraba 500: formatReservationResponse hacía reservation.lugar.lugar sobre null
+    const todas = await request.get('/api/reservations/all').set('Cookie', cookie);
+    expect(todas.status).toBe(200);
+
+    const porRango = await request
+      .get('/api/reservations/by-time-range')
+      .query({ fecha_inicio: '2027-01-01T00:00:00.000Z', fecha_fin: '2027-12-31T00:00:00.000Z' })
+      .set('Cookie', cookie);
+    expect(porRango.status).toBe(200);
+
+    const porProfesor = await request
+      .get('/api/reservations/by-teacher')
+      .query({ usuarioEmail: 'prof-a-reserva@test.com' })
+      .set('Cookie', cookie);
+    expect(porProfesor.status).toBe(200);
+
+    // La reserva huérfana sigue apareciendo, solo que sin lugar
+    const huerfana = porProfesor.body.data.find((r) => r.descripcion === 'Clase de educación física');
+    expect(huerfana).toBeDefined();
+    expect(huerfana.lugar).toBeUndefined();
+  });
+});

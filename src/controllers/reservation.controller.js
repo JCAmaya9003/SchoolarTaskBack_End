@@ -2,9 +2,12 @@ import { validationResult } from 'express-validator';
 import * as reservationService from '../services/reservation.service.js';
 import { sendSuccess } from '../utils/apiResponse.js';
 
+// Optional chaining como defensa: una reserva puede quedar con lugar null (el lugar académico
+// se borró del catálogo) o usuario null (usuario desactivado). La reserva sigue siendo un
+// registro válido de que alguien reservó un horario, así que no se oculta: solo se evita el crash.
 const formatReservationResponse = (reservation) => ({
     id: reservation._id,
-    lugar: reservation.lugar.lugar,
+    lugar: reservation.lugar?.lugar,
     descripcion: reservation.descripcion,
     fecha_inicio: reservation.fecha_inicio,
     fecha_fin: reservation.fecha_fin,
@@ -190,7 +193,7 @@ export const getReservationNameById = async (req, res, next) => {
 
         const reservation = await reservationService.getReservationById(id);
 
-        return sendSuccess(res, 200, 'Nombre del lugar obtenido con éxito', { nombre: reservation.lugar.lugar });
+        return sendSuccess(res, 200, 'Nombre del lugar obtenido con éxito', { nombre: reservation.lugar?.lugar });
     } catch (error) {
         next(error);
     }
