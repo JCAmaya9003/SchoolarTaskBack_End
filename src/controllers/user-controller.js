@@ -166,7 +166,7 @@ export const getUserRole = async (req, res, next) => {
 const ROLE_INFO_HANDLERS = {
   student: async (email) => {
     const user = await studentService.getStudentByUserIdAndEmail(email);
-    if (!user) return null;
+    if (!user || !user.usuario) return null; // usuario desactivado (populate -> null): se oculta (404)
     return {
       nombre: user.usuario.nombre,
       apellido: user.usuario.apellido,
@@ -185,7 +185,7 @@ const ROLE_INFO_HANDLERS = {
   },
   parent: async (email) => {
     const user = await parentService.getParentByUserIdAndEmail(email);
-    if (!user) return null;
+    if (!user || !user.usuario) return null; // usuario desactivado (populate -> null): se oculta (404)
     return {
       nombre: user.usuario.nombre,
       apellido: user.usuario.apellido,
@@ -203,7 +203,7 @@ const ROLE_INFO_HANDLERS = {
   },
   teacher: async (email) => {
     const user = await teacherService.getTeacherByUserIdAndEmail(email);
-    if (!user) return null;
+    if (!user || !user.usuario) return null; // usuario desactivado (populate -> null): se oculta (404)
     return {
       nombre: user.usuario.nombre,
       apellido: user.usuario.apellido,

@@ -9,9 +9,9 @@ const formatReservationResponse = (reservation) => ({
     fecha_inicio: reservation.fecha_inicio,
     fecha_fin: reservation.fecha_fin,
     usuario: {
-        nombre: reservation.usuario.nombre,
-        apellido: reservation.usuario.apellido,
-        email: reservation.usuario.email,
+        nombre: reservation.usuario?.nombre,
+        apellido: reservation.usuario?.apellido,
+        email: reservation.usuario?.email,
     },
 });
 

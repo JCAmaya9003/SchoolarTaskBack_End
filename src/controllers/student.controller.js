@@ -130,6 +130,13 @@ export const getStudentGradesInfoParent = async (req, res, next) => {
         const response = [];
 
         for (const student of students) {
+            // Oculta a los hijos cuyo usuario fue desactivado (populate -> null): el estado
+            // activo/inactivo vive solo en User, y sin este chequeo student.usuario.email
+            // rompería la vista del padre con un 500.
+            if (!student.usuario) {
+                continue;
+            }
+
             // Obtener notas y evaluaciones por estudiante
             const gradesInfo = await studentService.getStudentGradesInfo(student.usuario.email);
 

@@ -379,3 +379,23 @@ describe('DELETE /api/evaluations, cascada de notas', () => {
     expect(gradesInfo.status).toBe(200);
   });
 });
+
+describe('GET /api/students/get-students-filterWithParent, padre', () => {
+  it('el padre ve a su hijo; si el hijo se desactiva, la vista no se cae y lo oculta - 200', async () => {
+    const padreCookie = await loginAs(parentUser.email, parentUser.password);
+
+    // El padre ve a su hijo antes de desactivar
+    const before = await request.get('/api/students/get-students-filterWithParent').set('Cookie', padreCookie);
+    expect(before.status).toBe(200);
+    expect(before.body.data.some((r) => r.estudiante.email === studentEmail)).toBe(true);
+
+    // El admin desactiva al usuario del hijo
+    const adminCookie = await loginAsAdmin();
+    await request.delete('/api/users').set('Cookie', adminCookie).send({ email: studentEmail });
+
+    // La vista del padre no se cae (antes daba 500 por usuario=null) y el hijo desactivado ya no figura
+    const after = await request.get('/api/students/get-students-filterWithParent').set('Cookie', padreCookie);
+    expect(after.status).toBe(200);
+    expect(after.body.data.some((r) => r.estudiante.email === studentEmail)).toBe(false);
+  });
+});
