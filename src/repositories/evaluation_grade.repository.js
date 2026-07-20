@@ -32,6 +32,16 @@ export const deleteEvaluationGradesByEvaluationId = async (evaluationId) => {
     return await EvaluationGrade.deleteMany({ evaluacion: evaluationId });
 };
 
+// Las dos de abajo trabajan sobre un conjunto de evaluaciones a la vez: el borrado de un
+// catálogo primero informa cuántas notas se van a perder y después las borra en bloque.
+export const countEvaluationGradesByEvaluationIds = async (evaluationIds) => {
+    return await EvaluationGrade.countDocuments({ evaluacion: { $in: evaluationIds } });
+};
+
+export const deleteEvaluationGradesByEvaluationIds = async (evaluationIds) => {
+    return await EvaluationGrade.deleteMany({ evaluacion: { $in: evaluationIds } });
+};
+
 /**
  * Actualizar un registro de calificación por ID.
  * @param {String} id - ID del registro de calificación.

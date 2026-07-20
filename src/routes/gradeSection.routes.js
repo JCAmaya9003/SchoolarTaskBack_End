@@ -48,6 +48,8 @@ router.delete(
     [
         body('grado').isIn(GRADOS_VALIDOS).withMessage('Grado inválido. Debe ser un número del 1 al 12.'),
         body('seccion').isString().isLength({ min: 1, max: 1 }).matches(/^[A-Za-z]$/).withMessage('Sección inválida.'),
+        // Borrado en dos pasos: sin esto, si la clase está en uso responde 409 con el impacto
+        body('confirmar').optional().isBoolean().withMessage('Confirmar debe ser true o false.'),
     ],
     gradeSectionController.deleteGradeAndSection
 );

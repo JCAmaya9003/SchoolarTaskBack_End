@@ -70,6 +70,9 @@ export const errorHandler = (err, req, res, next) => {
   res.status(statusCode).json({
     success: false,
     message,
+    // El borrado de catálogos en dos pasos adjunta el detalle de lo que se destruiría, para que
+    // el cliente pueda mostrarlo en el diálogo de confirmación antes de reintentar.
+    ...(err.impacto && { impacto: err.impacto }),
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
   });
 };

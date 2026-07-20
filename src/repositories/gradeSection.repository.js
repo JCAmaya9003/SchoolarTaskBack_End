@@ -92,6 +92,12 @@ export const removeSubjectsFromGradeSection = async (id, materias) => {
 };
 
 
+// Saca la materia del pensum de todas las clases. Sin esto, borrar una materia dejaba su
+// ObjectId guardado en materias[] apuntando a un documento inexistente.
+export const pullSubjectFromAllGradeSections = async (subjectId) => {
+    return await GradeSection.updateMany({}, { $pull: { materias: subjectId } });
+};
+
 export const findGradeSectionsBySubject = async (subjectId) => {
     // Buscar grados y secciones que incluyan la materia especificada
     return await GradeSection.find({ materias: subjectId }).populate([

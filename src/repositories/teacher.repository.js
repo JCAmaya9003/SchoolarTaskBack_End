@@ -124,6 +124,27 @@ export const updateTeacherByUserId = async (id, updates) => {
  * @param {String} id - ID del profesor.
  * @returns {Promise<Object|null>} - Profesor eliminado o null.
  */
+// Las cuatro de abajo sostienen el borrado en cascada de catálogos. Sin ellas, al borrar una
+// materia o una clase, los ObjectId quedaban guardados dentro de grado_encargado apuntando a
+// documentos inexistentes: el populate no los traía (se veían como []) pero la base quedaba sucia.
+export const findTeachersBySubject = async (subjectId) => {
+    return await Teacher.find({ 'grado_encargado.materias': subjectId });
+};
+
+export const findTeachersByGradeSection = async (gradeSectionId) => {
+    return await Teacher.find({ 'grado_encargado.grado_seccion': gradeSectionId });
+};
+
+// $[] recorre todas las asignaciones del profesor y saca la materia de cada una
+export const pullSubjectFromAllAssignments = async (subjectId) => {
+    return await Teacher.updateMany({}, { $pull: { 'grado_encargado.$[].materias': subjectId } });
+};
+
+// Acá se saca la asignación entera, porque una asignación sin su grado/sección no tiene sentido
+export const pullGradeSectionFromAllAssignments = async (gradeSectionId) => {
+    return await Teacher.updateMany({}, { $pull: { grado_encargado: { grado_seccion: gradeSectionId } } });
+};
+
 export const deleteTeacherById = async (id) => {
     return await Teacher.findByIdAndDelete(id)
         .populate({

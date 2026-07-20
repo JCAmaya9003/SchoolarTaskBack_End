@@ -62,3 +62,9 @@ export const findEvaluationIdsByFilter = async (filter) => {
 export const findEvaluationsByGradeSection = async (gradeSectionId) => {
     return await Evaluation.find({ grado_seccion: gradeSectionId }).populate('materia', 'nombre');
 };
+
+// Borrado en bloque para la cascada de catálogos: al eliminar una materia o una clase,
+// sus evaluaciones dejan de tener sentido y se van con ella.
+export const deleteEvaluationsByFilter = async (filter) => {
+    return await Evaluation.deleteMany(filter);
+};
