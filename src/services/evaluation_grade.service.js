@@ -2,6 +2,7 @@ import * as evaluationGradeRepository from '../repositories/evaluation_grade.rep
 import * as evaluationRepository from '../repositories/evaluation.repository.js';
 import * as studentService from '../services/student.service.js';
 import * as evaluationService from '../services/evaluation.service.js';
+import * as gradeSectionService from '../services/gradeSection.service.js';
 import { NotFoundError, ConflictError } from '../errors/errors.js';
 
 /**
@@ -16,8 +17,9 @@ export const createEvaluationGrade = async ({ email, nombreMateria, nombreEvalua
         throw new NotFoundError(`Estudiante no encontrado con email: ${email}`);
     }
 
-    // Validar que la evaluación existe
-    const evaluation = await evaluationService.searchEvaluationbyNameAndSubject(nombreEvaluacion, nombreMateria);
+    // La evaluación es de la clase del estudiante: se busca por nombre + materia + grado_seccion
+    // del propio estudiante (por eso el payload de notas no necesita grado/sección).
+    const evaluation = await evaluationService.searchEvaluationbyNameSubjectAndGradeSection(nombreEvaluacion, nombreMateria, student.grado_seccion);
     if (!evaluation) {
         throw new NotFoundError(`Evaluación no encontrada`);
     }
@@ -80,8 +82,12 @@ export const getEvaluationGradesByStudent = async (email, requestingUser) => {
  * @param {String} evaluacionId - ID de la evaluación.
  * @returns {Promise<Array>} - Lista de calificaciones asociadas a la evaluación.
  */
-export const getEvaluationGradesByEvaluation = async (nombreEvaluacion, nombreMateria) => {
-    const evaluation = await evaluationService.searchEvaluationbyNameAndSubject(nombreEvaluacion, nombreMateria);
+export const getEvaluationGradesByEvaluation = async (nombreEvaluacion, nombreMateria, grado, seccion) => {
+    const gradeSection = await gradeSectionService.getGradeAndSection(grado, seccion);
+    if (!gradeSection) {
+        throw new NotFoundError(`Grado y sección no encontrados`);
+    }
+    const evaluation = await evaluationService.searchEvaluationbyNameSubjectAndGradeSection(nombreEvaluacion, nombreMateria, gradeSection.id);
     if (!evaluation) {
         throw new NotFoundError(`Evaluación no encontrada`);
     }
@@ -98,7 +104,7 @@ export const updateEvaluationGradeByStudentAndEvaluation = async ({email, nombre
     const student = await studentService.getStudentByUserIdAndEmail(email);
     if(student){
 
-        const evaluation = await evaluationService.searchEvaluationbyNameAndSubject(nombreEvaluacion, nombreMateria);
+        const evaluation = await evaluationService.searchEvaluationbyNameSubjectAndGradeSection(nombreEvaluacion, nombreMateria, student.grado_seccion);
         if (!evaluation) {
             throw new NotFoundError(`Evaluación no encontrada`);
         }
@@ -122,7 +128,7 @@ export const deleteEvaluationGradeById = async (email, nombreMateria, nombreEval
     const student = await studentService.getStudentByUserIdAndEmail(email);
     if(student){
 
-        const evaluacion = await evaluationService.searchEvaluationbyNameAndSubject(nombreEvaluacion, nombreMateria)
+        const evaluacion = await evaluationService.searchEvaluationbyNameSubjectAndGradeSection(nombreEvaluacion, nombreMateria, student.grado_seccion)
         if (!evaluacion) {
             throw new NotFoundError(`Evaluación no encontrada`);
         }

@@ -74,8 +74,8 @@ export const getEvaluationGradesByEvaluation = async (req, res, next) => {
         return res.status(400).json({ errors: errors.array() });
     }
     try {
-        const { nombre, nombreMateria } = req.query;
-        const grades = await evaluationGradeService.getEvaluationGradesByEvaluation(nombre, nombreMateria);
+        const { nombre, nombreMateria, grado, seccion } = req.query;
+        const grades = await evaluationGradeService.getEvaluationGradesByEvaluation(nombre, nombreMateria, grado, seccion);
         return sendSuccess(res, 200, 'Calificaciones obtenidas con éxito', grades.filter(isGradeDisplayable).map(formatEvaluationGradeResponse));
     } catch (error) {
         next(error);

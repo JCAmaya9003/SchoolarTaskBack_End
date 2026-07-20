@@ -82,7 +82,7 @@ describe('POST /api/evaluations', () => {
     const res = await request
       .post('/api/evaluations')
       .set('Cookie', cookie)
-      .send({ nombre: 'Parcial 1', nombreMateria: 'Matematicas', descripcion: 'Primer parcial', fecha: '2026-08-01', peso: 0.3 });
+      .send({ nombre: 'Parcial 1', nombreMateria: 'Matematicas', grado: gradeSectionData.grado, seccion: gradeSectionData.seccion, descripcion: 'Primer parcial', fecha: '2026-08-01', peso: 0.3 });
 
     expect(res.status).toBe(201);
     expect(res.body.data.id).toBeDefined();
@@ -95,7 +95,7 @@ describe('POST /api/evaluations', () => {
     const res = await request
       .post('/api/evaluations')
       .set('Cookie', cookie)
-      .send({ nombre: 'Parcial X', nombreMateria: 'MateriaFantasma', descripcion: 'desc', fecha: '2026-08-01', peso: 0.3 });
+      .send({ nombre: 'Parcial X', nombreMateria: 'MateriaFantasma', grado: gradeSectionData.grado, seccion: gradeSectionData.seccion, descripcion: 'desc', fecha: '2026-08-01', peso: 0.3 });
 
     expect(res.status).toBe(404);
   });
@@ -106,7 +106,7 @@ describe('POST /api/evaluations', () => {
     const res = await request
       .post('/api/evaluations')
       .set('Cookie', cookie)
-      .send({ nombre: 'Parcial XSS', nombreMateria: 'Matematicas', descripcion: '<script>alert(document.cookie)</script>', fecha: '2026-08-01', peso: 0.3 });
+      .send({ nombre: 'Parcial XSS', nombreMateria: 'Matematicas', grado: gradeSectionData.grado, seccion: gradeSectionData.seccion, descripcion: '<script>alert(document.cookie)</script>', fecha: '2026-08-01', peso: 0.3 });
 
     expect(res.status).toBe(400);
   });
@@ -117,7 +117,7 @@ describe('POST /api/evaluations', () => {
     const res = await request
       .post('/api/evaluations')
       .set('Cookie', cookie)
-      .send({ nombre: 'Parcial 1', nombreMateria: 'Matematicas', descripcion: 'Duplicada', fecha: '2026-08-01', peso: 0.3 });
+      .send({ nombre: 'Parcial 1', nombreMateria: 'Matematicas', grado: gradeSectionData.grado, seccion: gradeSectionData.seccion, descripcion: 'Duplicada', fecha: '2026-08-01', peso: 0.3 });
 
     expect(res.status).toBe(409);
   });
@@ -128,7 +128,7 @@ describe('POST /api/evaluations', () => {
     const res = await request
       .post('/api/evaluations')
       .set('Cookie', cookie)
-      .send({ nombre: 'Quiz 1', nombreMateria: 'Matematicas', descripcion: 'Quiz', fecha: '2026-08-05', peso: 0.1 });
+      .send({ nombre: 'Quiz 1', nombreMateria: 'Matematicas', grado: gradeSectionData.grado, seccion: gradeSectionData.seccion, descripcion: 'Quiz', fecha: '2026-08-05', peso: 0.1 });
 
     expect(res.status).toBe(201);
   });
@@ -139,7 +139,7 @@ describe('POST /api/evaluations', () => {
     const res = await request
       .post('/api/evaluations')
       .set('Cookie', cookie)
-      .send({ nombre: 'Quiz Historia', nombreMateria: 'Historia', descripcion: 'Quiz', fecha: '2026-08-05', peso: 0.1 });
+      .send({ nombre: 'Quiz Historia', nombreMateria: 'Historia', grado: gradeSectionData.grado, seccion: gradeSectionData.seccion, descripcion: 'Quiz', fecha: '2026-08-05', peso: 0.1 });
 
     expect(res.status).toBe(403);
   });
@@ -151,7 +151,7 @@ describe('GET /api/evaluations', () => {
     await request
       .post('/api/evaluations')
       .set('Cookie', cookie)
-      .send({ nombre: 'Parcial Historia 1', nombreMateria: 'Historia', descripcion: 'desc', fecha: '2026-08-02', peso: 0.3 });
+      .send({ nombre: 'Parcial Historia 1', nombreMateria: 'Historia', grado: gradeSectionData.grado, seccion: gradeSectionData.seccion, descripcion: 'desc', fecha: '2026-08-02', peso: 0.3 });
 
     const res = await request.get('/api/evaluations').set('Cookie', cookie).query({ limit: 50 });
 
@@ -184,7 +184,7 @@ describe('PUT /api/evaluations', () => {
       .send({
         nombre: 'Parcial 1',
         nuevoNombre: 'Parcial 1 (editado)',
-        nombreMateria: 'Matematicas',
+        nombreMateria: 'Matematicas', grado: gradeSectionData.grado, seccion: gradeSectionData.seccion,
         nuevaMateria: 'Matematicas',
         descripcion: 'Editada',
         fecha: '2026-08-03',
@@ -204,7 +204,7 @@ describe('PUT /api/evaluations', () => {
       .send({
         nombre: 'No existe',
         nuevoNombre: 'Nuevo',
-        nombreMateria: 'Matematicas',
+        nombreMateria: 'Matematicas', grado: gradeSectionData.grado, seccion: gradeSectionData.seccion,
         nuevaMateria: 'Matematicas',
         descripcion: 'desc',
         fecha: '2026-08-03',
@@ -223,7 +223,7 @@ describe('PUT /api/evaluations', () => {
       .send({
         nombre: 'Parcial Historia 1',
         nuevoNombre: 'Hackeado',
-        nombreMateria: 'Historia',
+        nombreMateria: 'Historia', grado: gradeSectionData.grado, seccion: gradeSectionData.seccion,
         nuevaMateria: 'Historia',
         descripcion: 'desc',
         fecha: '2026-08-03',
@@ -242,7 +242,7 @@ describe('PUT /api/evaluations', () => {
       .send({
         nombre: 'Quiz 1',
         nuevoNombre: 'Quiz 1',
-        nombreMateria: 'Matematicas',
+        nombreMateria: 'Matematicas', grado: gradeSectionData.grado, seccion: gradeSectionData.seccion,
         nuevaMateria: 'Historia',
         descripcion: 'Intento de reasignar a materia ajena',
         fecha: '2026-08-05',
@@ -259,12 +259,12 @@ describe('DELETE /api/evaluations', () => {
     await request
       .post('/api/evaluations')
       .set('Cookie', cookie)
-      .send({ nombre: 'A eliminar', nombreMateria: 'Matematicas', descripcion: 'desc', fecha: '2026-08-06', peso: 0.1 });
+      .send({ nombre: 'A eliminar', nombreMateria: 'Matematicas', grado: gradeSectionData.grado, seccion: gradeSectionData.seccion, descripcion: 'desc', fecha: '2026-08-06', peso: 0.1 });
 
     const res = await request
       .delete('/api/evaluations')
       .set('Cookie', cookie)
-      .send({ nombre: 'A eliminar', nombreMateria: 'Matematicas' });
+      .send({ nombre: 'A eliminar', nombreMateria: 'Matematicas', grado: gradeSectionData.grado, seccion: gradeSectionData.seccion });
 
     expect(res.status).toBe(200);
   });
@@ -275,7 +275,7 @@ describe('DELETE /api/evaluations', () => {
     const res = await request
       .delete('/api/evaluations')
       .set('Cookie', cookie)
-      .send({ nombre: 'Parcial Historia 1', nombreMateria: 'Historia' });
+      .send({ nombre: 'Parcial Historia 1', nombreMateria: 'Historia', grado: gradeSectionData.grado, seccion: gradeSectionData.seccion });
 
     expect(res.status).toBe(403);
   });
@@ -286,8 +286,28 @@ describe('DELETE /api/evaluations', () => {
     const res = await request
       .delete('/api/evaluations')
       .set('Cookie', cookie)
-      .send({ nombre: 'No existe', nombreMateria: 'Matematicas' });
+      .send({ nombre: 'No existe', nombreMateria: 'Matematicas', grado: gradeSectionData.grado, seccion: gradeSectionData.seccion });
 
     expect(res.status).toBe(404);
+  });
+});
+
+describe('evaluaciones scopeadas por clase', () => {
+  it('permite el mismo nombre+materia en dos grados/secciones distintos - 201 en ambos', async () => {
+    const cookie = await loginAsAdmin();
+    // Otra clase con la misma materia
+    await request.post('/api/gradeSections').set('Cookie', cookie).send({ grado: '5', seccion: 'B', materias: ['Matematicas'] });
+
+    const enTresA = await request.post('/api/evaluations').set('Cookie', cookie).send({
+      nombre: 'Examen Compartido', nombreMateria: 'Matematicas', grado: '3', seccion: 'A', descripcion: 'd', fecha: '2026-08-01', peso: 0.3,
+    });
+    const enCincoB = await request.post('/api/evaluations').set('Cookie', cookie).send({
+      nombre: 'Examen Compartido', nombreMateria: 'Matematicas', grado: '5', seccion: 'B', descripcion: 'd', fecha: '2026-08-01', peso: 0.3,
+    });
+
+    // Mismo nombre + materia, distinta clase: no colisiona (antes habría dado 409)
+    expect(enTresA.status).toBe(201);
+    expect(enCincoB.status).toBe(201);
+    expect(enCincoB.body.data.grado_seccion).toEqual({ grado: '5', seccion: 'B' });
   });
 });

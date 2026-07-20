@@ -110,10 +110,10 @@ beforeAll(async () => {
   });
 
   await request.post('/api/evaluations').set('Cookie', adminCookie).send({
-    nombre: 'Parcial Mate', nombreMateria: 'Matematicas', descripcion: 'desc', fecha: '2026-08-01', peso: 0.3,
+    nombre: 'Parcial Mate', nombreMateria: 'Matematicas', grado: gradeSectionData.grado, seccion: gradeSectionData.seccion, descripcion: 'desc', fecha: '2026-08-01', peso: 0.3,
   });
   await request.post('/api/evaluations').set('Cookie', adminCookie).send({
-    nombre: 'Parcial Historia', nombreMateria: 'Historia', descripcion: 'desc', fecha: '2026-08-01', peso: 0.3,
+    nombre: 'Parcial Historia', nombreMateria: 'Historia', grado: gradeSectionData.grado, seccion: gradeSectionData.seccion, descripcion: 'desc', fecha: '2026-08-01', peso: 0.3,
   });
 });
 
@@ -247,7 +247,7 @@ describe('GET /api/evaluation_grades/by-evaluation', () => {
     const res = await request
       .get('/api/evaluation_grades/by-evaluation')
       .set('Cookie', cookie)
-      .query({ nombre: 'Parcial Historia', nombreMateria: 'Historia' });
+      .query({ nombre: 'Parcial Historia', nombreMateria: 'Historia', grado: gradeSectionData.grado, seccion: gradeSectionData.seccion });
 
     expect(res.status).toBe(403);
   });
@@ -258,7 +258,7 @@ describe('GET /api/evaluation_grades/by-evaluation', () => {
     const res = await request
       .get('/api/evaluation_grades/by-evaluation')
       .set('Cookie', cookie)
-      .query({ nombre: 'Parcial Mate', nombreMateria: 'Matematicas' });
+      .query({ nombre: 'Parcial Mate', nombreMateria: 'Matematicas', grado: gradeSectionData.grado, seccion: gradeSectionData.seccion });
 
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body.data)).toBe(true);
@@ -355,7 +355,7 @@ describe('DELETE /api/evaluations, cascada de notas', () => {
 
     // Nueva evaluación + nota para el estudiante
     await request.post('/api/evaluations').set('Cookie', cookie).send({
-      nombre: 'Parcial Cascada', nombreMateria: 'Matematicas', descripcion: 'd', fecha: '2026-09-01', peso: 0.2,
+      nombre: 'Parcial Cascada', nombreMateria: 'Matematicas', grado: gradeSectionData.grado, seccion: gradeSectionData.seccion, descripcion: 'd', fecha: '2026-09-01', peso: 0.2,
     });
     await request.post('/api/evaluation_grades').set('Cookie', cookie).send({
       email: studentEmail, nombreMateria: 'Matematicas', nombreEvaluacion: 'Parcial Cascada', calificacion: 6,
@@ -367,7 +367,7 @@ describe('DELETE /api/evaluations, cascada de notas', () => {
     expect(before.body.data.some((g) => g.evaluacion.nombre === 'Parcial Cascada')).toBe(true);
 
     // El teacher/admin borra la evaluación
-    const del = await request.delete('/api/evaluations').set('Cookie', cookie).send({ nombre: 'Parcial Cascada', nombreMateria: 'Matematicas' });
+    const del = await request.delete('/api/evaluations').set('Cookie', cookie).send({ nombre: 'Parcial Cascada', nombreMateria: 'Matematicas', grado: gradeSectionData.grado, seccion: gradeSectionData.seccion });
     expect(del.status).toBe(200);
 
     // La nota se fue en cascada y la vista no se cae (antes daba 500 por nota huérfana)

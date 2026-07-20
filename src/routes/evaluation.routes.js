@@ -4,6 +4,11 @@ import * as evaluationController from '../controllers/evaluation.controller.js'
 import { validateToken, checkRole } from '../middlewares/auth-middleware.js';
 import { verifyTeacherSubject, enrichUserContext } from '../middlewares/authorization-middleware.js';
 import { rejectHtml } from '../utils/xss-guard.js';
+import { GRADOS_VALIDOS } from '../models/gradeSection-model.js';
+
+// La evaluación pertenece a una clase (grado/sección). Validadores reutilizados en create/edit/delete.
+const gradoValidator = body('grado').isIn(GRADOS_VALIDOS).withMessage('Grado inválido. Debe ser un número del 1 al 12.');
+const seccionValidator = body('seccion').isString().isLength({ min: 1, max: 1 }).matches(/^[A-Za-z]$/).withMessage('Sección inválida.');
 
 const router = express.Router();
 
@@ -16,6 +21,8 @@ router.post('/',
     [
       body('nombre').isString().withMessage('Nombre Invalido!').custom(rejectHtml),
       body('nombreMateria').isString().withMessage('Materia Invalida!').custom(rejectHtml),
+      gradoValidator,
+      seccionValidator,
       body('descripcion').isString().withMessage('Descripcion Invalida!').custom(rejectHtml),
       body('fecha').isDate().withMessage('Fecha invalida! Formato aceptado: (yyyy-mm-dd)'),
       body('peso').isNumeric().withMessage('Peso invalido! Tiene que ser en formato decimal'),
@@ -32,6 +39,8 @@ router.post('/',
       body('nuevoNombre').isString().withMessage('Nombre Invalido!').custom(rejectHtml),
       body('nombreMateria').isString().withMessage('Materia Invalida!').custom(rejectHtml),
       body('nuevaMateria').isString().withMessage('Materia Invalida!').custom(rejectHtml),
+      gradoValidator,
+      seccionValidator,
       body('descripcion').isString().withMessage('Descripcion Invalida!').custom(rejectHtml),
       body('fecha').isDate().withMessage('Fecha invalida! Formato aceptado: (yyyy-mm-dd)'),
       body('peso').isNumeric().withMessage('Peso invalido! Tiene que ser en formato decimal'),
@@ -46,6 +55,8 @@ router.post('/',
     [
       body('nombre').isString().withMessage('Nombre Invalido!').custom(rejectHtml),
       body('nombreMateria').isString().withMessage('Materia Invalida!').custom(rejectHtml),
+      gradoValidator,
+      seccionValidator,
     ],
     evaluationController.eraseEvaluation
   );

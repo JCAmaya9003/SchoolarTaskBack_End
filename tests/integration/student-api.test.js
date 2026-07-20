@@ -396,6 +396,8 @@ describe('POST /api/students/get-all, con materias asignadas', () => {
     await request.post('/api/evaluations').set('Cookie', cookie).send({
       nombre: 'ExamenReprobado',
       nombreMateria: 'MateriaConNotaCero',
+      grado: '9',
+      seccion: 'Y',
       descripcion: 'Examen final',
       fecha: '2026-01-10',
       peso: 1.0,

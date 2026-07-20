@@ -150,10 +150,10 @@ export const getStudentGradesInfo = async (email) => {
         throw new NotFoundError("No se encontraron materias para el grado y sección del estudiante");
     }
 
-    // OPTIMIZACIÓN: Obtener todas las evaluaciones de todas las materias en una sola consulta
-    const subjectIds = subjects.map(s => s._id);
+    // Evaluaciones de la clase del estudiante (grado/sección), no de la materia en otros grados:
+    // las evaluaciones ahora están atadas a un grado_seccion concreto.
     const evaluationRepository = await import('../repositories/evaluation.repository.js');
-    const allEvaluations = await evaluationRepository.findEvaluationsBySubjects(subjectIds);
+    const allEvaluations = await evaluationRepository.findEvaluationsByGradeSection(gradeSection._id);
 
     // OPTIMIZACIÓN: Obtener todas las calificaciones del estudiante en una sola consulta
     const evaluationGradeRepository = await import('../repositories/evaluation_grade.repository.js');
