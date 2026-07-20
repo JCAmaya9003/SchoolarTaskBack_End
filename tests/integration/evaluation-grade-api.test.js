@@ -323,3 +323,35 @@ describe('DELETE /api/evaluation_grades', () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe('DELETE /api/evaluations, cascada de notas', () => {
+  it('borra sus notas en cascada y la vista de notas del alumno no se cae - 200', async () => {
+    const cookie = await loginAsAdmin();
+
+    // Nueva evaluación + nota para el estudiante
+    await request.post('/api/evaluations').set('Cookie', cookie).send({
+      nombre: 'Parcial Cascada', nombreMateria: 'Matematicas', descripcion: 'd', fecha: '2026-09-01', peso: 0.2,
+    });
+    await request.post('/api/evaluation_grades').set('Cookie', cookie).send({
+      email: studentEmail, nombreMateria: 'Matematicas', nombreEvaluacion: 'Parcial Cascada', calificacion: 6,
+    });
+
+    // La nota existe antes de borrar la evaluación
+    const before = await request.get('/api/evaluation_grades/by-student').set('Cookie', cookie).query({ email: studentEmail });
+    expect(before.status).toBe(200);
+    expect(before.body.data.some((g) => g.evaluacion.nombre === 'Parcial Cascada')).toBe(true);
+
+    // El teacher/admin borra la evaluación
+    const del = await request.delete('/api/evaluations').set('Cookie', cookie).send({ nombre: 'Parcial Cascada', nombreMateria: 'Matematicas' });
+    expect(del.status).toBe(200);
+
+    // La nota se fue en cascada y la vista no se cae (antes daba 500 por nota huérfana)
+    const after = await request.get('/api/evaluation_grades/by-student').set('Cookie', cookie).query({ email: studentEmail });
+    expect(after.status).toBe(200);
+    expect(after.body.data.some((g) => g.evaluacion.nombre === 'Parcial Cascada')).toBe(false);
+
+    // La vista agregada del alumno (get-all) también responde 200
+    const gradesInfo = await request.post('/api/students/get-all').set('Cookie', cookie).send({ email: studentEmail });
+    expect(gradesInfo.status).toBe(200);
+  });
+});

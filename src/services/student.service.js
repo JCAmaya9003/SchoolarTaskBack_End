@@ -159,8 +159,12 @@ export const getStudentGradesInfo = async (email) => {
     const evaluationGradeRepository = await import('../repositories/evaluation_grade.repository.js');
     const allGrades = await evaluationGradeRepository.findEvaluationGradesByStudent(student._id);
 
-    // Crear un Map de calificaciones para búsqueda O(1)
-    const gradesMap = new Map(allGrades.map(g => [g.evaluacion._id.toString(), g.calificacion]));
+    // Crear un Map de calificaciones para búsqueda O(1). Se ignoran notas huérfanas (evaluación
+    // borrada antes de que existiera la cascada): sin este filtro, g.evaluacion sería null y
+    // g.evaluacion._id rompería toda la vista de notas con un 500.
+    const gradesMap = new Map(
+        allGrades.filter(g => g.evaluacion).map(g => [g.evaluacion._id.toString(), g.calificacion])
+    );
 
     // Agrupar evaluaciones por materia
     const evaluationsBySubject = allEvaluations.reduce((acc, evaluation) => {

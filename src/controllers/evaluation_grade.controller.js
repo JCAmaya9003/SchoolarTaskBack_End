@@ -2,19 +2,25 @@ import { validationResult } from 'express-validator';
 import * as evaluationGradeService from '../services/evaluation_grade.service.js';
 import { sendSuccess } from '../utils/apiResponse.js';
 
+// Optional chaining como defensa: una nota puede quedar con estudiante.usuario null (usuario
+// desactivado) o evaluacion null (nota huérfana vieja). Los listados filtran esos casos antes
+// de mapear; esto es para no romper nunca.
 const formatEvaluationGradeResponse = (grade) => ({
     id: grade._id,
     calificacion: grade.calificacion,
     estudiante: {
-        nombre: grade.estudiante.usuario.nombre,
-        apellido: grade.estudiante.usuario.apellido,
-        email: grade.estudiante.usuario.email,
+        nombre: grade.estudiante?.usuario?.nombre,
+        apellido: grade.estudiante?.usuario?.apellido,
+        email: grade.estudiante?.usuario?.email,
     },
     evaluacion: {
-        nombre: grade.evaluacion.nombre,
-        fecha: grade.evaluacion.fecha,
+        nombre: grade.evaluacion?.nombre,
+        fecha: grade.evaluacion?.fecha,
     },
 });
+
+// Una nota es "válida" para mostrar si su evaluación y el usuario del estudiante siguen vivos.
+const isGradeDisplayable = (grade) => Boolean(grade.evaluacion && grade.estudiante?.usuario);
 
 export const createEvaluationGrade = async (req, res, next) => {
     const errors = validationResult(req);
@@ -41,7 +47,8 @@ export const getAllEvaluationGrades = async (req, res, next) => {
     try {
         const { page, limit } = req.query;
         const { data, pagination } = await evaluationGradeService.getAllEvaluationGrades(page, limit, req.user);
-        return sendSuccess(res, 200, 'Calificaciones obtenidas con éxito', { items: data.map(formatEvaluationGradeResponse), pagination });
+        const items = data.filter(isGradeDisplayable).map(formatEvaluationGradeResponse);
+        return sendSuccess(res, 200, 'Calificaciones obtenidas con éxito', { items, pagination });
     } catch (error) {
         next(error);
     }
@@ -55,7 +62,7 @@ export const getEvaluationGradesByStudent = async (req, res, next) => {
     try {
         const { email } = req.query;
         const grades = await evaluationGradeService.getEvaluationGradesByStudent(email);
-        return sendSuccess(res, 200, 'Calificaciones obtenidas con éxito', grades.map(formatEvaluationGradeResponse));
+        return sendSuccess(res, 200, 'Calificaciones obtenidas con éxito', grades.filter(isGradeDisplayable).map(formatEvaluationGradeResponse));
     } catch (error) {
         next(error);
     }
@@ -69,7 +76,7 @@ export const getEvaluationGradesByEvaluation = async (req, res, next) => {
     try {
         const { nombre, nombreMateria } = req.query;
         const grades = await evaluationGradeService.getEvaluationGradesByEvaluation(nombre, nombreMateria);
-        return sendSuccess(res, 200, 'Calificaciones obtenidas con éxito', grades.map(formatEvaluationGradeResponse));
+        return sendSuccess(res, 200, 'Calificaciones obtenidas con éxito', grades.filter(isGradeDisplayable).map(formatEvaluationGradeResponse));
     } catch (error) {
         next(error);
     }

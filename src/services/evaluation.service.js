@@ -1,4 +1,5 @@
 import * as evaluationRepository from '../repositories/evaluation.repository.js'
+import * as evaluationGradeRepository from '../repositories/evaluation_grade.repository.js'
 import * as subjectService from '../services/subject.service.js'
 import * as teacherService from '../services/teacher.service.js'
 import { NotFoundError, ConflictError } from '../errors/errors.js';
@@ -63,6 +64,11 @@ export const deleteEvaluation = async ({nombre, nombreMateria}) =>{
     if(materia){
         const evaluacionExiste = await evaluationRepository.findEvaluationByNameAndSubject(materia, nombre);
         if(evaluacionExiste){
+            // Cascada: una nota sin su evaluación no significa nada y quedaría huérfana,
+            // rompiendo la vista de notas del alumno/padre. Se borran las notas primero y
+            // luego la evaluación: si el borrado de la evaluación fallara, quedaría sin notas
+            // (inocuo); el orden inverso sí dejaría notas colgadas.
+            await evaluationGradeRepository.deleteEvaluationGradesByEvaluationId(evaluacionExiste.id);
             const deletedEvaluation = await evaluationRepository.deleteEvaluationById(evaluacionExiste.id);
             return deletedEvaluation;
         }else{

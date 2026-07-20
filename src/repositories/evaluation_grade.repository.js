@@ -26,6 +26,12 @@ export const findEvaluationGradeByStudentAndEvaluation = async (studentId, evalu
     return await EvaluationGrade.findOne({ estudiante: studentId, evaluacion: evaluationId });
 };
 
+// Borra en bloque todas las notas de una evaluación. Usado al eliminar una evaluación en
+// cascada: una nota sin su evaluación no tiene sentido y quedaría huérfana.
+export const deleteEvaluationGradesByEvaluationId = async (evaluationId) => {
+    return await EvaluationGrade.deleteMany({ evaluacion: evaluationId });
+};
+
 /**
  * Actualizar un registro de calificación por ID.
  * @param {String} id - ID del registro de calificación.
