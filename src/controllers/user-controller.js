@@ -6,6 +6,7 @@ import * as studentService from '../services/student.service.js'
 import * as parentService from '../services/parent.service.js'
 import * as roleService from '../services/role-service.js'
 import * as roleChangeService from '../services/role-change.service.js'
+import * as teacherVisibilityService from '../services/teacher-visibility.service.js'
 import { sendSuccess } from '../utils/apiResponse.js';
 
 const LOGIN_COOKIE_MAX_AGE = 60 * 60 * 1000; // 1 hora, igual que la cookie de OAuth
@@ -225,6 +226,27 @@ const ROLE_NOT_FOUND_MESSAGE = {
   teacher: 'Profesor no encontrado',
 };
 
+// Entre profesores, el perfil funciona como directorio de contacto: quién es, cómo ubicarlo y
+// qué dicta. Los datos personales (domicilio, fecha de nacimiento, género, nacionalidad) no
+// hacen falta para contactar a un colega, así que no se exponen.
+const CAMPOS_CONTACTO_ENTRE_PROFESORES = ['nombre', 'apellido', 'email', 'telefono', 'especialidad', 'grado_encargado'];
+
+const soloDatosDeContacto = (info) =>
+  Object.fromEntries(CAMPOS_CONTACTO_ENTRE_PROFESORES.filter((campo) => campo in info).map((campo) => [campo, info[campo]]));
+
+// El alcance de un profesor es su clase, no el colegio: solo puede consultar a sus alumnos y
+// a los padres de esos alumnos. Sobre otro profesor no hay restricción de acceso, pero la
+// respuesta se recorta a los datos de contacto.
+const teacherPuedeVer = async (teacherEmail, rolDestino, emailDestino) => {
+  if (rolDestino === 'student') {
+    return await teacherVisibilityService.canViewStudent(teacherEmail, emailDestino);
+  }
+  if (rolDestino === 'parent') {
+    return await teacherVisibilityService.canViewParent(teacherEmail, emailDestino);
+  }
+  return true;
+};
+
 export const getUserInfo = async(req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -246,6 +268,18 @@ export const getUserInfo = async(req, res, next) => {
     const info = await handler(email);
     if (!info) {
       return res.status(404).json({ message: ROLE_NOT_FOUND_MESSAGE[rol.nombre] });
+    }
+
+    // Un teacher consultando a otra persona: acotado a su clase. Sobre sí mismo no aplica,
+    // y el admin no pasa por acá.
+    const esTeacherConsultandoAOtro = req.user?.role === 'teacher' && req.user?.email !== email;
+    if (esTeacherConsultandoAOtro) {
+      if (!(await teacherPuedeVer(req.user.email, rol.nombre, email))) {
+        return res.status(403).json({ message: 'No tienes permiso para ver los datos de esta persona' });
+      }
+      if (rol.nombre === 'teacher') {
+        return sendSuccess(res, 200, 'Datos obtenidos con éxito', soloDatosDeContacto(info));
+      }
     }
 
     return sendSuccess(res, 200, 'Datos obtenidos con éxito', info);
