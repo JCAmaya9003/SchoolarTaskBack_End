@@ -3,17 +3,19 @@ import * as userService from '../services/user-service.js'
 import { validationResult } from 'express-validator';
 import { sendSuccess } from '../utils/apiResponse.js';
 
-// Forma consistente para exponer un padre en las respuestas
+// Forma consistente para exponer un padre en las respuestas.
+// Optional chaining sobre `usuario` como defensa por si fue desactivado (populate -> null);
+// los listados igual filtran esos casos antes de mapear (ver getAllParents).
 const formatParentResponse = (parent) => ({
     id: parent._id,
-    nombre: parent.usuario.nombre,
-    apellido: parent.usuario.apellido,
-    email: parent.usuario.email,
-    genero: parent.usuario.genero,
-    domicilio: parent.usuario.domicilio,
-    nacionalidad: parent.usuario.nacionalidad,
-    fecha_nacimiento: parent.usuario.fecha_nacimiento,
-    rol: parent.usuario.rol,
+    nombre: parent.usuario?.nombre,
+    apellido: parent.usuario?.apellido,
+    email: parent.usuario?.email,
+    genero: parent.usuario?.genero,
+    domicilio: parent.usuario?.domicilio,
+    nacionalidad: parent.usuario?.nacionalidad,
+    fecha_nacimiento: parent.usuario?.fecha_nacimiento,
+    rol: parent.usuario?.rol,
     telefono: parent.telefono,
     telefono_trabajo: parent.telefono_trabajo,
     lugar_trabajo: parent.lugar_trabajo,
@@ -28,7 +30,9 @@ export const getAllParents = async (req, res, next) =>{
     try {
         const { page, limit } = req.query;
         const { data, pagination } = await parentService.getParents(page, limit);
-        return sendSuccess(res, 200, 'Padres obtenidos con éxito', { items: data.map(formatParentResponse), pagination });
+        // Oculta del listado a los padres cuyo usuario fue desactivado (soft-delete).
+        const items = data.filter((parent) => parent.usuario).map(formatParentResponse);
+        return sendSuccess(res, 200, 'Padres obtenidos con éxito', { items, pagination });
     } catch (e) {
         next(e);
     }

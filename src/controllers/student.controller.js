@@ -3,17 +3,20 @@ import * as studentService from '../services/student.service.js';
 import * as userService from '../services/user-service.js';
 import { sendSuccess } from '../utils/apiResponse.js';
 
-// Forma consistente para exponer un estudiante en las respuestas
+// Forma consistente para exponer un estudiante en las respuestas.
+// Se usa optional chaining sobre `usuario` como defensa: si el usuario fue desactivado
+// (soft-delete), el populate lo trae null. Los listados igual filtran esos casos antes de
+// mapear (ver getAllStudents), esto es solo para no romper nunca.
 const formatStudentResponse = (student) => ({
     id: student._id,
-    nombre: student.usuario.nombre,
-    apellido: student.usuario.apellido,
-    email: student.usuario.email,
-    genero: student.usuario.genero,
-    domicilio: student.usuario.domicilio,
-    nacionalidad: student.usuario.nacionalidad,
-    fecha_nacimiento: student.usuario.fecha_nacimiento,
-    rol: student.usuario.rol,
+    nombre: student.usuario?.nombre,
+    apellido: student.usuario?.apellido,
+    email: student.usuario?.email,
+    genero: student.usuario?.genero,
+    domicilio: student.usuario?.domicilio,
+    nacionalidad: student.usuario?.nacionalidad,
+    fecha_nacimiento: student.usuario?.fecha_nacimiento,
+    rol: student.usuario?.rol,
     padre: student.padre,
     grado_seccion: student.grado_seccion,
     alergias: student.alergias,
@@ -29,7 +32,10 @@ export const getAllStudents = async (req, res, next) =>{
     try {
         const { page, limit } = req.query;
         const { data, pagination } = await studentService.getStudents(page, limit);
-        return sendSuccess(res, 200, 'Estudiantes obtenidos con éxito', { items: data.map(formatStudentResponse), pagination });
+        // Oculta del listado a los estudiantes cuyo usuario fue desactivado (soft-delete):
+        // el populate lo trae null, así que no debe figurar en el roster activo.
+        const items = data.filter((student) => student.usuario).map(formatStudentResponse);
+        return sendSuccess(res, 200, 'Estudiantes obtenidos con éxito', { items, pagination });
     } catch (e) {
         next(e);
     }

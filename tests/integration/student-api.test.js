@@ -162,6 +162,25 @@ describe('GET /api/students, admin', () => {
     expect(Array.isArray(res.body.data.items)).toBe(true);
     expect(res.body.data.pagination.currentPage).toBe(1);
   });
+
+  it('oculta del listado a un estudiante cuyo usuario fue desactivado, sin caerse - 200', async () => {
+    const cookie = await loginAsAdmin();
+    const email = 'est-desactivado@test.com';
+    await request.post('/api/students').set('Cookie', cookie).send(buildStudent(email));
+
+    // Aparece en el listado antes de desactivar
+    const before = await request.get('/api/students').set('Cookie', cookie);
+    expect(before.body.data.items.some((s) => s.email === email)).toBe(true);
+
+    // El admin desactiva (soft-delete) al usuario del estudiante
+    const del = await request.delete('/api/users').set('Cookie', cookie).send({ email });
+    expect(del.status).toBe(200);
+
+    // El listado no se cae (antes daba 500 por usuario=null) y el desactivado ya no figura
+    const after = await request.get('/api/students').set('Cookie', cookie);
+    expect(after.status).toBe(200);
+    expect(after.body.data.items.some((s) => s.email === email)).toBe(false);
+  });
 });
 
 describe('PUT /api/students, admin', () => {

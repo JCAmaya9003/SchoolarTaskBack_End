@@ -6,16 +6,18 @@ import * as evaluationGradeService from '../services/evaluation_grade.service.js
 import { validationResult } from 'express-validator';
 import { sendSuccess } from '../utils/apiResponse.js';
 
-// Forma consistente para exponer un profesor en las respuestas
+// Forma consistente para exponer un profesor en las respuestas.
+// Optional chaining sobre `usuario` como defensa por si fue desactivado (populate -> null);
+// los listados igual filtran esos casos antes de mapear (ver getAllTeachers).
 const formatTeacherResponse = (teacher) => ({
     id: teacher._id,
-    nombre: teacher.usuario.nombre,
-    apellido: teacher.usuario.apellido,
-    email: teacher.usuario.email,
-    genero: teacher.usuario.genero,
-    domicilio: teacher.usuario.domicilio,
-    nacionalidad: teacher.usuario.nacionalidad,
-    rol: teacher.usuario.rol,
+    nombre: teacher.usuario?.nombre,
+    apellido: teacher.usuario?.apellido,
+    email: teacher.usuario?.email,
+    genero: teacher.usuario?.genero,
+    domicilio: teacher.usuario?.domicilio,
+    nacionalidad: teacher.usuario?.nacionalidad,
+    rol: teacher.usuario?.rol,
     telefono: teacher.telefono,
     especialidad: teacher.especialidad,
     grado_encargado: teacher.grado_encargado,
@@ -34,7 +36,9 @@ export const getAllTeachers = async (req, res, next) => {
     try {
         const { page, limit } = req.query;
         const { data, pagination } = await teacherService.getTeachers(page, limit);
-        return sendSuccess(res, 200, 'Profesores obtenidos con éxito', { items: data.map(formatTeacherResponse), pagination });
+        // Oculta del listado a los profesores cuyo usuario fue desactivado (soft-delete).
+        const items = data.filter((teacher) => teacher.usuario).map(formatTeacherResponse);
+        return sendSuccess(res, 200, 'Profesores obtenidos con éxito', { items, pagination });
     } catch (e) {
         next(e);
     }
