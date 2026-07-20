@@ -59,7 +59,7 @@ afterAll(async () => {
 describe('POST /api/news, admin', () => {
   it('debe crear una noticia sobre un usuario existente - 201', async () => {
     const cookie = await loginAsAdmin();
-    await request.post('/api/users/register').send(buildStudentUser('estudiante1-news@test.com'));
+    await registerUserDirectly(buildStudentUser('estudiante1-news@test.com'));
 
     const res = await request
       .post('/api/news')
@@ -127,7 +127,7 @@ describe('POST /api/news, admin', () => {
 describe('GET /api/news, admin/teacher/student', () => {
   it('debe listar noticias paginadas - 200', async () => {
     const cookie = await loginAsAdmin();
-    await request.post('/api/users/register').send(buildStudentUser('estudiante2-news@test.com'));
+    await registerUserDirectly(buildStudentUser('estudiante2-news@test.com'));
     await request
       .post('/api/news')
       .set('Cookie', cookie)
@@ -143,7 +143,7 @@ describe('GET /api/news, admin/teacher/student', () => {
 
 describe('GET /api/news/by-user', () => {
   it('un usuario puede ver sus propias noticias - 200', async () => {
-    await request.post('/api/users/register').send(buildStudentUser('estudiante3-news@test.com'));
+    await registerUserDirectly(buildStudentUser('estudiante3-news@test.com'));
     const adminCookie = await loginAsAdmin();
     await request
       .post('/api/news')
@@ -185,7 +185,7 @@ describe('GET /api/news/by-user', () => {
   });
 
   it('un usuario NO puede ver las noticias de otro usuario - 403', async () => {
-    await request.post('/api/users/register').send(buildStudentUser('estudiante-ajeno-news@test.com'));
+    await registerUserDirectly(buildStudentUser('estudiante-ajeno-news@test.com'));
     const studentCookie = await loginAs('estudiante3-news@test.com', 'password123');
 
     const res = await request
@@ -200,7 +200,7 @@ describe('GET /api/news/by-user', () => {
 describe('PUT /api/news, admin', () => {
   it('debe editar una noticia - 200', async () => {
     const cookie = await loginAsAdmin();
-    await request.post('/api/users/register').send(buildStudentUser('estudiante4-news@test.com'));
+    await registerUserDirectly(buildStudentUser('estudiante4-news@test.com'));
     await request
       .post('/api/news')
       .set('Cookie', cookie)
@@ -241,7 +241,7 @@ describe('PUT /api/news, admin', () => {
 describe('DELETE /api/news, admin', () => {
   it('debe eliminar una noticia - 200', async () => {
     const cookie = await loginAsAdmin();
-    await request.post('/api/users/register').send(buildStudentUser('estudiante5-news@test.com'));
+    await registerUserDirectly(buildStudentUser('estudiante5-news@test.com'));
     await request
       .post('/api/news')
       .set('Cookie', cookie)

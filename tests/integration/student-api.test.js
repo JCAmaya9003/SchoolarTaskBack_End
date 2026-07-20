@@ -132,7 +132,7 @@ describe('POST /api/students, admin', () => {
   });
 
   it('debe rechazar sin rol admin - 403', async () => {
-    await request.post('/api/users/register').send({
+    await registerUserDirectly({
       nombre: 'Otro', apellido: 'Usuario', email: 'no-admin@test.com', password: 'password123',
       rolNombre: 'student', fecha_nacimiento: '2000-01-01', genero: 'Masculino',
       domicilio: 'Casa', nacionalidad: 'Venezolana',

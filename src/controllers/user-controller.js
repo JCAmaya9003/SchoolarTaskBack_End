@@ -54,36 +54,14 @@ export const getMe = (req, res) => {
   return sendSuccess(res, 200, 'Usuario autenticado obtenido con éxito', { email: req.user.email });
 };
 
-export const register = async (req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-
-  const { nombre, apellido, email, password, fecha_nacimiento, rolNombre, genero, domicilio, nacionalidad } = req.body;
-  try {
-    // Defensa en profundidad: registerUser también la usan los flujos admin-only, que sí
-    // pueden asignar cualquier rol, así que esta restricción no puede vivir en el service.
-    // No hay que depender solo del validador de la ruta para el único punto público.
-    const rolesAutoRegistrables = ['student', 'parent'];
-    if (!rolesAutoRegistrables.includes(rolNombre)) {
-      return res.status(400).json({ message: 'El auto-registro solo permite los roles student o parent.' });
-    }
-
-    const generosPermitidos = ['Masculino', 'Femenino'];
-      if (!generosPermitidos.includes(genero)) {
-          return res.status(400).json({
-              message: 'El género proporcionado no es válido.',
-              error: `Los valores permitidos son: ${generosPermitidos.join(', ')}.`,
-          });
-      }
-
-    const newUser = await userService.registerUser({nombre, apellido, email, password, fecha_nacimiento, rolNombre, genero, domicilio, nacionalidad});
-    return sendSuccess(res, 201, 'Usuario creado con éxito', formatUserResponse(newUser));
-  } catch (error) {
-    next(error);
-  }
-};
+// El auto-registro público (POST /users/register) se eliminó. En un colegio la matrícula es un
+// acto administrativo: los usuarios los crea el admin desde POST /students, /teachers y /parents,
+// que además crean el perfil correspondiente. El registro público solo creaba el User, sin perfil,
+// así que producía cuentas que entraban al sistema y pasaban checkRole pero rompían con 404 en
+// todo lo que dependiera del perfil. Peor: como el email es único y el borrado de usuarios es
+// soft, un desconocido podía registrarse con el email institucional de un alumno y dejarlo
+// inutilizable para siempre (el admin recibía 409 al matricularlo, incluso tras desactivarlo).
+// userService.registerUser sigue existiendo: la usan los flujos de creación del admin.
 
 export const updateUser = async (req, res, next)=>{
   const errors = validationResult(req);

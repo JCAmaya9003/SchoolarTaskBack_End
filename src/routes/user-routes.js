@@ -1,6 +1,6 @@
 import express from 'express';
 import { body, param } from 'express-validator';
-import { login, register, updateUser, deleteUser, getAllUsers, getUserRole, getUserInfo, restoreUser, changeUserRole, forgotPassword, resetPassword, getMe } from '../controllers/user-controller.js';
+import { login, updateUser, deleteUser, getAllUsers, getUserRole, getUserInfo, restoreUser, changeUserRole, forgotPassword, resetPassword, getMe } from '../controllers/user-controller.js';
 import { validateToken, checkRole } from '../middlewares/auth-middleware.js';
 import { authLimiter } from '../middlewares/rate-limiter.js';
 import { verifyOwnResource, enrichUserContext } from '../middlewares/authorization-middleware.js';
@@ -47,42 +47,9 @@ router.post(
   login
 );
 
-/**
- * @swagger
- * /users/register:
- *   post:
- *     summary: Registrar nuevo usuario
- *     tags: [Usuarios]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/User'
- *     responses:
- *       200:
- *         description: Usuario creado exitosamente
- *       400:
- *         description: Datos de validación inválidos
- *       429:
- *         description: Demasiados intentos
- */
-router.post(
-  '/register',
-  authLimiter,
-  [
-    body('nombre').isString().matches(/^[A-Za-z\s]+$/).withMessage('Nombre Invalido! No use caracteres especiales!'),
-    body('apellido').isString().matches(/^[A-Za-z\s]+$/).withMessage('Apellido Invalido! No use caracteres especiales!'),
-    body('fecha_nacimiento').isDate().withMessage('Fecha de nacimiento invalida! Formato aceptado: (yyyy-mm-dd)'),
-    body('email').isEmail().withMessage('Email inválido'),
-    body('password').isLength({ min: 6 }).withMessage('La contraseña debe tener al menos 6 caracteres'),
-    body('genero').isString().matches(/^(Masculino|Femenino)$/).withMessage('Género inválido. Valores aceptados: Masculino, Femenino.'),
-    body('domicilio').isString().withMessage('Domicilio Incorrecto').custom(rejectHtml),
-    body('nacionalidad').isString().withMessage('Nacionalidad Incorrecto').custom(rejectHtml),
-    body('rolNombre').isIn(['student', 'parent']).withMessage('Rol inválido. El auto-registro solo permite los roles student o parent.'),
-  ],
-  register
-);
+// El auto-registro publico se elimino: en un colegio la matricula es un acto administrativo.
+// Los usuarios los crea el admin desde POST /students, /teachers y /parents, que ademas crean
+// el perfil completo. Ver el comentario en el controller para el detalle.
 
 /**
  * @swagger

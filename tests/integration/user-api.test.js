@@ -62,65 +62,29 @@ async function loginAsAdmin() {
   return cookie.split(';')[0];
 }
 
-describe('POST /api/users/register', () => {
-  it('debe registrar un usuario nuevo - 201', async () => {
-    const res = await request.post('/api/users/register').send(testUser);
+describe("POST /api/users/register, ruta eliminada", () => {
+  it("el auto-registro publico ya no existe: los usuarios los crea el admin - 404", async () => {
+    const res = await request.post("/api/users/register").send(testUser);
 
-    expect(res.status).toBe(201);
-    expect(res.body.message).toBe('Usuario creado con éxito');
-    expect(res.body.data.email).toBe('maria@test.com');
+    expect(res.status).toBe(404);
   });
 
-  it('rechaza HTML/scripts en campos de texto libre, domicilio - 400, defensa XSS', async () => {
-    const res = await request
-      .post('/api/users/register')
-      .send({ ...testUser, email: 'maria-xss@test.com', domicilio: '<script>alert(document.cookie)</script>' });
+  it("y no deja usuarios sin perfil ni ocupa el email de un futuro alumno - regresion", async () => {
+    await request.post("/api/users/register").send({ ...testUser, email: "okupa@test.com" });
 
-    expect(res.status).toBe(400);
-  });
-
-  it('debe rechazar registro duplicado - 409', async () => {
-    await request.post('/api/users/register').send(testUser);
-    const res = await request.post('/api/users/register').send(testUser);
-
-    expect(res.status).toBe(409);
-  });
-
-  it('debe rechazar datos inválidos - 400', async () => {
-    const res = await request.post('/api/users/register').send({
-      nombre: '123', // nombre con números
-      email: 'invalido',
-      password: '12345', // muy corta
+    // Nadie pudo crear la cuenta, asi que el login falla y el email sigue libre
+    const login = await request.post("/api/users/login").send({
+      email: "okupa@test.com",
+      password: testUser.password,
     });
 
-    expect(res.status).toBe(400);
-  });
-
-  it('debe rechazar rolNombre=admin en el auto-registro público - 400, cierra una escalada de privilegios', async () => {
-    const res = await request.post('/api/users/register').send({
-      ...testUser,
-      email: 'quiere-ser-admin@test.com',
-      rolNombre: 'admin',
-    });
-
-    expect(res.status).toBe(400);
-  });
-
-  it('debe rechazar si falta rolNombre - 400, antes asignaba el primer rol de la colección', async () => {
-    const { rolNombre, ...payloadSinRol } = testUser;
-
-    const res = await request.post('/api/users/register').send({
-      ...payloadSinRol,
-      email: 'sin-rol@test.com',
-    });
-
-    expect(res.status).toBe(400);
+    expect(login.status).toBe(401);
   });
 });
 
 describe('POST /api/users/login', () => {
   beforeEach(async () => {
-    await request.post('/api/users/register').send(testUser);
+    await registerUserDirectly(testUser);
   });
 
   it('debe hacer login exitoso y setear cookie httpOnly - 200', async () => {
@@ -159,7 +123,7 @@ describe('POST /api/users/login', () => {
 
 describe('POST /api/users/forgot-password', () => {
   beforeEach(async () => {
-    await request.post('/api/users/register').send(testUser);
+    await registerUserDirectly(testUser);
   });
 
   it('debe generar token de reset - 200', async () => {
@@ -186,7 +150,7 @@ describe('POST /api/users/forgot-password', () => {
 
 describe('POST /api/users/reset-password/:token', () => {
   beforeEach(async () => {
-    await request.post('/api/users/register').send(testUser);
+    await registerUserDirectly(testUser);
   });
 
   it('debe restablecer la contraseña con token válido - 200', async () => {
@@ -245,7 +209,7 @@ describe('GET /api/users, admin', () => {
 describe('PUT /api/users, admin', () => {
   it('debe actualizar un usuario - 200', async () => {
     const cookies = await loginAsAdmin();
-    await request.post('/api/users/register').send(testUser);
+    await registerUserDirectly(testUser);
 
     const res = await request
       .put('/api/users')
@@ -258,7 +222,7 @@ describe('PUT /api/users, admin', () => {
   });
 
   it('debe rechazar sin rol admin - 403', async () => {
-    await request.post('/api/users/register').send(testUser);
+    await registerUserDirectly(testUser);
     const loginRes = await request.post('/api/users/login').send({
       email: testUser.email,
       password: testUser.password,
@@ -275,7 +239,7 @@ describe('PUT /api/users, admin', () => {
 
   it('no permite cambiar el rol, eso desincronizaba el perfil - 409', async () => {
     const cookies = await loginAsAdmin();
-    await request.post('/api/users/register').send(testUser);
+    await registerUserDirectly(testUser);
 
     const res = await request
       .put('/api/users')
@@ -290,7 +254,7 @@ describe('PUT /api/users, admin', () => {
 describe('DELETE /api/users, admin, soft delete', () => {
   it('debe eliminar, soft delete un usuario - 200', async () => {
     const cookies = await loginAsAdmin();
-    await request.post('/api/users/register').send(testUser);
+    await registerUserDirectly(testUser);
 
     const res = await request
       .delete('/api/users')
@@ -317,7 +281,7 @@ describe('DELETE /api/users, admin, soft delete', () => {
 describe('PATCH /api/users/restore, admin', () => {
   it('debe restaurar un usuario eliminado - 200', async () => {
     const cookies = await loginAsAdmin();
-    await request.post('/api/users/register').send(testUser);
+    await registerUserDirectly(testUser);
     await request.delete('/api/users').set('Cookie', cookies).send({ email: testUser.email });
 
     const res = await request
@@ -344,7 +308,7 @@ describe('PATCH /api/users/restore, admin', () => {
 
 describe('GET /api/users/me', () => {
   beforeEach(async () => {
-    await request.post('/api/users/register').send(testUser);
+    await registerUserDirectly(testUser);
   });
 
   it('debe devolver el email del usuario autenticado - 200', async () => {
@@ -369,9 +333,9 @@ describe('GET /api/users/me', () => {
 
 describe('Autorización: accesos cruzados no autorizados devuelven 403', () => {
   it('POST /api/users/get-info: un estudiante no puede pedir info de otro usuario', async () => {
-    await request.post('/api/users/register').send(testUser);
+    await registerUserDirectly(testUser);
     const otherStudent = { ...testUser, email: 'otro-estudiante@test.com' };
-    await request.post('/api/users/register').send(otherStudent);
+    await registerUserDirectly(otherStudent);
 
     const loginRes = await request.post('/api/users/login').send({
       email: testUser.email,
@@ -388,7 +352,7 @@ describe('Autorización: accesos cruzados no autorizados devuelven 403', () => {
   });
 
   it('POST /api/users/get-info: un admin sí puede pedir info de cualquier usuario', async () => {
-    await request.post('/api/users/register').send(testUser);
+    await registerUserDirectly(testUser);
     const cookies = await loginAsAdmin();
 
     const res = await request
@@ -401,9 +365,9 @@ describe('Autorización: accesos cruzados no autorizados devuelven 403', () => {
   });
 
   it('GET /api/news/by-user: un estudiante no puede pedir noticias de otro usuario', async () => {
-    await request.post('/api/users/register').send(testUser);
+    await registerUserDirectly(testUser);
     const otherStudent = { ...testUser, email: 'otro-estudiante-news@test.com' };
-    await request.post('/api/users/register').send(otherStudent);
+    await registerUserDirectly(otherStudent);
 
     const loginRes = await request.post('/api/users/login').send({
       email: testUser.email,
