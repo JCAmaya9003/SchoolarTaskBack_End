@@ -310,4 +310,18 @@ describe('evaluaciones scopeadas por clase', () => {
     expect(enCincoB.status).toBe(201);
     expect(enCincoB.body.data.grado_seccion).toEqual({ grado: '5', seccion: 'B' });
   });
+
+  it('un teacher NO puede operar su materia en una clase que no dicta - 403 (permiso a nivel de clase)', async () => {
+    const adminCookie = await loginAsAdmin();
+    // Clase nueva con Matematicas, donde prof-mate-eval NO está asignado (él da Mate en 3/A)
+    await request.post('/api/gradeSections').set('Cookie', adminCookie).send({ grado: '6', seccion: 'C', materias: ['Matematicas'] });
+
+    const cookie = await loginAs('prof-mate-eval@test.com', 'password123');
+    const res = await request.post('/api/evaluations').set('Cookie', cookie).send({
+      nombre: 'Parcial Fuera de Clase', nombreMateria: 'Matematicas', grado: '6', seccion: 'C', descripcion: 'd', fecha: '2026-08-01', peso: 0.3,
+    });
+
+    // Dicta Matematicas, pero NO en 6/C: antes esto pasaba (permiso solo por materia), ahora 403
+    expect(res.status).toBe(403);
+  });
 });

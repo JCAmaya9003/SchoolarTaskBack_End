@@ -139,11 +139,9 @@ export const verifyTeacherSubject = async (req, res, next) => {
       return next();
     }
 
-    // Si es teacher, verificar que la materia sea suya
+    // Si es teacher, verificar que dicte esa materia EN ese grado/sección (a nivel de clase).
     if (userRole === 'teacher') {
       // Valida tanto la materia actual como la nueva, si la evaluación se está moviendo.
-      // Antes solo se validaba la materia actual, y un teacher podía reasignar su
-      // evaluación a una materia que no dicta.
       const subjectNames = [
         req.body?.nombreMateria || req.query?.nombreMateria || req.params?.nombreMateria,
         req.body?.nuevaMateria || req.query?.nuevaMateria || req.params?.nuevaMateria,
@@ -153,37 +151,61 @@ export const verifyTeacherSubject = async (req, res, next) => {
         return next(); // Si no hay materia, continuar
       }
 
+      // Resolver la clase (grado/sección) de la operación: viene explícita en el CRUD de
+      // evaluaciones y en by-evaluation; en el CRUD de notas se deriva del propio estudiante.
+      const GradeSection = (await import('../models/gradeSection-model.js')).default;
+      const grado = req.body?.grado || req.query?.grado;
+      const seccion = req.body?.seccion || req.query?.seccion;
+      let targetGradeSection = null;
+
+      if (grado && seccion) {
+        targetGradeSection = await GradeSection.findOne({ grado, seccion });
+      } else {
+        const studentEmail = req.body?.email || req.query?.email;
+        if (studentEmail) {
+          const studentService = await import('../services/student.service.js');
+          const student = await studentService.getStudentByUserIdAndEmail(studentEmail);
+          targetGradeSection = student?.grado_seccion || null;
+        }
+      }
+
+      // Si no se puede determinar la clase (input inválido, estudiante inexistente), se deja
+      // pasar: el validador de la ruta o el controller responderán el error correspondiente.
+      // Solo bloqueamos cuando SÍ hay una clase real y el teacher no la dicta.
+      if (!targetGradeSection) {
+        return next();
+      }
+
       const Teacher = (await import('../models/teacher-model.js')).default;
       const Subject = (await import('../models/subject-model.js')).default;
 
-      // Obtener el teacher
-      const teacher = await Teacher.findOne({ usuario: user._id }).populate('grado_encargado.materias');
-
+      const teacher = await Teacher.findOne({ usuario: user._id });
       if (!teacher) {
         throw new ForbiddenError('Profesor no encontrado');
       }
 
-      // Obtener todas las materias del teacher
-      const teacherSubjects = teacher.grado_encargado.flatMap(gc => gc.materias);
+      const targetGsId = targetGradeSection._id.toString();
 
       for (const subjectName of subjectNames) {
-        // Buscar la materia solicitada
         const subject = await Subject.findOne({ nombre: subjectName });
-
         if (!subject) {
           throw new ForbiddenError('Materia no encontrada');
         }
 
-        // Verificar que el teacher tenga esa materia
-        const hasSubject = teacherSubjects.some(s => s._id.toString() === subject._id.toString());
+        // El teacher debe tener una asignación para esta clase que incluya esta materia.
+        const teachesSubjectHere = teacher.grado_encargado.some((asignacion) =>
+          asignacion.grado_seccion?.toString() === targetGsId &&
+          asignacion.materias.some((m) => m.toString() === subject._id.toString())
+        );
 
-        if (!hasSubject) {
-          logger.warn('Intento de acceso no autorizado a materia de otro profesor:', {
+        if (!teachesSubjectHere) {
+          logger.warn('Intento de acceso no autorizado a una materia/clase que el profesor no dicta:', {
             teacherEmail: userEmail,
             subjectName,
+            gradoSeccion: targetGsId,
             endpoint: req.originalUrl,
           });
-          throw new ForbiddenError('No tienes permiso para acceder a esta materia');
+          throw new ForbiddenError('No tienes permiso para operar sobre esta materia en este grado y sección');
         }
       }
     }
