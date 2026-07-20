@@ -71,6 +71,17 @@ describe('POST /api/gradeSections, admin', () => {
     expect(res.status).toBe(400);
   });
 
+  it('rechaza un grado fuera del rango 1-12 - 400', async () => {
+    const cookie = await loginAsAdmin();
+
+    const res = await request
+      .post('/api/gradeSections')
+      .set('Cookie', cookie)
+      .send({ grado: '13', seccion: 'A', materias: [] });
+
+    expect(res.status).toBe(400);
+  });
+
   it('debe fallar si el grado y sección ya existe - 409', async () => {
     const cookie = await loginAsAdmin();
 
