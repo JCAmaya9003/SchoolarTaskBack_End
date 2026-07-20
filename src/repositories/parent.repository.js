@@ -12,17 +12,6 @@ export const findParentByUserId = async (userId) => {
   });
 };
 
-export const deleteParentById = async (id) => {
-  return await Parent.findByIdAndDelete(id).populate({
-    path: 'usuario',
-    select: 'nombre apellido email genero domicilio nacionalidad fecha_nacimiento rol',
-    populate: {
-      path: 'rol',
-      select: 'nombre',
-    },
-  });
-};
-
   export const findAllParents = async (page, limit) =>{
     const { skip, limit: validLimit, page: validPage } = getPaginationParams(page, limit);
 

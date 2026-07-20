@@ -88,11 +88,3 @@ export const getParentByUserIdAndEmail = async (email) =>{
     }
     return await parentRepository.findParentByUserId(parentUser.id);
 };
-
-export const deleteWithId = async ({id}) =>{
-    const deleted = await parentRepository.deleteParentById(id);
-    if (!deleted) {
-        throw new NotFoundError("No se encontró un padre con ese id");
-    }
-    return deleted;
-};

@@ -180,39 +180,6 @@ export const findStudentByUserId = async (userId) => {
         },
     ]);
     };
-    export const deleteStudentById = async (id) => {
-        return await Student.findByIdAndDelete(id).populate([
-            {
-                path: 'usuario',
-                select: 'nombre apellido email genero domicilio nacionalidad fecha_nacimiento rol',
-                populate: {
-                    path: 'rol',
-                    select: 'nombre',
-                },
-            },
-            {
-                path: 'padre',
-                select: 'usuario telefono telefono_trabajo lugar_trabajo profesion domicilio nacionalidad',
-                populate: {
-                    path: 'usuario',
-                    select: 'nombre apellido email genero domicilio nacionalidad fecha_nacimiento rol',
-                    populate: {
-                        path: 'rol',
-                        select: 'nombre'
-                    }
-                }
-            },
-            {
-                path: 'grado_seccion',
-                select: 'grado seccion materias',
-                populate: {
-                    path: 'materias',
-                    select: 'nombre',
-                }
-            },
-        ]);
-    };
-
     export const findStudentsByParentId = async (parentId) => {
         return await Student.find({ padre: parentId }).populate([
             {

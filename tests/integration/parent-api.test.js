@@ -176,30 +176,18 @@ describe('DELETE /api/parents, admin', () => {
   });
 });
 
-describe('DELETE /api/parents/id, admin', () => {
-  it('debe eliminar un padre por id - 200', async () => {
+describe('DELETE /api/parents, borrado por email', () => {
+  it('ya no existe la ruta por id, que borraba el perfil sin desactivar el usuario - 404', async () => {
     const cookie = await loginAsAdmin();
     const createRes = await request
       .post('/api/parents')
       .set('Cookie', cookie)
       .send(buildParent('padre6@test.com'));
-    const parentId = createRes.body.data.id;
 
     const res = await request
       .delete('/api/parents/id')
       .set('Cookie', cookie)
-      .send({ id: parentId });
-
-    expect(res.status).toBe(200);
-  });
-
-  it('debe fallar si el id no existe - 404', async () => {
-    const cookie = await loginAsAdmin();
-
-    const res = await request
-      .delete('/api/parents/id')
-      .set('Cookie', cookie)
-      .send({ id: '507f1f77bcf86cd799439011' });
+      .send({ id: createRes.body.data.id });
 
     expect(res.status).toBe(404);
   });

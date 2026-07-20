@@ -119,14 +119,6 @@ export const getStudentByUserIdAndEmail = async (email) =>{
     return await studentRepository.findStudentByUserId(studentUser.id);
 };
 
-export const deleteWithId = async ({id}) =>{
-    const deleted = await studentRepository.deleteStudentById(id);
-    if (!deleted) {
-        throw new NotFoundError("No se encontró un estudiante con ese id");
-    }
-    return deleted;
-};
-
 export const getStudentGradesInfo = async (email) => {
     const studentUser = await userService.searchUserByEmail(email);
     if (!studentUser) {

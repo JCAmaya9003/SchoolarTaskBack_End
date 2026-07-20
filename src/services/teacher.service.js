@@ -147,19 +147,6 @@ export const getTeacherByUserIdAndEmail = async (email) => {
     }
 };
 
-/**
- * Eliminar un profesor por ID.
- * @param {Object} data - ID del profesor.
- * @returns {Promise<Object|null>} - Profesor eliminado.
- */
-export const deleteWithId = async ({ id }) => {
-    const deleted = await teacherRepository.deleteTeacherById(id);
-    if (!deleted) {
-        throw new NotFoundError("No se encontró un profesor con ese id");
-    }
-    return deleted;
-};
-
 // Asignaciones del profesor: [{ grado_seccion, materias }] (grado_seccion y materias populados).
 // Devuelve [] si el usuario o el profesor no existen, para no dejar ramas muertas en quien la llama.
 export const getTeacherAssignments = async (email) => {

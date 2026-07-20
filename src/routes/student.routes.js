@@ -117,16 +117,6 @@ router.delete('/',
     studentController.deleteStudent
 );
 
-// Eliminar estudiante por ID - solo ADMIN
-router.delete('/id',
-    validateToken,
-    checkRole(['admin']),
-    [
-        body('id').isString().withMessage('Id inválido'),
-    ],
-    studentController.deleteById
-);
-
 /**
  * @swagger
  * /students/get-all:

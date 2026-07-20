@@ -106,21 +106,6 @@ export const updateStudent = async (req, res, next) =>{
     }
 }
 
-export const deleteById = async (req, res, next) =>{
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-    }
-    const { id } = req.body;
-
-    try {
-        const deleted = await studentService.deleteWithId({ id });
-        return sendSuccess(res, 200, 'Estudiante eliminado con éxito', formatStudentResponse(deleted));
-    }catch (error) {
-        next(error);
-    }
-}
-
 export const getStudentGradesInfoParent = async (req, res, next) => {
     try {
         const { email } = req.user;

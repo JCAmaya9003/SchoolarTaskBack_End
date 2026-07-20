@@ -128,27 +128,6 @@ export const deleteTeacher = async (req, res, next) => {
     }
 };
 
-/**
- * Eliminar un profesor por ID.
- * @param {Object} req - Solicitud HTTP.
- * @param {Object} res - Respuesta HTTP.
- */
-export const deleteById = async (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-    }
-
-    const { id } = req.body;
-
-    try {
-        const deleted = await teacherService.deleteWithId({ id });
-        return sendSuccess(res, 200, 'Profesor eliminado con éxito', formatTeacherResponse(deleted));
-    } catch (error) {
-        next(error);
-    }
-};
-
 export const getTeacherSubjectInfo = async (req, res, next) => {
     try {
         const { email } = req.user;

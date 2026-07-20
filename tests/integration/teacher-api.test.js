@@ -226,32 +226,43 @@ describe('DELETE /api/teachers, admin', () => {
   });
 });
 
-describe('DELETE /api/teachers/id, admin', () => {
-  it('debe eliminar un profesor por id - 200', async () => {
+describe('DELETE /api/teachers, borrado por email', () => {
+  it('ya no existe la ruta por id, que borraba el perfil sin desactivar el usuario - 404', async () => {
     const cookie = await loginAsAdmin();
     const createRes = await request
       .post('/api/teachers')
       .set('Cookie', cookie)
       .send(buildTeacher('prof6@test.com'));
-    const teacherId = createRes.body.data.id;
 
     const res = await request
       .delete('/api/teachers/id')
       .set('Cookie', cookie)
-      .send({ id: teacherId });
-
-    expect(res.status).toBe(200);
-  });
-
-  it('debe fallar si el id no existe - 404', async () => {
-    const cookie = await loginAsAdmin();
-
-    const res = await request
-      .delete('/api/teachers/id')
-      .set('Cookie', cookie)
-      .send({ id: '507f1f77bcf86cd799439011' });
+      .send({ id: createRes.body.data.id });
 
     expect(res.status).toBe(404);
+  });
+
+  it('borrar por email deja el usuario desactivado, no puede volver a entrar - regresión', async () => {
+    const cookie = await loginAsAdmin();
+    await request.post('/api/teachers').set('Cookie', cookie).send(buildTeacher('prof-baja@test.com'));
+
+    // Entra bien antes de la baja
+    const antes = await request
+      .post('/api/users/login')
+      .send({ email: 'prof-baja@test.com', password: 'password123' });
+    expect(antes.status).toBe(200);
+
+    const baja = await request
+      .delete('/api/teachers')
+      .set('Cookie', cookie)
+      .send({ email: 'prof-baja@test.com' });
+    expect(baja.status).toBe(200);
+
+    // Tras la baja el usuario queda desactivado: no queda un usuario fantasma con rol teacher
+    const despues = await request
+      .post('/api/users/login')
+      .send({ email: 'prof-baja@test.com', password: 'password123' });
+    expect(despues.status).toBe(401);
   });
 });
 

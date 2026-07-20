@@ -249,50 +249,37 @@ describe('DELETE /api/students, admin', () => {
   });
 });
 
-describe('DELETE /api/students/id, admin', () => {
-  it('debe eliminar un estudiante por id - 200', async () => {
+describe('DELETE /api/students, borrado por email', () => {
+  it('ya no existe la ruta por id, que borraba el perfil sin desactivar el usuario - 404', async () => {
     const cookie = await loginAsAdmin();
     const createRes = await request
       .post('/api/students')
       .set('Cookie', cookie)
       .send(buildStudent('est6@test.com'));
-    const studentId = createRes.body.data.id;
 
     const res = await request
       .delete('/api/students/id')
       .set('Cookie', cookie)
-      .send({ id: studentId });
+      .send({ id: createRes.body.data.id });
 
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(404);
   });
 
-  it('debe devolver el padre con su usuario populado al eliminar por id - 200, antes deleteStudentById no lo populaba', async () => {
+  it('borrar por email devuelve el padre con su usuario populado - 200', async () => {
     const cookie = await loginAsAdmin();
-    const createRes = await request
+    await request
       .post('/api/students')
       .set('Cookie', cookie)
       .send(buildStudent('est-delete-padre@test.com'));
-    const studentId = createRes.body.data.id;
 
     const res = await request
-      .delete('/api/students/id')
+      .delete('/api/students')
       .set('Cookie', cookie)
-      .send({ id: studentId });
+      .send({ email: 'est-delete-padre@test.com' });
 
     expect(res.status).toBe(200);
     expect(res.body.data.padre.usuario.nombre).toBe(parentUser.nombre);
     expect(res.body.data.padre.usuario.email).toBe(parentUser.email);
-  });
-
-  it('debe fallar si el id no existe - 404', async () => {
-    const cookie = await loginAsAdmin();
-
-    const res = await request
-      .delete('/api/students/id')
-      .set('Cookie', cookie)
-      .send({ id: '507f1f77bcf86cd799439011' });
-
-    expect(res.status).toBe(404);
   });
 });
 

@@ -56,14 +56,5 @@ router.delete('/',
     ],
     parentController.deleteParent);
 
-// Eliminar padre por ID - solo ADMIN
-router.delete('/id',
-    validateToken,
-    checkRole(['admin']),
-    [
-        body('id').isString().withMessage('Id inválido'),
-    ],
-    parentController.deleteById);
-
   
 export default router;

@@ -99,17 +99,3 @@ export const updateParent = async (req, res, next) =>{
     }
 };
 
-export const deleteById= async(req, res, next) =>{
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-    }
-    const { id } = req.body;
-
-    try {
-        const deleted = await parentService.deleteWithId({ id });
-        return sendSuccess(res, 200, 'Padre eliminado con éxito', formatParentResponse(deleted));
-    }catch (error) {
-        next(error);
-    }
-}
