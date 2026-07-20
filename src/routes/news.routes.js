@@ -8,14 +8,14 @@ import { rejectHtml } from '../utils/xss-guard.js';
 const router = express.Router();
 
 // Obtener todas las noticias paginadas
-router.get('/', validateToken, checkRole(['admin', 'teacher', 'student']), newsController.getAllNews);
+router.get('/', validateToken, checkRole(['admin', 'teacher', 'student', 'parent']), newsController.getAllNews);
 
 // Noticias de un usuario puntual; admin/teacher piden cualquiera, student solo la propia
 router.get(
     '/by-user',
     validateToken,
     enrichUserContext,
-    checkRole(['admin', 'teacher', 'student']),
+    checkRole(['admin', 'teacher', 'student', 'parent']),
     verifyOwnResource('query'),
     [
         query('email').isEmail().withMessage('Email inválido'),

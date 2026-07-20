@@ -39,6 +39,15 @@ export const verifyOwnResource = (emailSource = 'body') => {
         return next();
       }
 
+      // Un padre es dueño de los datos de sus hijos, así que puede consultarlos igual que
+      // los propios. Cualquier otro alumno sigue siendo ajeno.
+      if (userRole === 'parent' && userEmail !== requestEmail) {
+        const parentService = await import('../services/parent.service.js');
+        if (await parentService.isChildOf(userEmail, requestEmail)) {
+          return next();
+        }
+      }
+
       // Para student y parent, verificar que el email coincida
       if (userRole === 'student' || userRole === 'parent') {
         if (userEmail !== requestEmail) {

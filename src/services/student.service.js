@@ -235,13 +235,9 @@ export const getStudentsByParentEmail = async (email_padre) => {
         throw new NotFoundError("Padre no encontrado");
     }
 
-    // Buscar estudiantes relacionados con el padre
-    const students = await studentRepository.findStudentsByParentId(parent._id);
-    if (!students.length) {
-        throw new NotFoundError("No se encontraron estudiantes relacionados con el padre");
-    }
-
-    return students;
+    // Un padre sin hijos asignados todavía es un estado válido, no un error: el admin puede
+    // haberlo dado de alta antes de matricular a sus hijos. Devolver una lista vacía.
+    return await studentRepository.findStudentsByParentId(parent._id);
 };
 
 export const getStudentsBySubject = async (subjectId) => {

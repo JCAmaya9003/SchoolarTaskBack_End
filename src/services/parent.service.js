@@ -93,6 +93,27 @@ export const deleteParent = async (email) =>{
     }
 };
 
+// ¿Ese alumno es hijo de este padre? Para un padre, los datos de sus hijos son recurso propio:
+// puede ver su ficha completa (grado, contacto de emergencia, condiciones médicas), igual que
+// ya veía sus notas. Se consulta el repositorio de estudiantes en vez de student.service para
+// no cerrar un ciclo de imports (student.service ya importa parent.service).
+export const isChildOf = async (parentEmail, studentEmail) => {
+    const parentUser = await userService.searchUserByEmail(parentEmail);
+    if (!parentUser) {
+        return false;
+    }
+
+    const parent = await parentRepository.findParentByUserId(parentUser.id);
+    if (!parent) {
+        return false;
+    }
+
+    const studentRepository = await import('../repositories/student.repository.js');
+    const children = await studentRepository.findStudentsByParentId(parent._id);
+
+    return children.some((child) => child.usuario?.email === studentEmail);
+};
+
 export const getParentByUserIdAndEmail = async (email) =>{
     const parentUser = await userService.searchUserByEmail(email);
     if(!parentUser){
