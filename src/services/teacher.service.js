@@ -16,6 +16,30 @@ export const getTeachers = async (page, limit) => {
     return await teacherRepository.findAllTeachers(page, limit);
 };
 
+// Valida las asignaciones del profesor. Cada entrada es un grado/sección y las materias que
+// dicta ahí; devuelve el shape listo para guardar: [{ grado_seccion: id, materias: [ids] }].
+const buildValidAssignments = async (asignaciones) => {
+    const validAssignments = [];
+    for (const { grado, seccion, materias } of asignaciones) {
+        const gradeSection = await gradeSectionService.getGradeAndSection(grado, seccion);
+        if (!gradeSection) {
+            throw new NotFoundError(`Grado y sección inválidos: Grado=${grado}, Sección=${seccion}`);
+        }
+
+        const validSubjects = [];
+        for (const subjectName of materias) {
+            const subject = await subjectService.searchSubjectByName(subjectName);
+            if (!subject) {
+                throw new NotFoundError(`Materia inválida: ${subjectName}`);
+            }
+            validSubjects.push(subject._id);
+        }
+
+        validAssignments.push({ grado_seccion: gradeSection._id, materias: validSubjects });
+    }
+    return validAssignments;
+};
+
 /**
  * Crear un nuevo profesor.
  * @param {Object} data - Datos del profesor.
@@ -24,33 +48,7 @@ export const getTeachers = async (page, limit) => {
 export const createTeacher = async ({ nombre, apellido, email, password, fecha_nacimiento, rolNombre,
     genero, domicilio, nacionalidad, asignaciones, telefono, especialidad}) => {
 
-        // Validar las asignaciones
-        const validAssignments = [];
-        for (const { materias, grado_secciones } of asignaciones) {
-            // Validar materias
-            const validSubjects = [];
-            for (const subjectName of materias) {
-                const subject = await subjectService.searchSubjectByName(subjectName);
-                if (subject) {
-                    validSubjects.push(subject._id);
-                } else {
-                    throw new NotFoundError(`Materia inválida: ${subjectName}`);
-                }
-            }
-
-            // Validar grados y secciones
-            const validGradeSections = [];
-            for (const { grado, seccion } of grado_secciones) {
-                const gradeSection = await gradeSectionService.getGradeAndSection(grado, seccion);
-                if (gradeSection) {
-                    validGradeSections.push(gradeSection._id);
-                } else {
-                    throw new NotFoundError(`Grado y sección inválidos: Grado=${grado}, Sección=${seccion}`);
-                }
-            }
-
-            validAssignments.push({ materias: validSubjects, grado_secciones: validGradeSections });
-        }
+        const validAssignments = await buildValidAssignments(asignaciones);
 
         const userExists = await userService.searchUserByEmail(email);
 
@@ -99,30 +97,7 @@ export const updateTeacher = async ({ email, asignaciones, telefono, especialida
         const teacherExists = await teacherRepository.findTeacherByUserId(userExists.id);
 
         if (teacherExists) {
-            const validAssignments = [];
-            for (const { materias, grado_secciones } of asignaciones) {
-                const validSubjects = [];
-                for (const subjectName of materias) {
-                    const subject = await subjectService.searchSubjectByName(subjectName);
-                    if (subject) {
-                        validSubjects.push(subject._id);
-                    } else {
-                        throw new NotFoundError(`Materia inválida: ${subjectName}`);
-                    }
-                }
-
-                const validGradeSections = [];
-                for (const { grado, seccion } of grado_secciones) {
-                    const gradeSection = await gradeSectionService.getGradeAndSection(grado, seccion);
-                    if (gradeSection) {
-                        validGradeSections.push(gradeSection._id);
-                    } else {
-                        throw new NotFoundError(`Grado y sección inválidos: Grado=${grado}, Sección=${seccion}`);
-                    }
-                }
-
-                validAssignments.push({ materias: validSubjects, grado_secciones: validGradeSections });
-            }
+            const validAssignments = await buildValidAssignments(asignaciones);
 
             return await teacherRepository.updateTeacherByUserId(teacherExists.id, {
                 grado_encargado: validAssignments,

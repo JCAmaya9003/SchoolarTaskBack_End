@@ -32,8 +32,9 @@ const buildTeacher = (email, materia) => ({
   nacionalidad: 'Venezolana',
   asignaciones: [
     {
+      grado: gradeSectionData.grado,
+      seccion: gradeSectionData.seccion,
       materias: [materia],
-      grado_secciones: [{ grado: gradeSectionData.grado, seccion: gradeSectionData.seccion }],
     },
   ],
   telefono: '+50312345678',

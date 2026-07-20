@@ -6,19 +6,20 @@ const TeacherSchema = new mongoose.Schema({
     ref: 'User',
     required: true,
   },
+  // Cada asignación es un grado/sección concreto con las materias que el profesor dicta ahí.
+  // Antes era { materias:[], grado_secciones:[] } (producto cartesiano ambiguo); ahora es una
+  // entrada por clase, para que quede sin ambigüedad qué materias da en qué grado/sección.
   grado_encargado: [
     {
+      grado_seccion: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'GradeSection',
+        required: true,
+      },
       materias: [
         {
           type: mongoose.Schema.Types.ObjectId,
           ref: 'Subject',
-          required: true,
-        },
-      ],
-      grado_secciones: [
-        {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: 'GradeSection',
           required: true,
         },
       ],

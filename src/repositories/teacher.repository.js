@@ -22,7 +22,7 @@ export const findTeacherByUserId = async (userId) => {
             select: 'nombre',
         },
         {
-            path: 'grado_encargado.grado_secciones',
+            path: 'grado_encargado.grado_seccion',
             select: 'grado seccion',
         },
     ]);
@@ -54,7 +54,7 @@ export const findAllTeachers = async (page, limit) => {
                 select: 'nombre',
             })
             .populate({
-                path: 'grado_encargado.grado_secciones',
+                path: 'grado_encargado.grado_seccion',
                 select: 'grado seccion',
             }),
         Teacher.countDocuments(),
@@ -88,7 +88,7 @@ export const createTeacher = async (teacherData) => {
             select: 'nombre',
         })
         .populate({
-            path: 'grado_encargado.grado_secciones',
+            path: 'grado_encargado.grado_seccion',
             select: 'grado seccion',
         });
 };
@@ -114,7 +114,7 @@ export const updateTeacherByUserId = async (id, updates) => {
             select: 'nombre',
         })
         .populate({
-            path: 'grado_encargado.grado_secciones',
+            path: 'grado_encargado.grado_seccion',
             select: 'grado seccion',
         });
 };
@@ -139,7 +139,7 @@ export const deleteTeacherById = async (id) => {
             select: 'nombre',
         })
         .populate({
-            path: 'grado_encargado.grado_secciones',
+            path: 'grado_encargado.grado_seccion',
             select: 'grado seccion',
         });
 };

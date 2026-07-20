@@ -3,6 +3,7 @@ import { body } from 'express-validator';
 import * as teacherController from '../controllers/teacher.controller.js';
 import { validateToken, checkRole } from '../middlewares/auth-middleware.js';
 import { rejectHtml } from '../utils/xss-guard.js';
+import { GRADOS_VALIDOS } from '../models/gradeSection-model.js';
 
 const router = express.Router();
 
@@ -27,9 +28,8 @@ router.post(
         body('asignaciones').isArray().withMessage('Asignaciones debe ser un arreglo.'),
         body('asignaciones.*.materias').isArray().withMessage('Materias debe ser un arreglo de cadenas.'),
         body('asignaciones.*.materias.*').isString().withMessage('Cada materia debe ser una cadena.').custom(rejectHtml),
-        body('asignaciones.*.grado_secciones').isArray().withMessage('Grado y secciones debe ser un arreglo.'),
-        body('asignaciones.*.grado_secciones.*.grado').isString().withMessage('Cada grado debe ser una cadena.').custom(rejectHtml),
-        body('asignaciones.*.grado_secciones.*.seccion').isString().isLength({ min: 1, max: 1 }).withMessage('Cada sección debe ser un único carácter.'),
+        body('asignaciones.*.grado').isIn(GRADOS_VALIDOS).withMessage('Grado inválido. Debe ser un número del 1 al 12.'),
+        body('asignaciones.*.seccion').isString().isLength({ min: 1, max: 1 }).matches(/^[A-Za-z]$/).withMessage('Sección inválida.'),
         body('telefono').isString().matches(/^\+?[1-9]\d{1,14}$/).withMessage('Teléfono inválido. Debe incluir el prefijo del país (ejemplo: +50312345678).'),
         body('especialidad').isString().withMessage('Especialidad inválida.').custom(rejectHtml),
     ],
@@ -46,9 +46,8 @@ router.put(
         body('asignaciones').isArray().withMessage('Asignaciones debe ser un arreglo.'),
         body('asignaciones.*.materias').isArray().withMessage('Materias debe ser un arreglo de cadenas.'),
         body('asignaciones.*.materias.*').isString().withMessage('Cada materia debe ser una cadena.').custom(rejectHtml),
-        body('asignaciones.*.grado_secciones').isArray().withMessage('Grado y secciones debe ser un arreglo.'),
-        body('asignaciones.*.grado_secciones.*.grado').isString().withMessage('Cada grado debe ser una cadena.').custom(rejectHtml),
-        body('asignaciones.*.grado_secciones.*.seccion').isString().isLength({ min: 1, max: 1 }).withMessage('Cada sección debe ser un único carácter.'),
+        body('asignaciones.*.grado').isIn(GRADOS_VALIDOS).withMessage('Grado inválido. Debe ser un número del 1 al 12.'),
+        body('asignaciones.*.seccion').isString().isLength({ min: 1, max: 1 }).matches(/^[A-Za-z]$/).withMessage('Sección inválida.'),
         body('telefono').isString().matches(/^\+?[1-9]\d{1,14}$/).withMessage('Teléfono inválido. Debe incluir el prefijo del país (ejemplo: +50312345678).'),
         body('especialidad').isString().withMessage('Especialidad inválida.').custom(rejectHtml),
     ],

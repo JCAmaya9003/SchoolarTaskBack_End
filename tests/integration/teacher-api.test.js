@@ -32,8 +32,9 @@ const buildTeacher = (email) => ({
   nacionalidad: 'Venezolana',
   asignaciones: [
     {
+      grado: gradeSectionData.grado,
+      seccion: gradeSectionData.seccion,
       materias: ['Matematicas'],
-      grado_secciones: [{ grado: gradeSectionData.grado, seccion: gradeSectionData.seccion }],
     },
   ],
   telefono: '+50312345678',
@@ -163,8 +164,9 @@ describe('PUT /api/teachers, admin', () => {
         email: 'prof4@test.com',
         asignaciones: [
           {
+            grado: gradeSectionData.grado,
+            seccion: gradeSectionData.seccion,
             materias: ['Matematicas'],
-            grado_secciones: [{ grado: gradeSectionData.grado, seccion: gradeSectionData.seccion }],
           },
         ],
         telefono: '+50387654321',
@@ -185,8 +187,9 @@ describe('PUT /api/teachers, admin', () => {
         email: 'noexiste-prof@test.com',
         asignaciones: [
           {
+            grado: gradeSectionData.grado,
+            seccion: gradeSectionData.seccion,
             materias: ['Matematicas'],
-            grado_secciones: [{ grado: gradeSectionData.grado, seccion: gradeSectionData.seccion }],
           },
         ],
         telefono: '+50387654321',
