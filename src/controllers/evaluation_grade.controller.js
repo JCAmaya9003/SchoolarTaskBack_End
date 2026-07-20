@@ -61,7 +61,7 @@ export const getEvaluationGradesByStudent = async (req, res, next) => {
     }
     try {
         const { email } = req.query;
-        const grades = await evaluationGradeService.getEvaluationGradesByStudent(email);
+        const grades = await evaluationGradeService.getEvaluationGradesByStudent(email, req.user);
         return sendSuccess(res, 200, 'Calificaciones obtenidas con éxito', grades.filter(isGradeDisplayable).map(formatEvaluationGradeResponse));
     } catch (error) {
         next(error);

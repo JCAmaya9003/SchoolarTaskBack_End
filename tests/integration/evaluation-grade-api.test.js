@@ -264,6 +264,30 @@ describe('GET /api/evaluation_grades/by-evaluation', () => {
   });
 });
 
+describe('GET /api/evaluation_grades/by-student', () => {
+  it('un teacher solo ve las notas del alumno en sus propias materias - 200', async () => {
+    const cookie = await loginAs('prof-mate-grade@test.com', 'password123');
+
+    const res = await request.get('/api/evaluation_grades/by-student').set('Cookie', cookie).query({ email: studentEmail });
+
+    expect(res.status).toBe(200);
+    const evaluaciones = res.body.data.map((g) => g.evaluacion.nombre);
+    expect(evaluaciones).toContain('Parcial Mate');        // su materia
+    expect(evaluaciones).not.toContain('Parcial Historia'); // materia de otro profesor
+  });
+
+  it('el admin ve todas las notas del alumno - 200', async () => {
+    const cookie = await loginAsAdmin();
+
+    const res = await request.get('/api/evaluation_grades/by-student').set('Cookie', cookie).query({ email: studentEmail });
+
+    expect(res.status).toBe(200);
+    const evaluaciones = res.body.data.map((g) => g.evaluacion.nombre);
+    expect(evaluaciones).toContain('Parcial Mate');
+    expect(evaluaciones).toContain('Parcial Historia');
+  });
+});
+
 describe('PUT /api/evaluation_grades', () => {
   it('admin puede editar una calificación - 200', async () => {
     const cookie = await loginAsAdmin();

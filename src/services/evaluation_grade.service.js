@@ -57,12 +57,22 @@ export const getAllEvaluationGrades = async (page, limit, requestingUser) => {
  * @param {String} estudianteId - ID del estudiante.
  * @returns {Promise<Array>} - Lista de calificaciones asociadas al estudiante.
  */
-export const getEvaluationGradesByStudent = async (email) => {
+export const getEvaluationGradesByStudent = async (email, requestingUser) => {
     const student = await studentService.getStudentByUserIdAndEmail(email);
     if (!student) {
         throw new NotFoundError(`Estudiante no encontrado`);
     }
-    return await evaluationGradeRepository.findEvaluationGradesByStudent(student) ;
+    const grades = await evaluationGradeRepository.findEvaluationGradesByStudent(student);
+
+    // Un teacher solo puede ver las notas del alumno en las materias que dicta (consistente con
+    // /all y /by-evaluation). Antes veía todo el historial, incluidas materias de otros profesores.
+    // Admin y el propio alumno ven todas.
+    if (requestingUser?.role === 'teacher') {
+        const subjectIds = await evaluationService.getTeacherSubjectIds(requestingUser.email);
+        const ownSubjects = new Set(subjectIds.map((id) => id.toString()));
+        return grades.filter((g) => g.evaluacion?.materia && ownSubjects.has(g.evaluacion.materia.toString()));
+    }
+    return grades;
 };
 
 /**

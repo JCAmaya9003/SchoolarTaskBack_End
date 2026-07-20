@@ -2,14 +2,16 @@ import * as newsService from '../services/news.service.js'
 import { validationResult } from 'express-validator';
 import { sendSuccess } from '../utils/apiResponse.js';
 
+// Optional chaining sobre `usuario`: una noticia es un anuncio general que sigue siendo válido
+// aunque su autor haya sido desactivado (populate -> null). No se oculta, solo se evita el 500.
 const formatNewsResponse = (news) => ({
     id: news._id,
     titulo: news.titulo,
     contenido: news.contenido,
     autor: {
-        nombre: news.usuario.nombre,
-        apellido: news.usuario.apellido,
-        email: news.usuario.email,
+        nombre: news.usuario?.nombre,
+        apellido: news.usuario?.apellido,
+        email: news.usuario?.email,
     },
     createdAt: news.createdAt,
     updatedAt: news.updatedAt,
