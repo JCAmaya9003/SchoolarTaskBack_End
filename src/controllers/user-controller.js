@@ -212,6 +212,31 @@ const CAMPOS_CONTACTO_ENTRE_PROFESORES = ['nombre', 'apellido', 'email', 'telefo
 const soloDatosDeContacto = (info) =>
   Object.fromEntries(CAMPOS_CONTACTO_ENTRE_PROFESORES.filter((campo) => campo in info).map((campo) => [campo, info[campo]]));
 
+// El perfil de un alumno trae a su padre anidado y completo, incluidos sus datos laborales
+// (telefono_trabajo, lugar_trabajo, profesion) y personales (fecha de nacimiento, género,
+// nacionalidad). Un hijo no necesita nada de eso: para el propio alumno el padre se reduce a
+// cómo contactarlo. Se conserva la forma anidada, solo se recortan campos, para no cambiarle
+// las rutas de acceso a quien ya consume la respuesta. Admin, profesor y el propio padre
+// siguen viendo el registro completo.
+const recortarPadreParaElAlumno = (info) => {
+  if (!info.padre) {
+    return info;
+  }
+
+  return {
+    ...info,
+    padre: {
+      usuario: {
+        nombre: info.padre.usuario?.nombre,
+        apellido: info.padre.usuario?.apellido,
+        email: info.padre.usuario?.email,
+        domicilio: info.padre.usuario?.domicilio,
+      },
+      telefono: info.padre.telefono,
+    },
+  };
+};
+
 // El alcance de un profesor es su clase, no el colegio: solo puede consultar a sus alumnos y
 // a los padres de esos alumnos. Sobre otro profesor no hay restricción de acceso, pero la
 // respuesta se recorta a los datos de contacto.
@@ -258,6 +283,11 @@ export const getUserInfo = async(req, res, next) => {
       if (rol.nombre === 'teacher') {
         return sendSuccess(res, 200, 'Datos obtenidos con éxito', soloDatosDeContacto(info));
       }
+    }
+
+    // Un alumno solo llega a su propio perfil (verifyOwnResource), y ahí su padre viene anidado
+    if (req.user?.role === 'student') {
+      return sendSuccess(res, 200, 'Datos obtenidos con éxito', recortarPadreParaElAlumno(info));
     }
 
     return sendSuccess(res, 200, 'Datos obtenidos con éxito', info);
