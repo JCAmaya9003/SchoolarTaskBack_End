@@ -153,8 +153,9 @@ export const getStudentGradesInfo = async (req, res, next) => {
     try {
         const { email } = req.body;
 
-        // Obtener estudiante
-        const response =  await studentService.getStudentGradesInfo(email);
+        // req.user va enriquecido con el rol: un teacher solo ve las materias que dicta en la
+        // clase de este alumno, igual que en /evaluation_grades/by-student.
+        const response =  await studentService.getStudentGradesInfo(email, req.user);
 
         return sendSuccess(res, 200, 'Notas del estudiante obtenidas con éxito', response);
     } catch (error) {

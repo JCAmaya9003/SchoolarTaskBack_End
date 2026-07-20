@@ -4,9 +4,10 @@ import * as parentService from '../services/parent.service.js'
 import * as gradeSectionService from '../services/gradeSection.service.js'
 import * as evaluationGradeService from '../services/evaluation_grade.service.js';
 import * as evaluationService from '../services/evaluation.service.js';
+import * as teacherService from '../services/teacher.service.js';
 import { hardDeleteUserById } from '../repositories/user-repository.js';
 import logger from '../config/logger.js';
-import { NotFoundError, ConflictError } from '../errors/errors.js';
+import { NotFoundError, ConflictError, ForbiddenError } from '../errors/errors.js';
 
 export const getStudents = async (page, limit) =>{
     return await studentRepository.findAllStudents(page, limit);
@@ -145,7 +146,7 @@ export const getStudentByUserIdAndEmail = async (email) =>{
     return await studentRepository.findStudentByUserId(studentUser.id);
 };
 
-export const getStudentGradesInfo = async (email) => {
+export const getStudentGradesInfo = async (email, requestingUser) => {
     const studentUser = await userService.searchUserByEmail(email);
     if (!studentUser) {
         throw new NotFoundError("Usuario no encontrado");
@@ -163,9 +164,22 @@ export const getStudentGradesInfo = async (email) => {
     }
 
     // Obtener las materias del grado y sección
-    const subjects = await gradeSectionService.getSubjectsByGradeAndSection(gradeSection.grado, gradeSection.seccion);
+    let subjects = await gradeSectionService.getSubjectsByGradeAndSection(gradeSection.grado, gradeSection.seccion);
     if (!subjects.length) {
         throw new NotFoundError("No se encontraron materias para el grado y sección del estudiante");
+    }
+
+    // Un teacher ve solo las materias que dicta EN la clase de este alumno, igual que en
+    // /by-student y /all. Si no dicta ninguna, el alumno no es suyo y no puede verlo.
+    // El propio alumno, su padre y el admin siguen viendo el boletín completo.
+    if (requestingUser?.role === 'teacher') {
+        const ownSubjectIds = await teacherService.getTeacherSubjectIdsInClass(requestingUser.email, gradeSection._id);
+        const ownSubjects = new Set(ownSubjectIds.map((id) => id.toString()));
+        subjects = subjects.filter((s) => ownSubjects.has(s._id.toString()));
+
+        if (!subjects.length) {
+            throw new ForbiddenError("No dictas ninguna materia en la clase de este estudiante");
+        }
     }
 
     // Evaluaciones de la clase del estudiante (grado/sección), no de la materia en otros grados:

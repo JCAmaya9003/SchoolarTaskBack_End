@@ -68,6 +68,7 @@ beforeAll(async () => {
   await Role.create({ nombre: 'admin' });
   await Role.create({ nombre: 'parent' });
   await Role.create({ nombre: 'student' });
+  await Role.create({ nombre: 'teacher' });
 
   const appModule = await import('../../app.js');
   app = appModule.default;
@@ -404,5 +405,95 @@ describe('POST /api/students/get-all, con materias asignadas', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.data[0].evaluaciones[0].nota).toBe(0);
+  });
+});
+
+describe('POST /api/students/get-all, alcance del profesor', () => {
+  const claseDelProfe = { grado: '7', seccion: 'P' };
+  const claseAjena = { grado: '7', seccion: 'Q' };
+  const profeEmail = 'profe-scope@test.com';
+  const alumnoPropio = 'alumno-propio-scope@test.com';
+  const alumnoAjeno = 'alumno-ajeno-scope@test.com';
+
+  // El profesor dicta SOLO Algebra en 7P. En 7P también se dicta Biologia (que no es suya),
+  // y en 7Q se dicta Algebra pero él no tiene esa clase asignada.
+  beforeAll(async () => {
+    const cookie = await loginAsAdmin();
+
+    await request.post('/api/subjects').set('Cookie', cookie).send({ nombre: 'Algebra' });
+    await request.post('/api/subjects').set('Cookie', cookie).send({ nombre: 'Biologia' });
+    for (const clase of [claseDelProfe, claseAjena]) {
+      await request
+        .post('/api/gradeSections')
+        .set('Cookie', cookie)
+        .send({ ...clase, materias: ['Algebra', 'Biologia'] });
+    }
+
+    await request.post('/api/teachers').set('Cookie', cookie).send({
+      nombre: 'Carlos', apellido: 'Profesor', email: profeEmail, password: 'password123',
+      fecha_nacimiento: '1985-07-07', rolNombre: 'teacher', genero: 'Masculino',
+      domicilio: 'Casa Profe', nacionalidad: 'Venezolana',
+      asignaciones: [{ materias: ['Algebra'], ...claseDelProfe }],
+      telefono: '+50355556666', especialidad: 'Algebra',
+    });
+
+    for (const [email, clase] of [[alumnoPropio, claseDelProfe], [alumnoAjeno, claseAjena]]) {
+      await request.post('/api/students').set('Cookie', cookie).send({
+        ...buildStudent(email),
+        grado: clase.grado,
+        seccion: clase.seccion,
+      });
+    }
+  });
+
+  async function loginAsProfe() {
+    const res = await request.post('/api/users/login').send({ email: profeEmail, password: 'password123' });
+    const [cookie] = res.headers['set-cookie'];
+    return cookie.split(';')[0];
+  }
+
+  it('el profesor solo ve las materias que dicta en la clase del alumno - 200', async () => {
+    const res = await request
+      .post('/api/students/get-all')
+      .set('Cookie', await loginAsProfe())
+      .send({ email: alumnoPropio });
+
+    expect(res.status).toBe(200);
+    // Biologia también se dicta en 7P, pero no es suya
+    expect(res.body.data.map((m) => m.materia)).toEqual(['Algebra']);
+  });
+
+  it('el profesor no puede ver el boletín de un alumno de una clase que no dicta - 403', async () => {
+    const res = await request
+      .post('/api/students/get-all')
+      .set('Cookie', await loginAsProfe())
+      .send({ email: alumnoAjeno });
+
+    expect(res.status).toBe(403);
+  });
+
+  it('el admin sigue viendo el boletín completo - 200', async () => {
+    const res = await request
+      .post('/api/students/get-all')
+      .set('Cookie', await loginAsAdmin())
+      .send({ email: alumnoPropio });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.map((m) => m.materia).sort()).toEqual(['Algebra', 'Biologia']);
+  });
+
+  it('el propio alumno sigue viendo su boletín completo - 200', async () => {
+    const loginRes = await request
+      .post('/api/users/login')
+      .send({ email: alumnoPropio, password: 'password123' });
+    const [cookie] = loginRes.headers['set-cookie'];
+
+    const res = await request
+      .post('/api/students/get-all')
+      .set('Cookie', cookie.split(';')[0])
+      .send({ email: alumnoPropio });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.map((m) => m.materia).sort()).toEqual(['Algebra', 'Biologia']);
   });
 });
