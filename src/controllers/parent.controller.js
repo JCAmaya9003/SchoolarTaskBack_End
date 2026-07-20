@@ -49,7 +49,8 @@ export const createParent = async (req, res, next) =>{
 
     try {
         const newParent = await parentService.createParent({
-            nombre, apellido, email, password, fecha_nacimiento, rolNombre,
+            // El rol se fuerza según el endpoint, no se toma del body.
+            nombre, apellido, email, password, fecha_nacimiento, rolNombre: 'parent',
             genero, domicilio, nacionalidad,
             telefono, telefono_trabajo, lugar_trabajo, profesion
         });

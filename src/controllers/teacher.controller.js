@@ -62,7 +62,8 @@ export const createTeacher = async (req, res, next) => {
 
     try {
         const newTeacher = await teacherService.createTeacher({
-            nombre, apellido, email, password, fecha_nacimiento, rolNombre,
+            // El rol se fuerza según el endpoint, no se toma del body.
+            nombre, apellido, email, password, fecha_nacimiento, rolNombre: 'teacher',
             genero, domicilio,
             nacionalidad, asignaciones, telefono, especialidad
         });

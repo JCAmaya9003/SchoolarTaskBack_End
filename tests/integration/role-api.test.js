@@ -65,8 +65,8 @@ describe('GET /api/roles, admin', () => {
   });
 });
 
-describe('Uso de un rol inexistente en un flujo admin-only, regresión: searchRoleByName tiraba throw en vez de null', () => {
-  it('debe devolver 404 en vez de 500 si rolNombre no existe', async () => {
+describe('rolNombre forzado en los flujos de creación admin-only', () => {
+  it('ignora el rolNombre del body y liga el perfil al rol correcto del endpoint - 201', async () => {
     const cookie = await loginAsAdmin();
 
     const res = await request
@@ -75,9 +75,9 @@ describe('Uso de un rol inexistente en un flujo admin-only, regresión: searchRo
       .send({
         nombre: 'Pedro',
         apellido: 'Padre',
-        email: 'padre-rol-invalido@test.com',
+        email: 'padre-rol-forzado@test.com',
         password: 'password123',
-        rolNombre: 'rol-que-no-existe',
+        rolNombre: 'admin', // intento de ligar el perfil de padre a un user con rol admin
         fecha_nacimiento: '1980-01-01',
         genero: 'Masculino',
         domicilio: 'Calle 1',
@@ -88,6 +88,8 @@ describe('Uso de un rol inexistente en un flujo admin-only, regresión: searchRo
         profesion: 'Ingeniero',
       });
 
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(201);
+    // El rol se fuerza a 'parent' en el servidor, no se toma el 'admin' del body
+    expect(res.body.data.rol.nombre).toBe('parent');
   });
 });

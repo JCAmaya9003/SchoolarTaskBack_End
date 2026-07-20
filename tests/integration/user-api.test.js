@@ -406,3 +406,28 @@ describe('Autorización: accesos cruzados no autorizados devuelven 403', () => {
     expect(res.status).toBe(403);
   });
 });
+
+describe('Login sobre una cuenta sin contraseña (ej. solo Google)', () => {
+  it('devuelve 401, no 500 (antes bcrypt.compare con undefined tiraba una excepción)', async () => {
+    const User = (await import('../../src/models/user-model.js')).default;
+    const rol = await Role.findOne({ nombre: 'student' });
+    await User.create({
+      nombre: 'Goog',
+      apellido: 'User',
+      email: 'google-only@test.com',
+      googleId: 'google-abc-123', // sin password: required solo si no hay googleId
+      rol: rol._id,
+      fecha_nacimiento: new Date('2000-01-01'),
+      genero: 'Masculino',
+      nacionalidad: 'Venezolana',
+      domicilio: 'Calle 1',
+    });
+
+    const res = await request.post('/api/users/login').send({
+      email: 'google-only@test.com',
+      password: 'cualquiercosa',
+    });
+
+    expect(res.status).toBe(401);
+  });
+});

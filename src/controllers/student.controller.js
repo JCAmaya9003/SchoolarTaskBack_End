@@ -54,7 +54,9 @@ export const createStudent = async (req, res, next) =>{
 
     try {
         const newStudent = await studentService.createStudent({
-            nombre, apellido, email, password, fecha_nacimiento, rolNombre,
+            // El rol se fuerza según el endpoint, no se toma del body: este endpoint solo crea
+            // estudiantes, así no se puede ligar un perfil de estudiante a un user con otro rol.
+            nombre, apellido, email, password, fecha_nacimiento, rolNombre: 'student',
             genero, domicilio, nacionalidad,
             email_padre,
             grado, seccion,

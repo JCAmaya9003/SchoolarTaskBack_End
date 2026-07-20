@@ -33,6 +33,14 @@ export const loginUser = async( {email, password} ) => {
       throw new InvalidCredentialsError();
     }
 
+    // Cuenta sin contraseña local (ej. registrada solo por Google): responde el mismo error
+    // genérico (nunca revela el motivo) en vez de que bcrypt.compare(password, undefined) tire
+    // una excepción no controlada (500).
+    if (!user.password) {
+      logger.warn(`[AUTH] Login local sobre cuenta sin contraseña: ${email}`);
+      throw new InvalidCredentialsError();
+    }
+
     const isPasswordValid = await verifyPassword(password, user.password);
 
     if (isPasswordValid) {
@@ -104,8 +112,9 @@ export const editUser = async (email, nombre, apellido, password, fecha_nacimien
     const rol = await roleService.searchRoleByName(rolNombre);
 
     if(rol){
-      // Solo re-hashear si el password cambió
-      const isSamePassword = await verifyPassword(password, user.password);
+      // Solo re-hashear si el password cambió. Si la cuenta no tenía password (ej. Google),
+      // no se compara (evita el crash de bcrypt con undefined): se toma el nuevo password.
+      const isSamePassword = user.password ? await verifyPassword(password, user.password) : false;
       const finalPassword = isSamePassword ? user.password : await hashPassword(password);
 
       const updatedUser = await updateUserById(user._id, {email, nombre, apellido, password: finalPassword, fecha_nacimiento, rol, genero, domicilio, nacionalidad });

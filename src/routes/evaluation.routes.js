@@ -36,14 +36,15 @@ router.post('/',
     verifyTeacherSubject,
     [
       body('nombre').isString().withMessage('Nombre Invalido!').custom(rejectHtml),
-      body('nuevoNombre').isString().withMessage('Nombre Invalido!').custom(rejectHtml),
       body('nombreMateria').isString().withMessage('Materia Invalida!').custom(rejectHtml),
-      body('nuevaMateria').isString().withMessage('Materia Invalida!').custom(rejectHtml),
       gradoValidator,
       seccionValidator,
-      body('descripcion').isString().withMessage('Descripcion Invalida!').custom(rejectHtml),
-      body('fecha').isDate().withMessage('Fecha invalida! Formato aceptado: (yyyy-mm-dd)'),
-      body('peso').isNumeric().withMessage('Peso invalido! Tiene que ser en formato decimal'),
+      // Campos editables: opcionales. Se actualiza solo lo que se envía (edición parcial).
+      body('nuevoNombre').optional().isString().withMessage('Nombre Invalido!').custom(rejectHtml),
+      body('nuevaMateria').optional().isString().withMessage('Materia Invalida!').custom(rejectHtml),
+      body('descripcion').optional().isString().withMessage('Descripcion Invalida!').custom(rejectHtml),
+      body('fecha').optional().isDate().withMessage('Fecha invalida! Formato aceptado: (yyyy-mm-dd)'),
+      body('peso').optional().isNumeric().withMessage('Peso invalido! Tiene que ser en formato decimal'),
     ],
     evaluationController.updateEvaluation
   );

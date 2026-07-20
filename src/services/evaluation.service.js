@@ -36,17 +36,12 @@ export const getEvaluationsBySubject = async (subjectNombre) => {
     return await evaluationRepository.findEvaluationsBySubject(materia);
 };
 
-// Identifica la evaluación por nombre + materia + clase (grado/sección); puede renombrarla y
-// moverla a otra materia (nuevaMateria) dentro de la misma clase.
+// Identifica la evaluación por nombre + materia + clase (grado/sección). Edición parcial: solo
+// cambia los campos enviados, así renombrar o cambiar el peso no obliga a re-mandar todo.
 export const editEvaluation = async ({nombre, nuevoNombre, nombreMateria, nuevaMateria, grado, seccion, descripcion, fecha, peso}) =>{
     const materia = await subjectService.searchSubjectByName(nombreMateria);
     if(!materia){
         throw new NotFoundError("La materia original ingresada no existe");
-    }
-
-    const newMateria = await subjectService.searchSubjectByName(nuevaMateria);
-    if(!newMateria){
-        throw new NotFoundError("La nueva materia ingresada no existe");
     }
 
     const gradeSection = await gradeSectionService.getGradeAndSection(grado, seccion);
@@ -59,13 +54,20 @@ export const editEvaluation = async ({nombre, nuevoNombre, nombreMateria, nuevaM
         throw new NotFoundError("La evaluación no existe");
     }
 
-    return await evaluationRepository.updateEvaluationById(evaluacionExiste.id, {
-        nombre: nuevoNombre,
-        descripcion,
-        fecha,
-        peso,
-        materia: newMateria,
-    });
+    const updates = {};
+    if (nuevoNombre !== undefined) updates.nombre = nuevoNombre;
+    if (descripcion !== undefined) updates.descripcion = descripcion;
+    if (fecha !== undefined) updates.fecha = fecha;
+    if (peso !== undefined) updates.peso = peso;
+    if (nuevaMateria !== undefined) {
+        const newMateria = await subjectService.searchSubjectByName(nuevaMateria);
+        if(!newMateria){
+            throw new NotFoundError("La nueva materia ingresada no existe");
+        }
+        updates.materia = newMateria;
+    }
+
+    return await evaluationRepository.updateEvaluationById(evaluacionExiste.id, updates);
 }
 
 export const deleteEvaluation = async ({nombre, nombreMateria, grado, seccion}) =>{

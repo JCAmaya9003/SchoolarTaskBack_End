@@ -214,6 +214,26 @@ describe('PUT /api/evaluations', () => {
     expect(res.status).toBe(404);
   });
 
+  it('permite edición parcial: solo nuevoNombre, sin re-mandar nuevaMateria/descripcion/fecha/peso - 200', async () => {
+    const cookie = await loginAsAdmin();
+    await request.post('/api/evaluations').set('Cookie', cookie).send({
+      nombre: 'Parcial Parcial', nombreMateria: 'Matematicas', grado: gradeSectionData.grado, seccion: gradeSectionData.seccion, descripcion: 'orig', fecha: '2026-08-01', peso: 0.4,
+    });
+
+    const res = await request.put('/api/evaluations').set('Cookie', cookie).send({
+      nombre: 'Parcial Parcial',
+      nombreMateria: 'Matematicas',
+      grado: gradeSectionData.grado,
+      seccion: gradeSectionData.seccion,
+      nuevoNombre: 'Parcial Renombrado', // solo se cambia el nombre
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.nombre).toBe('Parcial Renombrado');
+    expect(res.body.data.materia).toBe('Matematicas'); // materia sin cambios
+    expect(res.body.data.peso).toBe(0.4);               // peso sin cambios
+  });
+
   it('un teacher NO puede editar una evaluación de materia ajena - 403', async () => {
     const cookie = await loginAs('prof-mate-eval@test.com', 'password123');
 
