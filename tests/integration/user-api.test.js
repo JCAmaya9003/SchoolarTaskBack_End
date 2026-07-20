@@ -272,6 +272,19 @@ describe('PUT /api/users, admin', () => {
 
     expect(res.status).toBe(403);
   });
+
+  it('no permite cambiar el rol, eso desincronizaba el perfil - 409', async () => {
+    const cookies = await loginAsAdmin();
+    await request.post('/api/users/register').send(testUser);
+
+    const res = await request
+      .put('/api/users')
+      .set('Cookie', cookies)
+      .send({ ...testUser, rolNombre: 'admin' });
+
+    expect(res.status).toBe(409);
+    expect(res.body.message).toContain('change-role');
+  });
 });
 
 describe('DELETE /api/users, admin, soft delete', () => {

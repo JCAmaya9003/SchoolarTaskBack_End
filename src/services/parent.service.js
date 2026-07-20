@@ -48,6 +48,18 @@ export const createParent = async ({nombre, apellido, email, password, fecha_nac
     }
 };
 
+// Crea el perfil de padre sobre un usuario que YA existe. Lo usa el cambio de rol, donde
+// el User no se crea de nuevo (a diferencia de createParent), solo se le arma el perfil nuevo.
+export const createParentProfileForUser = async (user, {telefono, telefono_trabajo, lugar_trabajo, profesion}) => {
+    return await parentRepository.createParent({
+        usuario: user,
+        telefono,
+        telefono_trabajo,
+        lugar_trabajo,
+        profesion,
+    });
+};
+
 export const updateParent = async ({email, telefono, telefono_trabajo, lugar_trabajo, profesion}) =>{
     const parentUser = await userService.searchUserByEmail(email);
 

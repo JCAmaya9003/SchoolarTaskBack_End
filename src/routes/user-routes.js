@@ -1,10 +1,11 @@
 import express from 'express';
 import { body, param } from 'express-validator';
-import { login, register, updateUser, deleteUser, getAllUsers, getUserRole, getUserInfo, restoreUser, forgotPassword, resetPassword, getMe } from '../controllers/user-controller.js';
+import { login, register, updateUser, deleteUser, getAllUsers, getUserRole, getUserInfo, restoreUser, changeUserRole, forgotPassword, resetPassword, getMe } from '../controllers/user-controller.js';
 import { validateToken, checkRole } from '../middlewares/auth-middleware.js';
 import { authLimiter } from '../middlewares/rate-limiter.js';
 import { verifyOwnResource, enrichUserContext } from '../middlewares/authorization-middleware.js';
 import { rejectHtml } from '../utils/xss-guard.js';
+import { GRADOS_VALIDOS } from '../models/gradeSection-model.js';
 
 const router = express.Router();
 
@@ -264,6 +265,63 @@ router.delete('/',
     body('email').isEmail().withMessage('Email inválido'),
   ],
   deleteUser
+);
+
+/**
+ * @swagger
+ * /users/change-role:
+ *   patch:
+ *     summary: Cambiar el rol de un usuario migrando su perfil, solo admin
+ *     description: >
+ *       Borra el perfil del rol viejo y crea el del rol nuevo. Como cada perfil exige campos
+ *       propios que los otros no tienen, hay que mandar los datos que pide el rol destino:
+ *       student (email_padre, grado, seccion, alergias, condiciones_medicas, contacto_emergencia),
+ *       teacher (asignaciones, telefono, especialidad), parent (telefono, telefono_trabajo,
+ *       lugar_trabajo, profesion). El rol admin no lleva datos de perfil.
+ *     tags: [Usuarios]
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Rol cambiado y perfil migrado
+ *       404:
+ *         description: Usuario, rol o datos referenciados inexistentes
+ *       409:
+ *         description: El usuario ya tiene ese rol o ya tiene el perfil destino
+ */
+router.patch('/change-role',
+  validateToken,
+  checkRole(['admin']),
+  [
+    body('email').isEmail().withMessage('Email inválido'),
+    body('nuevoRol').isIn(['admin', 'teacher', 'parent', 'student']).withMessage('Rol inválido.'),
+
+    // Datos del perfil destino: cada bloque solo aplica si se migra a ese rol
+    body('email_padre').if(body('nuevoRol').equals('student')).isEmail().withMessage('Email del padre inválido'),
+    body('grado').if(body('nuevoRol').equals('student')).isIn(GRADOS_VALIDOS).withMessage('Grado inválido. Debe ser un número del 1 al 12.'),
+    body('seccion').if(body('nuevoRol').equals('student')).isString().isLength({ min: 1, max: 1 }).matches(/^[A-Za-z]$/).withMessage('Sección inválida.'),
+    body('alergias').if(body('nuevoRol').equals('student')).isString().withMessage('Alergia/s Invalida/s!').custom(rejectHtml),
+    body('condiciones_medicas').if(body('nuevoRol').equals('student')).isString().withMessage('Condiciones Medicas Invalidas!').custom(rejectHtml),
+    body('contacto_emergencia.nombre').if(body('nuevoRol').equals('student')).isString().matches(/^[A-Za-z\s]+$/).withMessage('Nombre del contacto de emergencia inválido!'),
+    body('contacto_emergencia.telefono').if(body('nuevoRol').equals('student')).isString().matches(/^\+?[1-9]\d{1,14}$/).withMessage('Teléfono inválido. Debe incluir el prefijo del país (e.g., +50312345678).'),
+
+    body('asignaciones').if(body('nuevoRol').equals('teacher')).isArray().withMessage('Asignaciones debe ser un arreglo.'),
+    body('asignaciones.*.materias').if(body('nuevoRol').equals('teacher')).isArray().withMessage('Materias debe ser un arreglo de cadenas.'),
+    body('asignaciones.*.materias.*').if(body('nuevoRol').equals('teacher')).isString().withMessage('Cada materia debe ser una cadena.').custom(rejectHtml),
+    body('asignaciones.*.grado').if(body('nuevoRol').equals('teacher')).isIn(GRADOS_VALIDOS).withMessage('Grado inválido. Debe ser un número del 1 al 12.'),
+    body('asignaciones.*.seccion').if(body('nuevoRol').equals('teacher')).isString().isLength({ min: 1, max: 1 }).matches(/^[A-Za-z]$/).withMessage('Sección inválida.'),
+    body('especialidad').if(body('nuevoRol').equals('teacher')).isString().withMessage('Especialidad inválida.').custom(rejectHtml),
+
+    body('telefono_trabajo').if(body('nuevoRol').equals('parent')).isString().matches(/^\+?[1-9]\d{1,14}$/).withMessage('Teléfono de trabajo inválido.'),
+    body('lugar_trabajo').if(body('nuevoRol').equals('parent')).isString().withMessage('Lugar de Trabajo Invalido').custom(rejectHtml),
+    body('profesion').if(body('nuevoRol').equals('parent')).isString().matches(/^[A-Za-z\s]+$/).withMessage('Profesion Incorrecta! No use caracteres especiales!'),
+
+    // teacher y parent piden teléfono; student no lo lleva a nivel de perfil
+    body('telefono')
+      .if(body('nuevoRol').custom((valor) => ['teacher', 'parent'].includes(valor)))
+      .isString().matches(/^\+?[1-9]\d{1,14}$/).withMessage('Teléfono inválido. Debe incluir el prefijo del país (e.g., +50312345678).'),
+  ],
+  changeUserRole
 );
 
 /**

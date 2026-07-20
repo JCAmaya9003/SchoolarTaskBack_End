@@ -5,6 +5,7 @@ import * as teacherService from '../services/teacher.service.js'
 import * as studentService from '../services/student.service.js'
 import * as parentService from '../services/parent.service.js'
 import * as roleService from '../services/role-service.js'
+import * as roleChangeService from '../services/role-change.service.js'
 import { sendSuccess } from '../utils/apiResponse.js';
 
 const LOGIN_COOKIE_MAX_AGE = 60 * 60 * 1000; // 1 hora, igual que la cookie de OAuth
@@ -248,6 +249,23 @@ export const getUserInfo = async(req, res, next) => {
     }
 
     return sendSuccess(res, 200, 'Datos obtenidos con éxito', info);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const changeUserRole = async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ message: "Error al intentar cambiar el rol del usuario!", errors: errors.array() });
+  }
+  try {
+    const { email, nuevoRol, ...datosPerfil } = req.body;
+
+    await roleChangeService.changeUserRole(email, nuevoRol, datosPerfil);
+
+    const updatedUser = await userService.searchUserByEmail(email);
+    return sendSuccess(res, 200, 'Rol del usuario cambiado con éxito', formatUserResponse(updatedUser));
   } catch (error) {
     next(error);
   }

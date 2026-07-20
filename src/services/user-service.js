@@ -5,7 +5,7 @@ import { sendPasswordResetEmail } from './email.service.js';
 import { config } from '../config/config.js';
 import crypto from 'crypto';
 import logger from '../config/logger.js';
-import { ValidationError, InvalidCredentialsError, NotFoundError, UserAlreadyExistsError } from '../errors/errors.js';
+import { ValidationError, InvalidCredentialsError, NotFoundError, UserAlreadyExistsError, ConflictError } from '../errors/errors.js';
 
 // Bloqueo de cuenta por fuerza bruta, independiente de la IP. El rate limiter por IP no
 // alcanza contra un atacante distribuido que rota de IP contra la misma cuenta.
@@ -109,6 +109,15 @@ export const editUser = async (email, nombre, apellido, password, fecha_nacimien
   const user = await findUserByEmailWithPassword(email);
 
   if(user){
+    // Cambiar el rol acá dejaba el User y su perfil desincronizados: el perfil viejo
+    // (Student/Teacher/Parent) sobrevivía intacto, así que un usuario con rol student seguía
+    // apareciendo en GET /teachers. La migración del perfil no puede ser automática porque los
+    // perfiles no comparten campos obligatorios (un Teacher exige telefono y especialidad, que
+    // un Student no tiene), así que el cambio de rol vive en su propio endpoint, que sí los pide.
+    if (rolNombre !== user.rol?.nombre) {
+      throw new ConflictError('No se puede cambiar el rol desde esta operación. Usá PATCH /api/users/change-role, que además migra el perfil.');
+    }
+
     const rol = await roleService.searchRoleByName(rolNombre);
 
     if(rol){
