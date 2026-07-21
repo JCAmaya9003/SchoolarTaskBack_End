@@ -31,10 +31,8 @@ export const createEvaluation = async ({nombre, nombreMateria, grado, seccion, d
     });
 };
 
-export const getEvaluationsBySubject = async (subjectNombre) => {
-    const materia = await subjectService.searchSubjectByName(subjectNombre);
-    return await evaluationRepository.findEvaluationsBySubject(materia);
-};
+// getEvaluationsBySubject se elimino: traia las evaluaciones de la materia en TODAS las
+// clases, algo que ya no tiene sentido ahora que una evaluacion pertenece a una clase.
 
 // Identifica la evaluación por nombre + materia + clase (grado/sección). Edición parcial: solo
 // cambia los campos enviados, así renombrar o cambiar el peso no obliga a re-mandar todo.

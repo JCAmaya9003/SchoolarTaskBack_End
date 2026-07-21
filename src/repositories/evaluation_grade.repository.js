@@ -42,6 +42,12 @@ export const deleteEvaluationGradesByEvaluationIds = async (evaluationIds) => {
     return await EvaluationGrade.deleteMany({ evaluacion: { $in: evaluationIds } });
 };
 
+// Todas las notas de un conjunto de evaluaciones, en una sola consulta. La usa el reporte del
+// profesor para armar un mapa (estudiante, evaluación) -> nota en vez de consultar una por una.
+export const findEvaluationGradesByEvaluationIds = async (evaluationIds) => {
+    return await EvaluationGrade.find({ evaluacion: { $in: evaluationIds } }).select('estudiante evaluacion calificacion');
+};
+
 /**
  * Actualizar un registro de calificación por ID.
  * @param {String} id - ID del registro de calificación.

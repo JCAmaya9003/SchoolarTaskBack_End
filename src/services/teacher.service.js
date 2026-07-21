@@ -179,7 +179,18 @@ export const getTeacherSubjectIdsInClass = async (email, gradeSectionId) => {
     return assignment ? assignment.materias.map((m) => m._id) : [];
 };
 
-export const getSubjectsByTeacherEmail = async (email) => {
+/**
+ * Reporte del profesor: una entrada por cada clase que dicta y materia que dicta ahí.
+ *
+ * Antes se armaba a nivel de MATERIA: se tomaban las materias sueltas del profesor y se pedían
+ * todos los alumnos y todas las evaluaciones de esa materia en el colegio. Con las evaluaciones
+ * ya atadas a una clase, eso significaba que un profesor de Matemáticas en 5A veía en su propio
+ * reporte a los alumnos de 6B con sus notas, y que a cada alumno se lo cruzaba contra
+ * evaluaciones de otras clases (que le aparecían siempre en null, porque no eran suyas).
+ * Ahora se recorren las asignaciones [{ grado_seccion, materias }], que es como el profesor
+ * realmente da clase.
+ */
+export const getTeacherClassReport = async (email) => {
     const teacherUser = await userService.searchUserByEmail(email);
     if (!teacherUser) {
         throw new NotFoundError("Usuario no encontrado");
@@ -190,19 +201,66 @@ export const getSubjectsByTeacherEmail = async (email) => {
         throw new NotFoundError("Profesor no encontrado");
     }
 
-    // Extraer materias desde grado_encargado
-    const subjects = [];
-    for (const encargado of teacher.grado_encargado) {
-        if (encargado.materias && Array.isArray(encargado.materias)) {
-            subjects.push(...encargado.materias);
+    const studentRepository = await import('../repositories/student.repository.js');
+    const evaluationRepository = await import('../repositories/evaluation.repository.js');
+    const evaluationGradeRepository = await import('../repositories/evaluation_grade.repository.js');
+
+    const report = [];
+
+    // Un profesor sin asignaciones devuelve una lista vacía: es un estado válido, no un error.
+    for (const asignacion of teacher.grado_encargado) {
+        const gradeSection = asignacion.grado_seccion;
+        if (!gradeSection) {
+            continue; // la clase fue eliminada
+        }
+
+        const [students, evaluacionesDeLaClase] = await Promise.all([
+            studentRepository.findStudentsByGradeSection(gradeSection._id),
+            evaluationRepository.findEvaluationsByGradeSection(gradeSection._id),
+        ]);
+
+        // Se ocultan los alumnos cuyo usuario fue desactivado, igual que en el resto de listados
+        const alumnosActivos = students.filter((student) => student.usuario);
+
+        for (const materia of asignacion.materias) {
+            if (!materia) {
+                continue; // la materia fue eliminada
+            }
+
+            const evaluaciones = evaluacionesDeLaClase.filter(
+                (evaluacion) => evaluacion.materia?._id?.toString() === materia._id.toString()
+            );
+
+            const grades = await evaluationGradeRepository.findEvaluationGradesByEvaluationIds(
+                evaluaciones.map((evaluacion) => evaluacion._id)
+            );
+            const notasPorAlumnoYEvaluacion = new Map(
+                grades.map((grade) => [`${grade.estudiante}-${grade.evaluacion}`, grade.calificacion])
+            );
+
+            report.push({
+                materia: materia.nombre,
+                grado: gradeSection.grado,
+                seccion: gradeSection.seccion,
+                estudiantes: alumnosActivos.map((student) => ({
+                    estudiante: {
+                        nombre: student.usuario.nombre,
+                        apellido: student.usuario.apellido,
+                        email: student.usuario.email,
+                    },
+                    evaluaciones: evaluaciones.map((evaluacion) => ({
+                        evaluacion: evaluacion.nombre,
+                        // ?? y no ||, para que una nota de 0 no se colapse a null
+                        nota: notasPorAlumnoYEvaluacion.get(`${student._id}-${evaluacion._id}`) ?? null,
+                        peso: evaluacion.peso,
+                    })),
+                })),
+            });
         }
     }
 
-    if (!subjects.length) {
-        throw new NotFoundError("No se encontraron materias para el profesor");
-    }
-
-    return subjects;
+    return report;
 };
 
-
+// getSubjectsByTeacherEmail se elimino: aplanaba las materias del profesor ignorando en
+// que clase las dicta, y su unico consumidor era el reporte, que ahora usa las asignaciones.

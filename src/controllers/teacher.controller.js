@@ -1,8 +1,5 @@
 import * as userService from '../services/user-service.js';
 import * as teacherService from '../services/teacher.service.js';
-import * as studentService from '../services/student.service.js'
-import * as evaluationService from '../services/evaluation.service.js'
-import * as evaluationGradeService from '../services/evaluation_grade.service.js'
 import { validationResult } from 'express-validator';
 import { sendSuccess } from '../utils/apiResponse.js';
 
@@ -132,62 +129,11 @@ export const getTeacherSubjectInfo = async (req, res, next) => {
     try {
         const { email } = req.user;
 
-        // El service ya lanza NotFoundError si no hay materias
-        const subjects = await teacherService.getSubjectsByTeacherEmail(email);
+        // Una entrada por clase que dicta y materia que dicta ahí. El service ya lanza
+        // NotFoundError si el usuario o el perfil de profesor no existen.
+        const report = await teacherService.getTeacherClassReport(email);
 
-        // Preparar la respuesta
-        const response = [];
-
-        for (const subject of subjects) {
-            if (!subject || !subject.nombre) {
-                continue; // Salta si el subject es inválido
-            }
-
-            // Obtener estudiantes por materia
-            const students = await studentService.getStudentsBySubject(subject._id);
-
-            // Obtener evaluaciones y notas de la materia
-            const evaluations = await evaluationService.getEvaluationsBySubject(subject.nombre);
-
-            // Crear respuesta para cada materia
-            const subjectData = {
-                materia: subject.nombre,
-                estudiantes: [],
-            };
-
-            for (const student of students) {
-                if (!student || !student.usuario) {
-                    continue; // Salta si el student es inválido
-                }
-
-                const studentEvaluations = await Promise.all(
-                    evaluations.map(async (evaluation) => {
-                        if (!evaluation || !evaluation.nombre) {
-                            return null; // Devuelve null si la evaluación es inválida
-                        }
-                        const grade = await evaluationGradeService.getEvaluationGradesByStudentAndEvaluation(student._id, evaluation._id);
-                        return {
-                            evaluacion: evaluation.nombre,
-                            nota: grade ? grade.calificacion : null,
-                            peso: evaluation.peso,
-                        };
-                    })
-                );
-
-                subjectData.estudiantes.push({
-                    estudiante: {
-                        nombre: student.usuario.nombre || "Desconocido",
-                        apellido: student.usuario.apellido || "Desconocido",
-                        email: student.usuario.email || "Desconocido",
-                    },
-                    evaluaciones: studentEvaluations.filter(Boolean), // Filtrar evaluaciones no válidas
-                });
-            }
-
-            response.push(subjectData);
-        }
-
-        return sendSuccess(res, 200, 'Información de las materias y estudiantes obtenida con éxito', response);
+        return sendSuccess(res, 200, 'Información de las materias y estudiantes obtenida con éxito', report);
     } catch (error) {
         next(error);
     }

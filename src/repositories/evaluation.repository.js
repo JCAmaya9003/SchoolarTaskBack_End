@@ -46,11 +46,6 @@ export const findEvaluationByNameSubjectAndGradeSection = async (materia, nombre
       .populate('grado_seccion', 'grado seccion');
   };
 
-  export const findEvaluationsBySubject = async (materia) => {
-    const evaluations = await Evaluation.find({ materia: materia });
-    return evaluations;
-};
-
 // IDs de las evaluaciones que matchean un filtro (usado para filtrar notas por las clases del profe).
 export const findEvaluationIdsByFilter = async (filter) => {
     const evaluations = await Evaluation.find(filter).select('_id');

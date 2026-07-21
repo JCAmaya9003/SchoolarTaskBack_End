@@ -50,10 +50,29 @@ async function loginAsAdmin() {
   return cookie.split(';')[0];
 }
 
+// Necesario para matricular alumnos en las pruebas del reporte
+const parentUser = {
+  nombre: 'Pedro',
+  apellido: 'Padre',
+  email: 'padre-teacher@test.com',
+  password: 'password123',
+  rolNombre: 'parent',
+  fecha_nacimiento: '1980-03-03',
+  genero: 'Masculino',
+  domicilio: 'Casa del padre',
+  nacionalidad: 'Venezolana',
+  telefono: '+50399990000',
+  telefono_trabajo: '+50399991111',
+  lugar_trabajo: 'Oficina',
+  profesion: 'Ingeniero',
+};
+
 beforeAll(async () => {
   await setupTestDB();
   await Role.create({ nombre: 'admin' });
   await Role.create({ nombre: 'teacher' });
+  await Role.create({ nombre: 'student' });
+  await Role.create({ nombre: 'parent' });
 
   const appModule = await import('../../app.js');
   app = appModule.default;
@@ -64,6 +83,7 @@ beforeAll(async () => {
 
   await request.post('/api/subjects').set('Cookie', adminCookie).send({ nombre: 'Matematicas' });
   await request.post('/api/gradeSections').set('Cookie', adminCookie).send(gradeSectionData);
+  await request.post('/api/parents').set('Cookie', adminCookie).send(parentUser);
 });
 
 afterAll(async () => {
@@ -286,5 +306,89 @@ describe('GET /api/teachers/get-teacherInfo', () => {
     const res = await request.get('/api/teachers/get-teacherInfo');
 
     expect(res.status).toBe(401);
+  });
+});
+
+describe('GET /api/teachers/get-teacherInfo, alcance por clase', () => {
+  // Matematicas se dicta en 8A y en 8B. El profesor SOLO la dicta en 8A.
+  const PROFE = 'profe-reporte@test.com';
+  const ALUMNO_PROPIO = 'alumno-8a-reporte@test.com';
+  const ALUMNO_AJENO = 'alumno-8b-reporte@test.com';
+
+  beforeAll(async () => {
+    const cookie = await loginAsAdmin();
+    const post = (url, body) => request.post(url).set('Cookie', cookie).send(body);
+
+    await post('/api/subjects', { nombre: 'MateReporte' });
+    await post('/api/gradeSections', { grado: '8', seccion: 'A', materias: ['MateReporte'] });
+    await post('/api/gradeSections', { grado: '8', seccion: 'B', materias: ['MateReporte'] });
+
+    await post('/api/teachers', {
+      ...buildTeacher(PROFE),
+      asignaciones: [{ materias: ['MateReporte'], grado: '8', seccion: 'A' }],
+    });
+
+    for (const [email, seccion] of [[ALUMNO_PROPIO, 'A'], [ALUMNO_AJENO, 'B']]) {
+      await post('/api/students', {
+        nombre: 'Alumno', apellido: 'Reporte', email, password: 'password123',
+        rolNombre: 'student', fecha_nacimiento: '2010-05-05', genero: 'Masculino',
+        domicilio: 'Casa', nacionalidad: 'Venezolana', email_padre: parentUser.email,
+        grado: '8', seccion,
+        alergias: 'Ninguna', condiciones_medicas: 'Ninguna',
+        contacto_emergencia: { nombre: 'Pedro Padre', telefono: '+50312345678' },
+      });
+    }
+
+    await post('/api/evaluations', {
+      nombre: 'Parcial 8A', nombreMateria: 'MateReporte', grado: '8', seccion: 'A',
+      descripcion: 'x', fecha: '2026-03-01', peso: 25,
+    });
+    await post('/api/evaluations', {
+      nombre: 'Parcial 8B', nombreMateria: 'MateReporte', grado: '8', seccion: 'B',
+      descripcion: 'x', fecha: '2026-03-02', peso: 25,
+    });
+    await post('/api/evaluation_grades', {
+      email: ALUMNO_PROPIO, nombreMateria: 'MateReporte', nombreEvaluacion: 'Parcial 8A', calificacion: 7,
+    });
+    await post('/api/evaluation_grades', {
+      email: ALUMNO_AJENO, nombreMateria: 'MateReporte', nombreEvaluacion: 'Parcial 8B', calificacion: 9,
+    });
+  });
+
+  async function reporteDelProfe() {
+    const loginRes = await request.post('/api/users/login').send({ email: PROFE, password: 'password123' });
+    const [cookie] = loginRes.headers['set-cookie'];
+    return request.get('/api/teachers/get-teacherInfo').set('Cookie', cookie.split(';')[0]);
+  }
+
+  it('la entrada identifica la clase, no solo la materia - 200', async () => {
+    const res = await reporteDelProfe();
+
+    expect(res.status).toBe(200);
+    const entrada = res.body.data.find((e) => e.materia === 'MateReporte');
+    expect(entrada.grado).toBe('8');
+    expect(entrada.seccion).toBe('A');
+  });
+
+  it('no incluye alumnos de una clase que no dicta - regresión de fuga de notas', async () => {
+    const res = await reporteDelProfe();
+
+    const entrada = res.body.data.find((e) => e.materia === 'MateReporte');
+    const emails = entrada.estudiantes.map((e) => e.estudiante.email);
+
+    expect(emails).toContain(ALUMNO_PROPIO);
+    expect(emails).not.toContain(ALUMNO_AJENO);
+  });
+
+  it('solo cruza a cada alumno con las evaluaciones de SU clase', async () => {
+    const res = await reporteDelProfe();
+
+    const entrada = res.body.data.find((e) => e.materia === 'MateReporte');
+    const alumno = entrada.estudiantes.find((e) => e.estudiante.email === ALUMNO_PROPIO);
+
+    // Antes aparecía también "Parcial 8B" con nota null, una evaluación de otra clase
+    expect(alumno.evaluaciones).toHaveLength(1);
+    expect(alumno.evaluaciones[0].evaluacion).toBe('Parcial 8A');
+    expect(alumno.evaluaciones[0].nota).toBe(7);
   });
 });
