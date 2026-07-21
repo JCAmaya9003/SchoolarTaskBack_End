@@ -192,3 +192,25 @@ describe('DELETE /api/parents, borrado por email', () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe('POST /api/parents, teléfono compartido', () => {
+  it('dos padres de la misma familia pueden compartir el teléfono de casa - 201', async () => {
+    const cookie = await loginAsAdmin();
+    const telefonoDeCasa = '+50344443333';
+
+    const madre = await request
+      .post('/api/parents')
+      .set('Cookie', cookie)
+      .send({ ...buildParent('madre-familia@test.com'), telefono: telefonoDeCasa });
+
+    // Antes esto daba 409: telefono tenía un índice único, así que el segundo no entraba
+    const padre = await request
+      .post('/api/parents')
+      .set('Cookie', cookie)
+      .send({ ...buildParent('padre-familia@test.com'), telefono: telefonoDeCasa });
+
+    expect(madre.status).toBe(201);
+    expect(padre.status).toBe(201);
+    expect(padre.body.data.telefono).toBe(telefonoDeCasa);
+  });
+});
