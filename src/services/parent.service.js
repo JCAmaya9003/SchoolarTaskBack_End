@@ -84,6 +84,15 @@ export const deleteParent = async (email) =>{
         const parentExists = await parentRepository.findParentByUserId(parentUser.id);
 
         if(parentExists){
+            // No se borra un padre con hijos matriculados: dejaría a esos Student con un padre
+            // colgando (Student.padre apuntando a un doc inexistente). Hay que reasignarlos o
+            // darlos de baja primero. Mismo criterio que el borrado de una clase con alumnos.
+            const studentRepository = await import('../repositories/student.repository.js');
+            const hijos = await studentRepository.findStudentsByParentId(parentExists._id);
+            if (hijos.length > 0) {
+                throw new ConflictError(`No se puede eliminar el padre: tiene ${hijos.length} hijo(s) matriculado(s). Reasignalos o dalos de baja primero.`);
+            }
+
             return await parentRepository.deleteParentByUserId(parentExists.id);
         }else{
             throw new NotFoundError("El padre no existe");

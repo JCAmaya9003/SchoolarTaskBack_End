@@ -270,6 +270,20 @@ describe('DELETE /api/students, admin', () => {
     expect(res.status).toBe(404);
   });
 
+  it('no se puede borrar un padre con hijos matriculados, dejaría al hijo colgando - 409', async () => {
+    const cookie = await loginAsAdmin();
+    // Aseguramos que el padre tenga al menos un hijo
+    await request.post('/api/students').set('Cookie', cookie).send(buildStudent('hijo-del-padre@test.com'));
+
+    const res = await request
+      .delete('/api/parents')
+      .set('Cookie', cookie)
+      .send({ email: parentUser.email });
+
+    expect(res.status).toBe(409);
+    expect(res.body.message).toContain('hijo');
+  });
+
   it('restaurar por PATCH /users/restore a un estudiante borrado por rol no crea un fantasma - 409', async () => {
     const cookie = await loginAsAdmin();
     const email = 'est-restore-fantasma@test.com';
