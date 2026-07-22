@@ -322,19 +322,21 @@ describe('DELETE /api/users, admin, soft delete', () => {
 });
 
 describe('PATCH /api/users/restore, admin', () => {
-  it('debe restaurar un usuario eliminado - 200', async () => {
+  it('debe restaurar un usuario desactivado cuyo perfil sigue disponible - 200', async () => {
     const cookies = await loginAsAdmin();
-    await registerUserDirectly(testUser);
-    await request.delete('/api/users').set('Cookie', cookies).send({ email: testUser.email });
+    // Un admin no tiene perfil asociado, así que desactivarlo y restaurarlo siempre es coherente.
+    const otroAdmin = { ...adminUser, email: 'otro-admin-restore@test.com' };
+    await registerUserDirectly(otroAdmin);
+    await request.delete('/api/users').set('Cookie', cookies).send({ email: otroAdmin.email });
 
     const res = await request
       .patch('/api/users/restore')
       .set('Cookie', cookies)
-      .send({ email: testUser.email });
+      .send({ email: otroAdmin.email });
 
     expect(res.status).toBe(200);
     expect(res.body.message).toBe('Usuario restaurado con éxito');
-    expect(res.body.data.email).toBe(testUser.email);
+    expect(res.body.data.email).toBe(otroAdmin.email);
   });
 
   it('debe fallar si no hay un usuario eliminado con ese email - 404', async () => {

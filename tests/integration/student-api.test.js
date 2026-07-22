@@ -270,6 +270,24 @@ describe('DELETE /api/students, admin', () => {
     expect(res.status).toBe(404);
   });
 
+  it('restaurar por PATCH /users/restore a un estudiante borrado por rol no crea un fantasma - 409', async () => {
+    const cookie = await loginAsAdmin();
+    const email = 'est-restore-fantasma@test.com';
+    await request.post('/api/students').set('Cookie', cookie).send(buildStudent(email));
+
+    // DELETE /students borra el perfil en duro y desactiva el user
+    await request.delete('/api/students').set('Cookie', cookie).send({ email });
+
+    // restore no debe revivir un user cuyo perfil ya no existe: quedaría con rol student sin perfil
+    const res = await request.patch('/api/users/restore').set('Cookie', cookie).send({ email });
+
+    expect(res.status).toBe(409);
+
+    // Y el usuario sigue sin poder entrar (no se revivió)
+    const login = await request.post('/api/users/login').send({ email, password: 'password123' });
+    expect(login.status).toBe(401);
+  });
+
   it('borrar un estudiante se lleva sus notas en cascada, no las deja huérfanas - regresión', async () => {
     const cookie = await loginAsAdmin();
     const email = 'est-con-notas-cascade@test.com';

@@ -167,11 +167,40 @@ export const getUsers = async (page, limit) =>{
   return await findAllusers(page, limit);
 };
 
+// ¿Sigue existiendo el perfil de este usuario? Los borrados por rol lo eliminan en duro, así que
+// un usuario desactivado por esa vía ya no tiene perfil. Se consulta el repositorio directamente
+// (no el service) porque searchUserByEmail excluye a los desactivados y acá el user está borrado.
+const perfilSigueExistiendo = async (rolNombre, userId) => {
+  if (rolNombre === 'student') {
+    const repo = await import('../repositories/student.repository.js');
+    return Boolean(await repo.findStudentByUserId(userId));
+  }
+  if (rolNombre === 'teacher') {
+    const repo = await import('../repositories/teacher.repository.js');
+    return Boolean(await repo.findTeacherByUserId(userId));
+  }
+  if (rolNombre === 'parent') {
+    const repo = await import('../repositories/parent.repository.js');
+    return Boolean(await repo.findParentByUserId(userId));
+  }
+  return true; // admin no tiene perfil asociado
+};
+
 export const restoreUser = async (email) => {
   const deletedUser = await findDeletedUserByEmail(email);
 
   if(!deletedUser){
     return null;
+  }
+
+  // Solo se restaura si el resultado es coherente. DELETE /users desactiva y deja el perfil
+  // intacto: restore lo revive perfecto. Los borrados por rol (DELETE /students|teachers|parents)
+  // borran el perfil en duro; revivir solo el User dejaría una cuenta con rol pero sin perfil (un
+  // fantasma que entra al sistema pero rompe con 404 en todo lo que dependa del perfil). En ese
+  // caso restore se niega: hay que volver a dar de alta a la persona desde su endpoint de creación.
+  const rolNombre = deletedUser.rol?.nombre;
+  if (!(await perfilSigueExistiendo(rolNombre, deletedUser._id))) {
+    throw new ConflictError('No se puede restaurar: el perfil de este usuario fue eliminado. Volvé a darlo de alta desde su endpoint de creación.');
   }
 
   const restoredUser = await restoreUserById(deletedUser._id);
