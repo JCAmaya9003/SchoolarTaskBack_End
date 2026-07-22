@@ -108,6 +108,14 @@ router.get(
     reservationController.getReservationsByUser
 );
 
-router.post('/get-nombre', validateToken, checkRole(['admin', 'teacher']), reservationController.getReservationNameById);
+router.post(
+    '/get-nombre',
+    validateToken,
+    checkRole(['admin', 'teacher']),
+    [
+        body('id').isString().withMessage('Id inválido'),
+    ],
+    reservationController.getReservationNameById
+);
 
 export default router;

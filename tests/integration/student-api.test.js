@@ -348,6 +348,30 @@ describe('POST /api/students/get-all, autorización', () => {
   });
 });
 
+describe('POST /api/students/get-all, clase sin materias', () => {
+  it('un alumno en una clase recién creada sin materias recibe un boletín vacío, no un 404', async () => {
+    const cookie = await loginAsAdmin();
+    await request
+      .post('/api/gradeSections')
+      .set('Cookie', cookie)
+      .send({ grado: '11', seccion: 'W', materias: [] });
+    const email = 'alumno-clase-vacia@test.com';
+    await request.post('/api/students').set('Cookie', cookie).send({
+      ...buildStudent(email),
+      grado: '11',
+      seccion: 'W',
+    });
+
+    const res = await request
+      .post('/api/students/get-all')
+      .set('Cookie', cookie)
+      .send({ email });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual([]);
+  });
+});
+
 describe('POST /api/students/get-all, con materias asignadas', () => {
   it('debe devolver las notas sin crashear - 200, antes subject._id quedaba undefined por un remapeo a subject.id', async () => {
     const cookie = await loginAsAdmin();

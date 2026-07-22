@@ -168,11 +168,10 @@ export const getStudentGradesInfo = async (email, requestingUser) => {
         throw new NotFoundError("Grado y sección no encontrados para el estudiante");
     }
 
-    // Obtener las materias del grado y sección
+    // Obtener las materias del grado y sección. Una clase sin materias cargadas todavía es un
+    // estado válido (clase recién creada), no un error: se devuelve un boletín vacío en vez de
+    // un 404, mismo criterio que el padre sin hijos.
     let subjects = await gradeSectionService.getSubjectsByGradeAndSection(gradeSection.grado, gradeSection.seccion);
-    if (!subjects.length) {
-        throw new NotFoundError("No se encontraron materias para el grado y sección del estudiante");
-    }
 
     // Un teacher ve solo las materias que dicta EN la clase de este alumno, igual que en
     // /by-student y /all. Si no dicta ninguna, el alumno no es suyo y no puede verlo.

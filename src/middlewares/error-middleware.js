@@ -21,6 +21,11 @@ export const errorHandler = (err, req, res, next) => {
     ip: req.ip,
   });
 
+  // "Operacional" = un error esperado, con un mensaje pensado para el cliente (un AppError, o
+  // un error de librería que traducimos abajo). Cualquier otra cosa es un bug inesperado: su
+  // mensaje es crudo (ej. el texto de V8 de un TypeError) y no debe llegar al cliente.
+  let isOperational = err instanceof AppError;
+
   // Los errores ya tipados como AppError ya traen su statusCode correcto.
   // Solo hace falta traducir errores crudos de librerías externas.
   if (!(err instanceof AppError)) {
@@ -28,12 +33,14 @@ export const errorHandler = (err, req, res, next) => {
     if (err.name === 'ValidationError' && err.errors) {
       const message = Object.values(err.errors).map(val => val.message).join(', ');
       error = new AppError(message, 400);
+      isOperational = true;
     }
 
     // Error de ObjectId inválido de Mongoose
     if (err.name === 'CastError') {
       const message = `Recurso no encontrado. ID inválido: ${err.value}`;
       error = new AppError(message, 404);
+      isOperational = true;
     }
 
     // Error de clave duplicada de MongoDB
@@ -42,30 +49,38 @@ export const errorHandler = (err, req, res, next) => {
       const value = err.keyValue[field];
       const message = `Ya existe un registro con ${field}: ${value}`;
       error = new AppError(message, 409);
+      isOperational = true;
     }
 
     // Error de JWT inválido
     if (err.name === 'JsonWebTokenError') {
       const message = 'Token inválido. Por favor, inicia sesión de nuevo';
       error = new AppError(message, 401);
+      isOperational = true;
     }
 
     // Error de JWT expirado
     if (err.name === 'TokenExpiredError') {
       const message = 'Token expirado. Por favor, inicia sesión de nuevo';
       error = new AppError(message, 401);
+      isOperational = true;
     }
 
     // Error de express-validator
     if (err.array && typeof err.array === 'function') {
       const message = err.array().map(e => e.msg).join(', ');
       error = new AppError(message, 400);
+      isOperational = true;
     }
   }
 
   // Respuesta de error
   const statusCode = error.statusCode || 500;
-  const message = error.message || 'Error interno del servidor';
+  // Un bug inesperado nunca expone su mensaje crudo al cliente (salvo en development, para
+  // depurar): se responde un genérico. Los errores operacionales sí muestran su mensaje.
+  const message = (isOperational || process.env.NODE_ENV === 'development')
+    ? (error.message || 'Error interno del servidor')
+    : 'Error interno del servidor';
 
   res.status(statusCode).json({
     success: false,
