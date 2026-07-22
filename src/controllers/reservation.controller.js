@@ -52,13 +52,14 @@ export const updateReservation = async (req, res, next) => {
         return res.status(400).json({ errors: errors.array() });
     }
     try {
-        const { lugar, nuevoLugar, usuarioEmail, descripcion, nueva_fecha_inicio, nueva_fecha_fin } = req.body;
+        const { lugar, nuevoLugar, usuarioEmail, descripcion, fecha_inicio, nueva_fecha_inicio, nueva_fecha_fin } = req.body;
 
         const updatedReservation = await reservationService.updateReservation({
             lugar,
             nuevoLugar,
             usuarioEmail,
             descripcion,
+            fecha_inicio,
             nueva_fecha_inicio,
             nueva_fecha_fin,
         });
@@ -78,11 +79,12 @@ export const deleteReservation = async (req, res, next) => {
         return res.status(400).json({ errors: errors.array() });
     }
     try {
-        const { lugar, usuarioEmail } = req.body;
+        const { lugar, usuarioEmail, fecha_inicio } = req.body;
 
         const deletedReservation = await reservationService.deleteReservation({
             lugar,
             usuarioEmail,
+            fecha_inicio,
         });
 
         return sendSuccess(res, 200, 'Reserva eliminada con éxito', formatReservationResponse(deletedReservation));

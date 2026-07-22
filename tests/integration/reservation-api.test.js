@@ -255,6 +255,7 @@ describe('PUT /api/reservations', () => {
         nuevoLugar: 'Laboratorio A',
         usuarioEmail: 'prof-a-reserva@test.com',
         descripcion: 'Descripción editada',
+        fecha_inicio: '2026-09-01T10:00:00.000Z',
         nueva_fecha_inicio: '2026-09-01T14:00:00.000Z',
         nueva_fecha_fin: '2026-09-01T16:00:00.000Z',
       });
@@ -275,6 +276,7 @@ describe('PUT /api/reservations', () => {
         nuevoLugar: 'Auditorio',
         usuarioEmail: 'prof-b-reserva@test.com',
         descripcion: 'Hackeo',
+        fecha_inicio: '2026-09-05T10:00:00.000Z',
         nueva_fecha_inicio: '2026-09-05T10:00:00.000Z',
         nueva_fecha_fin: '2026-09-05T12:00:00.000Z',
       });
@@ -295,6 +297,7 @@ describe('PUT /api/reservations', () => {
         nuevoLugar: 'Laboratorio A',
         usuarioEmail: 'prof-a-reserva@test.com',
         descripcion: 'Segunda edición sin mover el horario',
+        fecha_inicio: '2026-09-01T14:00:00.000Z',
         nueva_fecha_inicio: '2026-09-01T14:00:00.000Z',
         nueva_fecha_fin: '2026-09-01T16:00:00.000Z',
       });
@@ -314,6 +317,7 @@ describe('PUT /api/reservations', () => {
         nuevoLugar: 'Laboratorio A',
         usuarioEmail: 'no-es-un-email',
         descripcion: 'Descripción',
+        fecha_inicio: '2026-09-01T14:00:00.000Z',
         nueva_fecha_inicio: '2026-09-01T14:00:00.000Z',
         nueva_fecha_fin: '2026-09-01T16:00:00.000Z',
       });
@@ -363,7 +367,7 @@ describe('DELETE /api/reservations', () => {
     const res = await request
       .delete('/api/reservations')
       .set('Cookie', cookie)
-      .send({ lugar: 'Auditorio', usuarioEmail: 'prof-b-reserva@test.com' });
+      .send({ lugar: 'Auditorio', usuarioEmail: 'prof-b-reserva@test.com', fecha_inicio: '2026-09-05T10:00:00.000Z' });
 
     expect(res.status).toBe(403);
   });
@@ -374,7 +378,7 @@ describe('DELETE /api/reservations', () => {
     const res = await request
       .delete('/api/reservations')
       .set('Cookie', cookie)
-      .send({ lugar: 'Laboratorio A', usuarioEmail: 'prof-a-reserva@test.com' });
+      .send({ lugar: 'Laboratorio A', usuarioEmail: 'prof-a-reserva@test.com', fecha_inicio: '2026-09-01T14:00:00.000Z' });
 
     expect(res.status).toBe(200);
   });
@@ -385,9 +389,45 @@ describe('DELETE /api/reservations', () => {
     const res = await request
       .delete('/api/reservations')
       .set('Cookie', cookie)
-      .send({ lugar: 'Laboratorio A', usuarioEmail: 'prof-a-reserva@test.com' });
+      .send({ lugar: 'Laboratorio A', usuarioEmail: 'prof-a-reserva@test.com', fecha_inicio: '2026-09-01T14:00:00.000Z' });
 
     expect(res.status).toBe(404);
+  });
+
+  it('borra la reserva indicada por su fecha, no una al azar de las del mismo lugar - regresión', async () => {
+    const cookie = await loginAsAdmin();
+
+    // Tres reservas del mismo profe en el mismo lugar, en días distintos
+    const dias = [
+      { descripcion: 'lunes', inicio: '2026-11-02T10:00:00.000Z', fin: '2026-11-02T12:00:00.000Z' },
+      { descripcion: 'martes', inicio: '2026-11-03T10:00:00.000Z', fin: '2026-11-03T12:00:00.000Z' },
+      { descripcion: 'miercoles', inicio: '2026-11-04T10:00:00.000Z', fin: '2026-11-04T12:00:00.000Z' },
+    ];
+    for (const d of dias) {
+      await request.post('/api/reservations/create').set('Cookie', cookie).send({
+        lugar: 'Auditorio', usuarioEmail: 'prof-b-reserva@test.com',
+        descripcion: d.descripcion, fecha_inicio: d.inicio, fecha_fin: d.fin,
+      });
+    }
+
+    // Se pide borrar "martes" explícitamente por su fecha de inicio
+    const del = await request
+      .delete('/api/reservations')
+      .set('Cookie', cookie)
+      .send({ lugar: 'Auditorio', usuarioEmail: 'prof-b-reserva@test.com', fecha_inicio: '2026-11-03T10:00:00.000Z' });
+
+    expect(del.status).toBe(200);
+    expect(del.body.data.descripcion).toBe('martes');
+
+    // Lunes y miércoles sobreviven; martes se fue
+    const restantes = await request
+      .get('/api/reservations/by-teacher')
+      .query({ usuarioEmail: 'prof-b-reserva@test.com' })
+      .set('Cookie', cookie);
+    const descripciones = restantes.body.data.map((r) => r.descripcion);
+    expect(descripciones).toContain('lunes');
+    expect(descripciones).toContain('miercoles');
+    expect(descripciones).not.toContain('martes');
   });
 });
 

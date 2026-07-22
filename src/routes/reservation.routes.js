@@ -36,6 +36,8 @@ router.put(
         body('nuevoLugar').isString().withMessage('El nuevo lugar debe ser una cadena válida.').custom(rejectHtml),
         body('usuarioEmail').isEmail().withMessage('El email del profesor debe ser válido.'),
         body('descripcion').isString().withMessage('Descripcion Invalida.').custom(rejectHtml),
+        // Identifica cuál reserva editar (la que arranca en esta fecha)
+        body('fecha_inicio').isISO8601().withMessage('La fecha de inicio de la reserva a editar debe ser válida.'),
         body('nueva_fecha_inicio').isISO8601().withMessage('La nueva fecha de inicio debe ser válida.'),
         body('nueva_fecha_fin').isISO8601().withMessage('La nueva fecha de fin debe ser válida.')
             .custom((fin, { req }) => new Date(fin) > new Date(req.body.nueva_fecha_inicio))
@@ -53,6 +55,8 @@ router.delete(
     [
         body('lugar').isString().withMessage('El lugar debe ser una cadena válida.').custom(rejectHtml),
         body('usuarioEmail').isEmail().withMessage('El email del profesor debe ser válido.'),
+        // Identifica cuál reserva borrar (la que arranca en esta fecha)
+        body('fecha_inicio').isISO8601().withMessage('La fecha de inicio de la reserva a borrar debe ser válida.'),
     ],
     reservationController.deleteReservation
 );

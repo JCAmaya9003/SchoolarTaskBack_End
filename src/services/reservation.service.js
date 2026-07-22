@@ -52,7 +52,7 @@ export const createReservation = async ({ lugar, usuarioEmail, descripcion, fech
  * @param {Object} updates - Datos para actualizar.
  * @returns {Promise<Object>} - Reserva actualizada.
  */
-export const updateReservation = async ({ lugar, nuevoLugar, usuarioEmail, descripcion, nueva_fecha_inicio, nueva_fecha_fin }) => {
+export const updateReservation = async ({ lugar, nuevoLugar, usuarioEmail, descripcion, fecha_inicio, nueva_fecha_inicio, nueva_fecha_fin }) => {
     validarRango(nueva_fecha_inicio, nueva_fecha_fin);
 
     const lugarActual = await academicPlaceService.searchPlaceByName(lugar);
@@ -70,9 +70,11 @@ export const updateReservation = async ({ lugar, nuevoLugar, usuarioEmail, descr
         throw new NotFoundError(`Usuario no encontrado con email: ${usuarioEmail}`);
     }
 
-    const reservaExistente = await reservationRepository.findReservationByUserAndPlace(usuario.id, lugarActual.id);
+    // fecha_inicio identifica CUÁL reserva editar. Sin esto se editaba una al azar de las que el
+    // usuario tuviera en ese lugar.
+    const reservaExistente = await reservationRepository.findReservationByUserPlaceAndStart(usuario.id, lugarActual.id, fecha_inicio);
     if (!reservaExistente) {
-        throw new NotFoundError(`No se encontró una reserva en el lugar '${lugar}' para el usuario con email '${usuarioEmail}'`);
+        throw new NotFoundError(`No se encontró una reserva en el lugar '${lugar}' para el usuario con email '${usuarioEmail}' que arranque en la fecha indicada`);
     }
 
     const reservasEnFechas = await reservationRepository.findReservationsByTimeRange(nueva_fecha_inicio, nueva_fecha_fin, lugarNuevo.id, reservaExistente.id);
@@ -93,7 +95,7 @@ export const updateReservation = async ({ lugar, nuevoLugar, usuarioEmail, descr
  * @param {Object} data - Datos para eliminar la reserva.
  * @returns {Promise<Object>} - Reserva eliminada.
  */
-export const deleteReservation = async ({ lugar, usuarioEmail }) => {
+export const deleteReservation = async ({ lugar, usuarioEmail, fecha_inicio }) => {
     const lugarExistente = await academicPlaceService.searchPlaceByName(lugar);
     if (!lugarExistente) {
         throw new NotFoundError(`Lugar no encontrado con nombre: ${lugar}`);
@@ -104,9 +106,11 @@ export const deleteReservation = async ({ lugar, usuarioEmail }) => {
         throw new NotFoundError(`Usuario no encontrado con email: ${usuarioEmail}`);
     }
 
-    const reserva = await reservationRepository.findReservationByUserAndPlace(usuario.id, lugarExistente.id);
+    // fecha_inicio identifica CUÁL reserva borrar. Sin esto se borraba una al azar de las que el
+    // usuario tuviera en ese lugar (verificado: creando lunes/martes/miércoles, borraba "lunes").
+    const reserva = await reservationRepository.findReservationByUserPlaceAndStart(usuario.id, lugarExistente.id, fecha_inicio);
     if (!reserva) {
-        throw new NotFoundError(`No se encontró una reserva en el lugar '${lugar}' para el usuario con email '${usuarioEmail}'`);
+        throw new NotFoundError(`No se encontró una reserva en el lugar '${lugar}' para el usuario con email '${usuarioEmail}' que arranque en la fecha indicada`);
     }
 
     return await reservationRepository.deleteReservationById(reserva.id);
