@@ -18,7 +18,9 @@ router.post(
         body('usuarioEmail').isEmail().withMessage('El email del profesor debe ser válido.'),
         body('descripcion').isString().withMessage('Descripcion Invalida.').custom(rejectHtml),
         body('fecha_inicio').isISO8601().withMessage('La fecha de inicio debe ser una fecha válida.'),
-        body('fecha_fin').isISO8601().withMessage('La fecha de fin debe ser una fecha válida.'),
+        body('fecha_fin').isISO8601().withMessage('La fecha de fin debe ser una fecha válida.')
+            .custom((fin, { req }) => new Date(fin) > new Date(req.body.fecha_inicio))
+            .withMessage('La fecha de fin debe ser posterior a la fecha de inicio.'),
     ],
     reservationController.createReservation
 );
@@ -35,7 +37,9 @@ router.put(
         body('usuarioEmail').isEmail().withMessage('El email del profesor debe ser válido.'),
         body('descripcion').isString().withMessage('Descripcion Invalida.').custom(rejectHtml),
         body('nueva_fecha_inicio').isISO8601().withMessage('La nueva fecha de inicio debe ser válida.'),
-        body('nueva_fecha_fin').isISO8601().withMessage('La nueva fecha de fin debe ser válida.'),
+        body('nueva_fecha_fin').isISO8601().withMessage('La nueva fecha de fin debe ser válida.')
+            .custom((fin, { req }) => new Date(fin) > new Date(req.body.nueva_fecha_inicio))
+            .withMessage('La nueva fecha de fin debe ser posterior a la fecha de inicio.'),
     ],
     reservationController.updateReservation
 );

@@ -1,7 +1,16 @@
 import * as reservationRepository from '../repositories/reservation.repository.js';
 import * as userService from '../services/user-service.js';
 import * as academicPlaceService from '../services/academic_place.service.js';
-import { NotFoundError, ConflictError } from '../errors/errors.js';
+import { NotFoundError, ConflictError, ValidationError } from '../errors/errors.js';
+
+// La fecha de fin tiene que ser posterior a la de inicio. Sin esto, un rango invertido se
+// guardaba tal cual y además rompía la detección de solapamiento (sus cláusulas $or quedaban
+// insatisfacibles), así que la reserva corrupta bloqueaba el lugar sin figurar en los choques.
+const validarRango = (inicio, fin) => {
+    if (new Date(fin) <= new Date(inicio)) {
+        throw new ValidationError('La fecha de fin debe ser posterior a la fecha de inicio.');
+    }
+};
 
 /**
  * Crear una nueva reserva.
@@ -9,6 +18,8 @@ import { NotFoundError, ConflictError } from '../errors/errors.js';
  * @returns {Promise<Object>} - Reserva creada.
  */
 export const createReservation = async ({ lugar, usuarioEmail, descripcion, fecha_inicio, fecha_fin }) => {
+    validarRango(fecha_inicio, fecha_fin);
+
     const lugarExistente = await academicPlaceService.searchPlaceByName(lugar);
     if (!lugarExistente) {
         throw new NotFoundError(`Lugar no encontrado con nombre: ${lugar}`);
@@ -42,6 +53,8 @@ export const createReservation = async ({ lugar, usuarioEmail, descripcion, fech
  * @returns {Promise<Object>} - Reserva actualizada.
  */
 export const updateReservation = async ({ lugar, nuevoLugar, usuarioEmail, descripcion, nueva_fecha_inicio, nueva_fecha_fin }) => {
+    validarRango(nueva_fecha_inicio, nueva_fecha_fin);
+
     const lugarActual = await academicPlaceService.searchPlaceByName(lugar);
     if (!lugarActual) {
         throw new NotFoundError(`Lugar no encontrado con nombre: ${lugar}`);

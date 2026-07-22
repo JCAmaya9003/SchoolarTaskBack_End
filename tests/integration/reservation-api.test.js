@@ -170,6 +170,40 @@ describe('POST /api/reservations/create', () => {
 
     expect(res.status).toBe(403);
   });
+
+  it('rechaza un rango con fecha_fin anterior a fecha_inicio - 400', async () => {
+    const cookie = await loginAsAdmin();
+
+    const res = await request
+      .post('/api/reservations/create')
+      .set('Cookie', cookie)
+      .send({
+        lugar: 'Laboratorio A',
+        usuarioEmail: 'prof-a-reserva@test.com',
+        descripcion: 'Rango invertido',
+        fecha_inicio: '2026-10-10T10:00:00.000Z',
+        fecha_fin: '2026-10-01T12:00:00.000Z',
+      });
+
+    expect(res.status).toBe(400);
+  });
+
+  it('rechaza un rango con fecha_fin igual a fecha_inicio - 400', async () => {
+    const cookie = await loginAsAdmin();
+
+    const res = await request
+      .post('/api/reservations/create')
+      .set('Cookie', cookie)
+      .send({
+        lugar: 'Laboratorio A',
+        usuarioEmail: 'prof-a-reserva@test.com',
+        descripcion: 'Rango vacío',
+        fecha_inicio: '2026-10-20T10:00:00.000Z',
+        fecha_fin: '2026-10-20T10:00:00.000Z',
+      });
+
+    expect(res.status).toBe(400);
+  });
 });
 
 describe('GET /api/reservations/all', () => {
