@@ -249,6 +249,49 @@ describe('PUT /api/users, admin', () => {
     expect(res.status).toBe(409);
     expect(res.body.message).toContain('change-role');
   });
+
+  it('editar sin enviar password no le cambia la contraseña al usuario - regresión', async () => {
+    const cookies = await loginAsAdmin();
+    await registerUserDirectly(testUser);
+
+    // El admin corrige un dato (domicilio) sin tocar la contraseña
+    const { password, ...sinPassword } = testUser;
+    const res = await request
+      .put('/api/users')
+      .set('Cookie', cookies)
+      .send({ ...sinPassword, domicilio: 'Domicilio corregido' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.domicilio).toBe('Domicilio corregido');
+
+    // La contraseña original sigue funcionando: antes editUser la reescribía siempre
+    const login = await request
+      .post('/api/users/login')
+      .send({ email: testUser.email, password: testUser.password });
+    expect(login.status).toBe(200);
+  });
+
+  it('editar enviando un password nuevo sí lo cambia - 200', async () => {
+    const cookies = await loginAsAdmin();
+    await registerUserDirectly(testUser);
+
+    const res = await request
+      .put('/api/users')
+      .set('Cookie', cookies)
+      .send({ ...testUser, password: 'nuevaClave456' });
+
+    expect(res.status).toBe(200);
+
+    const conNueva = await request
+      .post('/api/users/login')
+      .send({ email: testUser.email, password: 'nuevaClave456' });
+    expect(conNueva.status).toBe(200);
+
+    const conVieja = await request
+      .post('/api/users/login')
+      .send({ email: testUser.email, password: testUser.password });
+    expect(conVieja.status).toBe(401);
+  });
 });
 
 describe('DELETE /api/users, admin, soft delete', () => {

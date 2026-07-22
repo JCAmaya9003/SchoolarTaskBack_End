@@ -121,10 +121,15 @@ export const editUser = async (email, nombre, apellido, password, fecha_nacimien
     const rol = await roleService.searchRoleByName(rolNombre);
 
     if(rol){
-      // Solo re-hashear si el password cambió. Si la cuenta no tenía password (ej. Google),
-      // no se compara (evita el crash de bcrypt con undefined): se toma el nuevo password.
-      const isSamePassword = user.password ? await verifyPassword(password, user.password) : false;
-      const finalPassword = isSamePassword ? user.password : await hashPassword(password);
+      // La contraseña solo se toca si el admin manda una nueva. Si no viene, se conserva la
+      // que ya tenía la cuenta: antes se reescribía siempre, así que corregir cualquier dato
+      // (un domicilio) obligaba a re-enviar la contraseña y, si no coincidía con la vieja,
+      // se la cambiaba en silencio. Si viene y ya es la misma, no se re-hashea al pedo.
+      let finalPassword = user.password;
+      if (password) {
+        const isSamePassword = user.password ? await verifyPassword(password, user.password) : false;
+        finalPassword = isSamePassword ? user.password : await hashPassword(password);
+      }
 
       const updatedUser = await updateUserById(user._id, {email, nombre, apellido, password: finalPassword, fecha_nacimiento, rol, genero, domicilio, nacionalidad });
       logger.info(`[ADMIN] Usuario editado: ${email}, nuevo rol: ${rolNombre}`);

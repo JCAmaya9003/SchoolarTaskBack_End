@@ -191,7 +191,9 @@ router.put('/',
     body('apellido').isString().matches(/^[A-Za-z\s]+$/).withMessage('Apellido Invalido! No use caracteres especiales!'),
     body('fecha_nacimiento').isDate().withMessage('Fecha de nacimiento invalida! Formato aceptado: (yyyy-mm-dd)'),
     body('email').isEmail().withMessage('Email inválido'),
-    body('password').isLength({ min: 6 }).withMessage('La contraseña debe tener al menos 6 caracteres'),
+    // La contraseña es opcional al editar: corregir el domicilio de un alumno no debería
+    // obligar a mandar (y por lo tanto pisar) su contraseña. Solo se cambia si se envía.
+    body('password').optional().isLength({ min: 6 }).withMessage('La contraseña debe tener al menos 6 caracteres'),
     body('genero').isString().matches(/^(Masculino|Femenino)$/).withMessage('Género inválido. Valores aceptados: Masculino, Femenino.'),
     body('domicilio').isString().withMessage('Domicilio Incorrecto').custom(rejectHtml),
     body('nacionalidad').isString().withMessage('Nacionalidad Incorrecto').custom(rejectHtml),
