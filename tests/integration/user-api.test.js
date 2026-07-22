@@ -121,6 +121,30 @@ describe('POST /api/users/login', () => {
   });
 });
 
+describe('POST /api/users/logout', () => {
+  it('cierra la sesión borrando la cookie del token - 200', async () => {
+    await registerUserDirectly(testUser);
+    const loginRes = await request.post('/api/users/login').send({
+      email: testUser.email,
+      password: testUser.password,
+    });
+    const [cookie] = loginRes.headers['set-cookie'];
+
+    const res = await request.post('/api/users/logout').set('Cookie', cookie.split(';')[0]);
+
+    expect(res.status).toBe(200);
+    // El Set-Cookie del logout vacía el token (lo expira/limpia)
+    const setCookie = res.headers['set-cookie'].join(';');
+    expect(setCookie).toContain('token=;');
+  });
+
+  it('se puede cerrar sesión sin una sesión activa, siempre debe poder hacerse - 200', async () => {
+    const res = await request.post('/api/users/logout');
+
+    expect(res.status).toBe(200);
+  });
+});
+
 describe('POST /api/users/forgot-password', () => {
   beforeEach(async () => {
     await registerUserDirectly(testUser);

@@ -1,6 +1,6 @@
 import express from 'express';
 import { body, param } from 'express-validator';
-import { login, updateUser, deleteUser, getAllUsers, getUserRole, getUserInfo, restoreUser, changeUserRole, forgotPassword, resetPassword, getMe } from '../controllers/user-controller.js';
+import { login, logout, updateUser, deleteUser, getAllUsers, getUserRole, getUserInfo, restoreUser, changeUserRole, forgotPassword, resetPassword, getMe } from '../controllers/user-controller.js';
 import { validateToken, checkRole } from '../middlewares/auth-middleware.js';
 import { authLimiter } from '../middlewares/rate-limiter.js';
 import { verifyOwnResource, enrichUserContext } from '../middlewares/authorization-middleware.js';
@@ -46,6 +46,18 @@ router.post(
   ],
   login
 );
+
+/**
+ * @swagger
+ * /users/logout:
+ *   post:
+ *     summary: Cerrar sesión, borra la cookie del token
+ *     tags: [Usuarios]
+ *     responses:
+ *       200:
+ *         description: Sesión cerrada
+ */
+router.post('/logout', logout);
 
 // El auto-registro publico se elimino: en un colegio la matricula es un acto administrativo.
 // Los usuarios los crea el admin desde POST /students, /teachers y /parents, que ademas crean

@@ -54,6 +54,20 @@ export const getMe = (req, res) => {
   return sendSuccess(res, 200, 'Usuario autenticado obtenido con éxito', { email: req.user.email });
 };
 
+// Cierra la sesión borrando la cookie httpOnly del token. El JWT es stateless, así que no se
+// invalida server-side (para eso haría falta una denylist); limpiar la cookie es el logout
+// estándar. No requiere token válido: cerrar sesión debe poder hacerse siempre, incluso con la
+// sesión ya expirada. Se limpia con los mismos atributos con que se seteó, para que el navegador
+// la matchee y la borre.
+export const logout = (req, res) => {
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  });
+  return sendSuccess(res, 200, 'Sesión cerrada con éxito');
+};
+
 // El auto-registro público (POST /users/register) se eliminó. En un colegio la matrícula es un
 // acto administrativo: los usuarios los crea el admin desde POST /students, /teachers y /parents,
 // que además crean el perfil correspondiente. El registro público solo creaba el User, sin perfil,
