@@ -1,5 +1,7 @@
 import EvaluationGrade from '../models/evaluation_grade.model.js';
 import { getPaginationParams, getPaginationMeta } from '../utils/pagination-helper.js';
+import { findActiveStudentIds } from './student.repository.js';
+import { findEvaluationIdsByFilter } from './evaluation.repository.js';
 
 /**
  * Crear un registro de calificación de evaluación.
@@ -100,7 +102,20 @@ export const deleteEvaluationGradeById = async (id) => {
  */
 export const findAllEvaluationGrades = async (page, limit, evaluationIds = null) => {
     const { skip, limit: validLimit, page: validPage } = getPaginationParams(page, limit);
-    const filter = evaluationIds ? { evaluacion: { $in: evaluationIds } } : {};
+
+    // Una nota solo es mostrable si su evaluación existe y el usuario del estudiante está activo.
+    // Antes esos casos se filtraban en memoria después de paginar, así que el total no coincidía
+    // con lo devuelto. Ahora se excluyen a nivel de query, para que la paginación sea exacta.
+    // Si viene evaluationIds (un teacher filtrando por sus clases), ya es un subconjunto de
+    // evaluaciones existentes; si no (admin), se usan todas las evaluaciones que existen.
+    const [activeStudentIds, existingEvaluationIds] = await Promise.all([
+        findActiveStudentIds(),
+        evaluationIds ? Promise.resolve(evaluationIds) : findEvaluationIdsByFilter({}),
+    ]);
+    const filter = {
+        estudiante: { $in: activeStudentIds },
+        evaluacion: { $in: existingEvaluationIds },
+    };
 
     const [grades, total] = await Promise.all([
         EvaluationGrade.find(filter)

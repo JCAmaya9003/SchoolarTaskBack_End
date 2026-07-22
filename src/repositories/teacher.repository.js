@@ -1,5 +1,6 @@
 import Teacher from "../models/teacher-model.js";
 import { getPaginationParams, getPaginationMeta } from "../utils/pagination-helper.js";
+import { findActiveUserIds } from "./user-repository.js";
 
 /**
  * Buscar un profesor por el ID de usuario.
@@ -37,8 +38,13 @@ export const findTeacherByUserId = async (userId) => {
 export const findAllTeachers = async (page, limit) => {
     const { skip, limit: validLimit, page: validPage } = getPaginationParams(page, limit);
 
+    // Se excluye a los profesores con usuario desactivado a nivel de query, no en memoria, para
+    // que el total de paginación coincida con lo devuelto.
+    const activeUserIds = await findActiveUserIds();
+    const filtro = { usuario: { $in: activeUserIds } };
+
     const [teachers, total] = await Promise.all([
-        Teacher.find()
+        Teacher.find(filtro)
             .skip(skip)
             .limit(validLimit)
             .populate({
@@ -57,7 +63,7 @@ export const findAllTeachers = async (page, limit) => {
                 path: 'grado_encargado.grado_seccion',
                 select: 'grado seccion',
             }),
-        Teacher.countDocuments(),
+        Teacher.countDocuments(filtro),
     ]);
 
     return {

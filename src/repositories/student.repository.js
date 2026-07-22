@@ -1,5 +1,13 @@
 import Student from "../models/student-model.js";
 import { getPaginationParams, getPaginationMeta } from "../utils/pagination-helper.js";
+import { findActiveUserIds } from "./user-repository.js";
+
+// IDs de los estudiantes cuyo usuario está activo. Lo usa la paginación de notas para no contar
+// (ni traer) las de estudiantes con usuario desactivado, que no son mostrables.
+export const findActiveStudentIds = async () => {
+    const activeUserIds = await findActiveUserIds();
+    return await Student.find({ usuario: { $in: activeUserIds } }).distinct('_id');
+};
 
 export const findStudentByUserId = async (userId) => {
     return await Student.findOne({usuario: userId }).populate([
@@ -37,8 +45,13 @@ export const findStudentByUserId = async (userId) => {
     export const findAllStudents = async (page, limit) =>{
       const { skip, limit: validLimit, page: validPage } = getPaginationParams(page, limit);
 
+      // Se excluye a los estudiantes cuyo usuario fue desactivado a nivel de query, no en memoria,
+      // para que el total de paginación coincida con lo que efectivamente se devuelve.
+      const activeUserIds = await findActiveUserIds();
+      const filtro = { usuario: { $in: activeUserIds } };
+
       const [students, total] = await Promise.all([
-        Student.find()
+        Student.find(filtro)
           .skip(skip)
           .limit(validLimit)
           .populate([
@@ -71,7 +84,7 @@ export const findStudentByUserId = async (userId) => {
                 }
             },
           ]),
-        Student.countDocuments(),
+        Student.countDocuments(filtro),
       ]);
 
       return {

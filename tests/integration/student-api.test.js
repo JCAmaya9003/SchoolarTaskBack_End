@@ -183,6 +183,26 @@ describe('GET /api/students, admin', () => {
     expect(after.status).toBe(200);
     expect(after.body.data.items.some((s) => s.email === email)).toBe(false);
   });
+
+  it('la paginación no cuenta a los desactivados: items y totalItems coinciden - regresión', async () => {
+    const cookie = await loginAsAdmin();
+    // Base limpia de estudiantes para contar con exactitud
+    const mongoose = (await import('mongoose')).default;
+    await mongoose.connection.collection('students').deleteMany({});
+
+    for (const e of ['pag1@test.com', 'pag2@test.com', 'pag3@test.com']) {
+      await request.post('/api/students').set('Cookie', cookie).send(buildStudent(e));
+    }
+    // Se desactiva uno
+    await request.delete('/api/users').set('Cookie', cookie).send({ email: 'pag2@test.com' });
+
+    const res = await request.get('/api/students').set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    // Antes: items 2, totalItems 3 (el filtro post-populate no descontaba del total)
+    expect(res.body.data.items).toHaveLength(2);
+    expect(res.body.data.pagination.totalItems).toBe(2);
+  });
 });
 
 describe('PUT /api/students, admin', () => {

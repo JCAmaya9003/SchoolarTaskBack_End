@@ -35,6 +35,16 @@ export const findAllusers = async (page, limit) => {
   };
 }
 
+// IDs de los usuarios activos (el plugin de soft-delete excluye a los desactivados). Se usa para
+// filtrar los perfiles Student/Teacher/Parent a nivel de query en vez de en memoria, así la
+// paginación no cuenta a los desactivados (antes una página de 20 podía traer menos).
+// Se usa find().select() y no distinct('_id'): distinct NO dispara el pre('find') del plugin de
+// soft-delete, así que devolvería también los usuarios desactivados.
+export const findActiveUserIds = async () => {
+  const users = await User.find().select('_id');
+  return users.map((u) => u._id);
+};
+
 export const createUser = async (userData) => {
   const user = new User(userData);
   return await (await user.save()).populate('rol', 'nombre');

@@ -1,5 +1,6 @@
 import Parent from "../models/parent-model.js";
 import { getPaginationParams, getPaginationMeta } from "../utils/pagination-helper.js";
+import { findActiveUserIds } from "./user-repository.js";
 
 export const findParentByUserId = async (userId) => {
   return await Parent.findOne({usuario: userId }).populate({
@@ -15,8 +16,13 @@ export const findParentByUserId = async (userId) => {
   export const findAllParents = async (page, limit) =>{
     const { skip, limit: validLimit, page: validPage } = getPaginationParams(page, limit);
 
+    // Se excluye a los padres con usuario desactivado a nivel de query, no en memoria, para que
+    // el total de paginación coincida con lo devuelto.
+    const activeUserIds = await findActiveUserIds();
+    const filtro = { usuario: { $in: activeUserIds } };
+
     const [parents, total] = await Promise.all([
-      Parent.find()
+      Parent.find(filtro)
         .skip(skip)
         .limit(validLimit)
         .populate({
@@ -27,7 +33,7 @@ export const findParentByUserId = async (userId) => {
             select: 'nombre',
           },
         }),
-      Parent.countDocuments(),
+      Parent.countDocuments(filtro),
     ]);
 
     return {
