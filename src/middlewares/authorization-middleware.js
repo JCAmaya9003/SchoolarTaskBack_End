@@ -238,15 +238,23 @@ export const enrichUserContext = async (req, res, next) => {
     const User = (await import('../models/user-model.js')).default;
     const user = await User.findOne({ email: req.user.email }).populate('rol');
 
-    if (user) {
-      req.user.role = user.rol?.nombre;
-      req.user._id = user._id;
-      req.user.fullUser = user;
+    // Falla cerrado: si no se encuentra al usuario (token válido pero cuenta desactivada o
+    // inexistente) se rechaza en vez de seguir con el contexto vacío. Varios controllers deciden
+    // el recorte de datos según req.user.role; si el rol quedara undefined, esas ramas de
+    // seguridad se saltearían (ej. un teacher vería el boletín completo de un alumno ajeno).
+    if (!user) {
+      throw new UnauthorizedError('Usuario no encontrado o inactivo');
     }
+
+    req.user.role = user.rol?.nombre;
+    req.user._id = user._id;
+    req.user.fullUser = user;
 
     next();
   } catch (error) {
+    // También falla cerrado ante un error inesperado (ej. BD caída): antes hacía next() y dejaba
+    // pasar la request con el rol sin resolver.
     logger.error('Error enriqueciendo contexto de usuario:', { error: error.message });
-    next(); // Continuar aunque falle, para no romper el flujo
+    next(error);
   }
 };

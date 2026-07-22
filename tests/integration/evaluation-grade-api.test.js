@@ -238,6 +238,21 @@ describe('GET /api/evaluation_grades/all', () => {
     expect(evaluaciones).toContain('Parcial Mate');
     expect(evaluaciones).not.toContain('Parcial Historia');
   });
+
+  it('enrichUserContext falla cerrado: un usuario desactivado con token válido es rechazado - 401', async () => {
+    const adminCookie = await loginAsAdmin();
+    // Un teacher propio, para no afectar al resto de la suite
+    await request.post('/api/teachers').set('Cookie', adminCookie).send(buildTeacher('prof-desactivado@test.com', 'Matematicas'));
+    const cookie = await loginAs('prof-desactivado@test.com', 'password123');
+
+    // Token válido en mano, se desactiva su usuario
+    await request.delete('/api/teachers').set('Cookie', adminCookie).send({ email: 'prof-desactivado@test.com' });
+
+    // La ruta pasa por enrichUserContext: antes seguía con el rol sin resolver, ahora rechaza
+    const res = await request.get('/api/evaluation_grades/all').set('Cookie', cookie).query({ limit: 50 });
+
+    expect(res.status).toBe(401);
+  });
 });
 
 describe('GET /api/evaluation_grades/by-evaluation', () => {
