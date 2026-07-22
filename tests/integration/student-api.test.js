@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import supertest from 'supertest';
 import { setupTestDB, teardownTestDB, registerUserDirectly } from '../setup.js';
 import Role from '../../src/models/role-model.js';
+import EvaluationGrade from '../../src/models/evaluation_grade.model.js';
 
 let app;
 let request;
@@ -247,6 +248,38 @@ describe('DELETE /api/students, admin', () => {
       .send({ email: 'noexiste-est2@test.com' });
 
     expect(res.status).toBe(404);
+  });
+
+  it('borrar un estudiante se lleva sus notas en cascada, no las deja huérfanas - regresión', async () => {
+    const cookie = await loginAsAdmin();
+    const email = 'est-con-notas-cascade@test.com';
+
+    await request.post('/api/subjects').set('Cookie', cookie).send({ nombre: 'MateCascade' });
+    await request
+      .post('/api/gradeSections')
+      .set('Cookie', cookie)
+      .send({ grado: '9', seccion: 'K', materias: ['MateCascade'] });
+    await request.post('/api/students').set('Cookie', cookie).send({
+      ...buildStudent(email),
+      grado: '9',
+      seccion: 'K',
+    });
+    await request.post('/api/evaluations').set('Cookie', cookie).send({
+      nombre: 'ParcialCascade', nombreMateria: 'MateCascade', grado: '9', seccion: 'K',
+      descripcion: 'x', fecha: '2026-03-01', peso: 25,
+    });
+    await request.post('/api/evaluation_grades').set('Cookie', cookie).send({
+      email, nombreMateria: 'MateCascade', nombreEvaluacion: 'ParcialCascade', calificacion: 8,
+    });
+
+    // Se cuenta sobre la base, no vía la API: los listados filtran las notas huérfanas (populate
+    // -> null), así que una nota huérfana desaparecería de la respuesta igual, sin haberse borrado.
+    expect(await EvaluationGrade.countDocuments()).toBe(1);
+
+    await request.delete('/api/students').set('Cookie', cookie).send({ email });
+
+    // Tras borrar el estudiante, su nota se fue de la base (antes quedaba huérfana para siempre)
+    expect(await EvaluationGrade.countDocuments()).toBe(0);
   });
 });
 

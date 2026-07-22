@@ -127,6 +127,11 @@ export const deleteStudent = async (email) =>{
         const studentExists = await studentRepository.findStudentByUserId(studentUser.id);
 
         if(studentExists){
+            // Cascada: se borran primero las notas del estudiante y después el perfil, para no
+            // dejarlas huérfanas apuntando a un estudiante inexistente (mismo criterio que al
+            // borrar una evaluación, que borra sus notas).
+            const evaluationGradeRepository = await import('../repositories/evaluation_grade.repository.js');
+            await evaluationGradeRepository.deleteEvaluationGradesByStudentId(studentExists.id);
             return await studentRepository.deleteStudentByUserId(studentExists.id);
         }else{
             throw new NotFoundError("El Estudiante no existe!");
