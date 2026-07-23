@@ -27,9 +27,16 @@ const EvaluationSchema = new mongoose.Schema({
       type: Date,
       required: true,
     },
+    // El peso solo estaba tipado como Number, así que aceptaba negativos, 0 y valores gigantes.
+    // Un peso <= 0 rompe el promedio ponderado del boletín y uno > 100 no tiene sentido. El rango
+    // (0, 100] sirve tanto para pesos en porcentaje (25) como en fracción (0.25).
     peso: {
       type: Number,
       required: true,
+      validate: {
+        validator: (valor) => valor > 0 && valor <= 100,
+        message: 'El peso debe ser mayor que 0 y menor o igual a 100.',
+      },
     }
   }, {
     timestamps: true,

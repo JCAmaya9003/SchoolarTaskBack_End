@@ -25,7 +25,7 @@ router.post('/',
       seccionValidator,
       body('descripcion').isString().withMessage('Descripcion Invalida!').custom(rejectHtml),
       body('fecha').isDate().withMessage('Fecha invalida! Formato aceptado: (yyyy-mm-dd)'),
-      body('peso').isNumeric().withMessage('Peso invalido! Tiene que ser en formato decimal'),
+      body('peso').isFloat({ gt: 0, max: 100 }).withMessage('Peso invalido! Debe ser un numero mayor que 0 y menor o igual a 100.'),
     ],
     evaluationController.newEvaluation
   );
@@ -44,7 +44,7 @@ router.post('/',
       body('nuevaMateria').optional().isString().withMessage('Materia Invalida!').custom(rejectHtml),
       body('descripcion').optional().isString().withMessage('Descripcion Invalida!').custom(rejectHtml),
       body('fecha').optional().isDate().withMessage('Fecha invalida! Formato aceptado: (yyyy-mm-dd)'),
-      body('peso').optional().isNumeric().withMessage('Peso invalido! Tiene que ser en formato decimal'),
+      body('peso').optional().isFloat({ gt: 0, max: 100 }).withMessage('Peso invalido! Debe ser un numero mayor que 0 y menor o igual a 100.'),
     ],
     evaluationController.updateEvaluation
   );

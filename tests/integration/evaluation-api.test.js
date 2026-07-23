@@ -143,6 +143,21 @@ describe('POST /api/evaluations', () => {
 
     expect(res.status).toBe(403);
   });
+
+  it.each([
+    ['negativo', -50],
+    ['cero', 0],
+    ['mayor que 100', 999999],
+  ])('rechaza un peso %s - 400', async (_caso, peso) => {
+    const cookie = await loginAsAdmin();
+
+    const res = await request
+      .post('/api/evaluations')
+      .set('Cookie', cookie)
+      .send({ nombre: `Peso ${peso}`, nombreMateria: 'Matematicas', grado: gradeSectionData.grado, seccion: gradeSectionData.seccion, descripcion: 'x', fecha: '2026-08-05', peso });
+
+    expect(res.status).toBe(400);
+  });
 });
 
 describe('GET /api/evaluations', () => {
