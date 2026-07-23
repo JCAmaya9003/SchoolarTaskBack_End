@@ -77,10 +77,13 @@ export const findAllTeachers = async (page, limit) => {
  * @param {Object} teacherData - Datos del profesor a crear.
  * @returns {Promise<Object>} - Profesor creado.
  */
-export const createTeacher = async (teacherData) => {
+export const createTeacher = async (teacherData, session) => {
     const teacher = new Teacher(teacherData);
-    const savedTeacher = await teacher.save();
-    return await Teacher.findById(savedTeacher._id)
+    const savedTeacher = await teacher.save(session ? { session } : undefined);
+
+    // El findById tiene que ir en la misma sesión: si no, no vería el documento recién insertado
+    // dentro de la transacción (todavía no commiteada) y devolvería null.
+    const query = Teacher.findById(savedTeacher._id)
         .populate({
             path: 'usuario',
             select: 'nombre apellido email genero domicilio nacionalidad rol',
@@ -97,6 +100,8 @@ export const createTeacher = async (teacherData) => {
             path: 'grado_encargado.grado_seccion',
             select: 'grado seccion',
         });
+
+    return await (session ? query.session(session) : query);
 };
 
 /**

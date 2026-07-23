@@ -4,6 +4,7 @@ import * as studentService from './student.service.js';
 import * as teacherService from './teacher.service.js';
 import * as parentService from './parent.service.js';
 import { updateUserById } from '../repositories/user-repository.js';
+import { runInTransaction } from '../utils/transaction.js';
 import logger from '../config/logger.js';
 import { NotFoundError, ConflictError } from '../errors/errors.js';
 
@@ -16,18 +17,18 @@ const PROFILE_HANDLERS = {
     // únicamente cambia de rol. Usar la baja completa lo dejaría desactivado.
     student: {
         find: (email) => studentService.getStudentByUserIdAndEmail(email),
-        remove: (email) => studentService.deleteStudentProfile(email),
-        create: (user, datos) => studentService.createStudentProfileForUser(user, datos),
+        remove: (email, session) => studentService.deleteStudentProfile(email, session),
+        create: (user, datos, session) => studentService.createStudentProfileForUser(user, datos, session),
     },
     teacher: {
         find: (email) => teacherService.getTeacherByUserIdAndEmail(email),
-        remove: (email) => teacherService.deleteTeacherProfile(email),
-        create: (user, datos) => teacherService.createTeacherProfileForUser(user, datos),
+        remove: (email, session) => teacherService.deleteTeacherProfile(email, session),
+        create: (user, datos, session) => teacherService.createTeacherProfileForUser(user, datos, session),
     },
     parent: {
         find: (email) => parentService.getParentByUserIdAndEmail(email),
-        remove: (email) => parentService.deleteParentProfile(email),
-        create: (user, datos) => parentService.createParentProfileForUser(user, datos),
+        remove: (email, session) => parentService.deleteParentProfile(email, session),
+        create: (user, datos, session) => parentService.createParentProfileForUser(user, datos, session),
     },
     admin: {
         find: async () => null,
@@ -71,17 +72,22 @@ export const changeUserRole = async (email, nuevoRol, datosPerfil = {}) => {
         throw new ConflictError(`El usuario ya tiene un perfil de ${nuevoRol}`);
     }
 
-    // Se crea el perfil nuevo ANTES de borrar el viejo: si los datos del rol destino son
-    // inválidos (grado inexistente, materia inexistente), esto tira y el usuario queda
-    // exactamente como estaba, en vez de perder su perfil viejo a cambio de nada.
-    const nuevoPerfil = await destino.create(user, datosPerfil);
-
+    // Las tres escrituras (crear el perfil nuevo, borrar el viejo, actualizar el rol) van en una
+    // transacción: sin ella, un fallo en el paso 2 dejaba al usuario con DOS perfiles.
     const perfilAnterior = await origen.find(email);
-    if (perfilAnterior) {
-        await origen.remove(email);
-    }
 
-    await updateUserById(user._id, { rol });
+    const nuevoPerfil = await runInTransaction(async (session) => {
+        // Se crea el perfil nuevo ANTES de borrar el viejo: si los datos del rol destino son
+        // inválidos (grado inexistente, materia inexistente), esto tira antes de destruir nada.
+        const creado = await destino.create(user, datosPerfil, session);
+
+        if (perfilAnterior) {
+            await origen.remove(email, session);
+        }
+
+        await updateUserById(user._id, { rol }, session);
+        return creado;
+    });
 
     logger.info(`[ADMIN] Rol cambiado para ${email}: ${rolActual} -> ${nuevoRol}`);
     return nuevoPerfil;

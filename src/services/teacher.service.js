@@ -88,7 +88,7 @@ export const createTeacher = async ({ nombre, apellido, email, password, fecha_n
 
 // Crea el perfil de profesor sobre un usuario que YA existe. Lo usa el cambio de rol, donde
 // el User no se crea de nuevo (a diferencia de createTeacher), solo se le arma el perfil nuevo.
-export const createTeacherProfileForUser = async (user, { asignaciones, telefono, especialidad }) => {
+export const createTeacherProfileForUser = async (user, { asignaciones, telefono, especialidad }, session) => {
     const validAssignments = await buildValidAssignments(asignaciones);
 
     return await teacherRepository.createTeacher({
@@ -96,7 +96,7 @@ export const createTeacherProfileForUser = async (user, { asignaciones, telefono
         grado_encargado: validAssignments,
         telefono,
         especialidad,
-    });
+    }, session);
 };
 
 /**

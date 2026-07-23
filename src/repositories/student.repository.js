@@ -93,9 +93,9 @@ export const findStudentByUserId = async (userId) => {
       };
     }
     
-    export const createStudent = async (studentData) => {
+    export const createStudent = async (studentData, session) => {
       const student = new Student(studentData);
-      const savedStudent = await student.save();
+      const savedStudent = await student.save(session ? { session } : undefined);
       return await savedStudent.populate([
         {
             path: 'usuario', 

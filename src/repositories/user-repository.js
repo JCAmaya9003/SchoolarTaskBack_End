@@ -50,8 +50,9 @@ export const createUser = async (userData) => {
   return await (await user.save()).populate('rol', 'nombre');
 };
 
-export const updateUserById = async (id, updates) => {
-  return await User.findByIdAndUpdate(id, updates, { new: true, runValidators: true }).populate('rol');
+export const updateUserById = async (id, updates, session) => {
+  const query = User.findByIdAndUpdate(id, updates, { new: true, runValidators: true }).populate('rol');
+  return await (session ? query.session(session) : query);
 };
 	
 export const deleteUserById = async (id, session) => {

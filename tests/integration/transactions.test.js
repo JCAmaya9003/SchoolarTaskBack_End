@@ -3,6 +3,7 @@ import supertest from 'supertest';
 import { setupTestDB, teardownTestDB, clearTestDB, registerUserDirectly } from '../setup.js';
 import Role from '../../src/models/role-model.js';
 import Student from '../../src/models/student-model.js';
+import Teacher from '../../src/models/teacher-model.js';
 import User from '../../src/models/user-model.js';
 import EvaluationGrade from '../../src/models/evaluation_grade.model.js';
 import * as userRepository from '../../src/repositories/user-repository.js';
@@ -102,5 +103,48 @@ describe('Atomicidad de la baja de una persona', () => {
 
     const loginRes = await request.post('/api/users/login').send({ email: ALUMNO, password: 'password123' });
     expect(loginRes.status).toBe(200);
+  });
+});
+
+describe('Atomicidad del cambio de rol', () => {
+  const datosDeProfesor = {
+    asignaciones: [{ materias: ['MateTx'], grado: '6', seccion: 'T' }],
+    telefono: '+50355556666',
+    especialidad: 'MateTx',
+  };
+
+  it('si falla la actualización del rol, el usuario no queda con dos perfiles', async () => {
+    // Se rompe la ÚLTIMA escritura: la que cambia el rol del usuario
+    vi.spyOn(userRepository, 'updateUserById').mockRejectedValueOnce(new Error('fallo simulado de la BD'));
+
+    const res = await request
+      .patch('/api/users/change-role')
+      .set('Cookie', adminCookie)
+      .send({ email: ALUMNO, nuevoRol: 'teacher', ...datosDeProfesor });
+
+    expect(res.status).toBe(500);
+
+    // Nada se aplicó: sin transacción quedaría el perfil de profesor creado y el de estudiante
+    // borrado, con el rol todavía en student.
+    expect(await Teacher.countDocuments()).toBe(0);
+    expect(await Student.countDocuments()).toBe(1);
+
+    // Y sigue siendo un estudiante funcional
+    const info = await request
+      .post('/api/users/get-info')
+      .set('Cookie', adminCookie)
+      .send({ email: ALUMNO, rolNombre: 'student' });
+    expect(info.status).toBe(200);
+  });
+
+  it('el cambio de rol completo sí deja un solo perfil - 200', async () => {
+    const res = await request
+      .patch('/api/users/change-role')
+      .set('Cookie', adminCookie)
+      .send({ email: ALUMNO, nuevoRol: 'teacher', ...datosDeProfesor });
+
+    expect(res.status).toBe(200);
+    expect(await Teacher.countDocuments()).toBe(1);
+    expect(await Student.countDocuments()).toBe(0);
   });
 });

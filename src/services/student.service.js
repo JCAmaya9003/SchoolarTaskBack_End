@@ -75,7 +75,7 @@ export const createStudent = async ({nombre, apellido, email, password, fecha_na
 
 // Crea el perfil de estudiante sobre un usuario que YA existe. Lo usa el cambio de rol, donde
 // el User no se crea de nuevo (a diferencia de createStudent), solo se le arma el perfil nuevo.
-export const createStudentProfileForUser = async (user, {email_padre, grado, seccion, alergias, condiciones_medicas, contacto_emergencia}) => {
+export const createStudentProfileForUser = async (user, {email_padre, grado, seccion, alergias, condiciones_medicas, contacto_emergencia}, session) => {
     const parentExists = await parentService.getParentByUserIdAndEmail(email_padre);
     if (!parentExists) {
         throw new NotFoundError("El padre no existe");
@@ -96,7 +96,7 @@ export const createStudentProfileForUser = async (user, {email_padre, grado, sec
             nombre: contacto_emergencia.nombre,
             telefono: contacto_emergencia.telefono,
         },
-    });
+    }, session);
 };
 
 export const updateStudent = async ({email, grado, seccion, alergias, condiciones_medicas, contacto_emergencia}) =>{

@@ -42,9 +42,9 @@ export const findParentByUserId = async (userId) => {
     };
   }
 
-  export const createParent = async (parentData) => {
+  export const createParent = async (parentData, session) => {
     const parent = new Parent(parentData);
-    const savedParent = await parent.save();
+    const savedParent = await parent.save(session ? { session } : undefined);
     return await savedParent.populate({
       path: 'usuario',
       select: 'nombre apellido email genero domicilio nacionalidad fecha_nacimiento rol',
