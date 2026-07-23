@@ -1,4 +1,5 @@
 import * as subjectService from '../services/subject.service.js';
+import * as catalogDeletionService from '../services/catalog-deletion.service.js';
 import { validationResult } from 'express-validator';
 import { sendSuccess } from '../utils/apiResponse.js';
 
@@ -43,9 +44,14 @@ export const deleteSubject = async (req, res, next) => {
     }
 
     try {
-        const { nombre } = req.body;
-        const erasedSubject = await subjectService.eraseSubject(nombre);
-        return sendSuccess(res, 200, 'Materia eliminada con éxito', formatSubjectResponse(erasedSubject));
+        const { nombre, confirmar } = req.body;
+        // Borrado en dos pasos: sin confirmar, si la materia está en uso el service tira 409
+        // con el detalle del impacto en vez de destruir nada.
+        const { eliminada, impacto } = await catalogDeletionService.deleteSubjectCascade(nombre, confirmar === true);
+        return sendSuccess(res, 200, 'Materia eliminada con éxito', {
+            ...formatSubjectResponse(eliminada),
+            impacto,
+        });
     } catch (error) {
         next(error);
     }

@@ -192,17 +192,19 @@ describe('eraseUser, soft delete', () => {
 });
 
 describe('restoreUser', () => {
-  it('debe restaurar un usuario eliminado', async () => {
-    await userService.registerUser(testUserData);
-    await userService.eraseUser('juan@test.com');
+  it('debe restaurar un usuario eliminado cuyo rol no requiere perfil (admin)', async () => {
+    // Un admin no tiene perfil asociado, así que restore siempre es coherente. Un rol con perfil
+    // (student/teacher/parent) solo se restaura si su perfil sigue existiendo (ver restoreUser).
+    await userService.registerUser({ ...testUserData, email: 'admin-restore@test.com', rolNombre: 'admin' });
+    await userService.eraseUser('admin-restore@test.com');
 
-    const restored = await userService.restoreUser('juan@test.com');
+    const restored = await userService.restoreUser('admin-restore@test.com');
     expect(restored).toBeDefined();
 
     // El usuario debe ser encontrado de nuevo
-    const found = await userService.searchUserByEmail('juan@test.com');
+    const found = await userService.searchUserByEmail('admin-restore@test.com');
     expect(found).not.toBeNull();
-    expect(found.email).toBe('juan@test.com');
+    expect(found.email).toBe('admin-restore@test.com');
   });
 
   it('debe devolver null si no hay usuario eliminado con ese email', async () => {

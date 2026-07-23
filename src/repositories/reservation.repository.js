@@ -108,8 +108,12 @@ export const findReservationsByTimeRange = async (startDate, endDate, lugarId, e
  * @param {String} lugarId - ID del lugar.
  * @returns {Promise<Object|null>} - Reserva encontrada o null.
  */
-export const findReservationByUserAndPlace = async (usuarioId, lugarId) => {
-    return await Reservation.findOne({ usuario: usuarioId, lugar: lugarId })
+// Localiza una reserva por su clave natural completa: quién, dónde y cuándo arranca. Un usuario
+// puede tener varias reservas en el mismo lugar (lunes y martes), así que (usuario, lugar) sola
+// es ambigua y findOne elegía una al azar; la fecha de inicio la vuelve única (no puede haber
+// dos reservas en el mismo lugar arrancando en el mismo instante, se solaparían).
+export const findReservationByUserPlaceAndStart = async (usuarioId, lugarId, fechaInicio) => {
+    return await Reservation.findOne({ usuario: usuarioId, lugar: lugarId, fecha_inicio: new Date(fechaInicio) })
     .populate({
         path: 'lugar',
         select: 'lugar',

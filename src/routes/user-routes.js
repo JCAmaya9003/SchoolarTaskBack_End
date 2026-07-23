@@ -1,10 +1,11 @@
 import express from 'express';
 import { body, param } from 'express-validator';
-import { login, register, updateUser, deleteUser, getAllUsers, getUserRole, getUserInfo, restoreUser, forgotPassword, resetPassword, getMe } from '../controllers/user-controller.js';
+import { login, logout, updateUser, deleteUser, getAllUsers, getUserRole, getUserInfo, restoreUser, changeUserRole, forgotPassword, resetPassword, getMe } from '../controllers/user-controller.js';
 import { validateToken, checkRole } from '../middlewares/auth-middleware.js';
 import { authLimiter } from '../middlewares/rate-limiter.js';
 import { verifyOwnResource, enrichUserContext } from '../middlewares/authorization-middleware.js';
 import { rejectHtml } from '../utils/xss-guard.js';
+import { GRADOS_VALIDOS } from '../models/gradeSection-model.js';
 
 const router = express.Router();
 
@@ -48,40 +49,19 @@ router.post(
 
 /**
  * @swagger
- * /users/register:
+ * /users/logout:
  *   post:
- *     summary: Registrar nuevo usuario
+ *     summary: Cerrar sesión, borra la cookie del token
  *     tags: [Usuarios]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/User'
  *     responses:
  *       200:
- *         description: Usuario creado exitosamente
- *       400:
- *         description: Datos de validación inválidos
- *       429:
- *         description: Demasiados intentos
+ *         description: Sesión cerrada
  */
-router.post(
-  '/register',
-  authLimiter,
-  [
-    body('nombre').isString().matches(/^[A-Za-z\s]+$/).withMessage('Nombre Invalido! No use caracteres especiales!'),
-    body('apellido').isString().matches(/^[A-Za-z\s]+$/).withMessage('Apellido Invalido! No use caracteres especiales!'),
-    body('fecha_nacimiento').isDate().withMessage('Fecha de nacimiento invalida! Formato aceptado: (yyyy-mm-dd)'),
-    body('email').isEmail().withMessage('Email inválido'),
-    body('password').isLength({ min: 6 }).withMessage('La contraseña debe tener al menos 6 caracteres'),
-    body('genero').isString().matches(/^(Masculino|Femenino)$/).withMessage('Género inválido. Valores aceptados: Masculino, Femenino.'),
-    body('domicilio').isString().withMessage('Domicilio Incorrecto').custom(rejectHtml),
-    body('nacionalidad').isString().withMessage('Nacionalidad Incorrecto').custom(rejectHtml),
-    body('rolNombre').isIn(['student', 'parent']).withMessage('Rol inválido. El auto-registro solo permite los roles student o parent.'),
-  ],
-  register
-);
+router.post('/logout', logout);
+
+// El auto-registro publico se elimino: en un colegio la matricula es un acto administrativo.
+// Los usuarios los crea el admin desde POST /students, /teachers y /parents, que ademas crean
+// el perfil completo. Ver el comentario en el controller para el detalle.
 
 /**
  * @swagger
@@ -223,7 +203,9 @@ router.put('/',
     body('apellido').isString().matches(/^[A-Za-z\s]+$/).withMessage('Apellido Invalido! No use caracteres especiales!'),
     body('fecha_nacimiento').isDate().withMessage('Fecha de nacimiento invalida! Formato aceptado: (yyyy-mm-dd)'),
     body('email').isEmail().withMessage('Email inválido'),
-    body('password').isLength({ min: 6 }).withMessage('La contraseña debe tener al menos 6 caracteres'),
+    // La contraseña es opcional al editar: corregir el domicilio de un alumno no debería
+    // obligar a mandar (y por lo tanto pisar) su contraseña. Solo se cambia si se envía.
+    body('password').optional().isLength({ min: 6 }).withMessage('La contraseña debe tener al menos 6 caracteres'),
     body('genero').isString().matches(/^(Masculino|Femenino)$/).withMessage('Género inválido. Valores aceptados: Masculino, Femenino.'),
     body('domicilio').isString().withMessage('Domicilio Incorrecto').custom(rejectHtml),
     body('nacionalidad').isString().withMessage('Nacionalidad Incorrecto').custom(rejectHtml),
@@ -264,6 +246,63 @@ router.delete('/',
     body('email').isEmail().withMessage('Email inválido'),
   ],
   deleteUser
+);
+
+/**
+ * @swagger
+ * /users/change-role:
+ *   patch:
+ *     summary: Cambiar el rol de un usuario migrando su perfil, solo admin
+ *     description: >
+ *       Borra el perfil del rol viejo y crea el del rol nuevo. Como cada perfil exige campos
+ *       propios que los otros no tienen, hay que mandar los datos que pide el rol destino:
+ *       student (email_padre, grado, seccion, alergias, condiciones_medicas, contacto_emergencia),
+ *       teacher (asignaciones, telefono, especialidad), parent (telefono, telefono_trabajo,
+ *       lugar_trabajo, profesion). El rol admin no lleva datos de perfil.
+ *     tags: [Usuarios]
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Rol cambiado y perfil migrado
+ *       404:
+ *         description: Usuario, rol o datos referenciados inexistentes
+ *       409:
+ *         description: El usuario ya tiene ese rol o ya tiene el perfil destino
+ */
+router.patch('/change-role',
+  validateToken,
+  checkRole(['admin']),
+  [
+    body('email').isEmail().withMessage('Email inválido'),
+    body('nuevoRol').isIn(['admin', 'teacher', 'parent', 'student']).withMessage('Rol inválido.'),
+
+    // Datos del perfil destino: cada bloque solo aplica si se migra a ese rol
+    body('email_padre').if(body('nuevoRol').equals('student')).isEmail().withMessage('Email del padre inválido'),
+    body('grado').if(body('nuevoRol').equals('student')).isIn(GRADOS_VALIDOS).withMessage('Grado inválido. Debe ser un número del 1 al 12.'),
+    body('seccion').if(body('nuevoRol').equals('student')).isString().isLength({ min: 1, max: 1 }).matches(/^[A-Za-z]$/).withMessage('Sección inválida.'),
+    body('alergias').if(body('nuevoRol').equals('student')).isString().withMessage('Alergia/s Invalida/s!').custom(rejectHtml),
+    body('condiciones_medicas').if(body('nuevoRol').equals('student')).isString().withMessage('Condiciones Medicas Invalidas!').custom(rejectHtml),
+    body('contacto_emergencia.nombre').if(body('nuevoRol').equals('student')).isString().matches(/^[A-Za-z\s]+$/).withMessage('Nombre del contacto de emergencia inválido!'),
+    body('contacto_emergencia.telefono').if(body('nuevoRol').equals('student')).isString().matches(/^\+?[1-9]\d{1,14}$/).withMessage('Teléfono inválido. Debe incluir el prefijo del país (e.g., +50312345678).'),
+
+    body('asignaciones').if(body('nuevoRol').equals('teacher')).isArray().withMessage('Asignaciones debe ser un arreglo.'),
+    body('asignaciones.*.materias').if(body('nuevoRol').equals('teacher')).isArray().withMessage('Materias debe ser un arreglo de cadenas.'),
+    body('asignaciones.*.materias.*').if(body('nuevoRol').equals('teacher')).isString().withMessage('Cada materia debe ser una cadena.').custom(rejectHtml),
+    body('asignaciones.*.grado').if(body('nuevoRol').equals('teacher')).isIn(GRADOS_VALIDOS).withMessage('Grado inválido. Debe ser un número del 1 al 12.'),
+    body('asignaciones.*.seccion').if(body('nuevoRol').equals('teacher')).isString().isLength({ min: 1, max: 1 }).matches(/^[A-Za-z]$/).withMessage('Sección inválida.'),
+    body('especialidad').if(body('nuevoRol').equals('teacher')).isString().withMessage('Especialidad inválida.').custom(rejectHtml),
+
+    body('telefono_trabajo').if(body('nuevoRol').equals('parent')).isString().matches(/^\+?[1-9]\d{1,14}$/).withMessage('Teléfono de trabajo inválido.'),
+    body('lugar_trabajo').if(body('nuevoRol').equals('parent')).isString().withMessage('Lugar de Trabajo Invalido').custom(rejectHtml),
+    body('profesion').if(body('nuevoRol').equals('parent')).isString().matches(/^[A-Za-z\s]+$/).withMessage('Profesion Incorrecta! No use caracteres especiales!'),
+
+    // teacher y parent piden teléfono; student no lo lleva a nivel de perfil
+    body('telefono')
+      .if(body('nuevoRol').custom((valor) => ['teacher', 'parent'].includes(valor)))
+      .isString().matches(/^\+?[1-9]\d{1,14}$/).withMessage('Teléfono inválido. Debe incluir el prefijo del país (e.g., +50312345678).'),
+  ],
+  changeUserRole
 );
 
 /**

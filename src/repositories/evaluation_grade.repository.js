@@ -1,5 +1,7 @@
 import EvaluationGrade from '../models/evaluation_grade.model.js';
 import { getPaginationParams, getPaginationMeta } from '../utils/pagination-helper.js';
+import { findActiveStudentIds } from './student.repository.js';
+import { findEvaluationIdsByFilter } from './evaluation.repository.js';
 
 /**
  * Crear un registro de calificación de evaluación.
@@ -24,6 +26,35 @@ export const createEvaluationGrade = async (evaluationGradeData) => {
 
 export const findEvaluationGradeByStudentAndEvaluation = async (studentId, evaluationId) => {
     return await EvaluationGrade.findOne({ estudiante: studentId, evaluacion: evaluationId });
+};
+
+// Borra en bloque todas las notas de una evaluación. Usado al eliminar una evaluación en
+// cascada: una nota sin su evaluación no tiene sentido y quedaría huérfana.
+export const deleteEvaluationGradesByEvaluationId = async (evaluationId) => {
+    return await EvaluationGrade.deleteMany({ evaluacion: evaluationId });
+};
+
+// Las dos de abajo trabajan sobre un conjunto de evaluaciones a la vez: el borrado de un
+// catálogo primero informa cuántas notas se van a perder y después las borra en bloque.
+export const countEvaluationGradesByEvaluationIds = async (evaluationIds) => {
+    return await EvaluationGrade.countDocuments({ evaluacion: { $in: evaluationIds } });
+};
+
+export const deleteEvaluationGradesByEvaluationIds = async (evaluationIds) => {
+    return await EvaluationGrade.deleteMany({ evaluacion: { $in: evaluationIds } });
+};
+
+// Borra en bloque todas las notas de un estudiante. Usado al eliminar un estudiante en cascada:
+// una nota sin su estudiante queda huérfana, igual que una nota sin su evaluación.
+export const deleteEvaluationGradesByStudentId = async (studentId, session) => {
+    const query = EvaluationGrade.deleteMany({ estudiante: studentId });
+    return await (session ? query.session(session) : query);
+};
+
+// Todas las notas de un conjunto de evaluaciones, en una sola consulta. La usa el reporte del
+// profesor para armar un mapa (estudiante, evaluación) -> nota en vez de consultar una por una.
+export const findEvaluationGradesByEvaluationIds = async (evaluationIds) => {
+    return await EvaluationGrade.find({ evaluacion: { $in: evaluationIds } }).select('estudiante evaluacion calificacion');
 };
 
 /**
@@ -72,7 +103,20 @@ export const deleteEvaluationGradeById = async (id) => {
  */
 export const findAllEvaluationGrades = async (page, limit, evaluationIds = null) => {
     const { skip, limit: validLimit, page: validPage } = getPaginationParams(page, limit);
-    const filter = evaluationIds ? { evaluacion: { $in: evaluationIds } } : {};
+
+    // Una nota solo es mostrable si su evaluación existe y el usuario del estudiante está activo.
+    // Antes esos casos se filtraban en memoria después de paginar, así que el total no coincidía
+    // con lo devuelto. Ahora se excluyen a nivel de query, para que la paginación sea exacta.
+    // Si viene evaluationIds (un teacher filtrando por sus clases), ya es un subconjunto de
+    // evaluaciones existentes; si no (admin), se usan todas las evaluaciones que existen.
+    const [activeStudentIds, existingEvaluationIds] = await Promise.all([
+        findActiveStudentIds(),
+        evaluationIds ? Promise.resolve(evaluationIds) : findEvaluationIdsByFilter({}),
+    ]);
+    const filter = {
+        estudiante: { $in: activeStudentIds },
+        evaluacion: { $in: existingEvaluationIds },
+    };
 
     const [grades, total] = await Promise.all([
         EvaluationGrade.find(filter)

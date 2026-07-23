@@ -1,5 +1,6 @@
 import Parent from "../models/parent-model.js";
 import { getPaginationParams, getPaginationMeta } from "../utils/pagination-helper.js";
+import { findActiveUserIds } from "./user-repository.js";
 
 export const findParentByUserId = async (userId) => {
   return await Parent.findOne({usuario: userId }).populate({
@@ -12,22 +13,16 @@ export const findParentByUserId = async (userId) => {
   });
 };
 
-export const deleteParentById = async (id) => {
-  return await Parent.findByIdAndDelete(id).populate({
-    path: 'usuario',
-    select: 'nombre apellido email genero domicilio nacionalidad fecha_nacimiento rol',
-    populate: {
-      path: 'rol',
-      select: 'nombre',
-    },
-  });
-};
-
   export const findAllParents = async (page, limit) =>{
     const { skip, limit: validLimit, page: validPage } = getPaginationParams(page, limit);
 
+    // Se excluye a los padres con usuario desactivado a nivel de query, no en memoria, para que
+    // el total de paginación coincida con lo devuelto.
+    const activeUserIds = await findActiveUserIds();
+    const filtro = { usuario: { $in: activeUserIds } };
+
     const [parents, total] = await Promise.all([
-      Parent.find()
+      Parent.find(filtro)
         .skip(skip)
         .limit(validLimit)
         .populate({
@@ -38,7 +33,7 @@ export const deleteParentById = async (id) => {
             select: 'nombre',
           },
         }),
-      Parent.countDocuments(),
+      Parent.countDocuments(filtro),
     ]);
 
     return {
@@ -47,9 +42,9 @@ export const deleteParentById = async (id) => {
     };
   }
 
-  export const createParent = async (parentData) => {
+  export const createParent = async (parentData, session) => {
     const parent = new Parent(parentData);
-    const savedParent = await parent.save();
+    const savedParent = await parent.save(session ? { session } : undefined);
     return await savedParent.populate({
       path: 'usuario',
       select: 'nombre apellido email genero domicilio nacionalidad fecha_nacimiento rol',
@@ -72,13 +67,15 @@ export const deleteParentById = async (id) => {
     });
   };
 
-  export const deleteParentByUserId = async (id) => {
-    return await Parent.findByIdAndDelete(id).populate({
+  export const deleteParentByUserId = async (id, session) => {
+    const query = Parent.findByIdAndDelete(id).populate({
       path: 'usuario',
       select: 'nombre apellido email genero domicilio nacionalidad fecha_nacimiento rol',
       populate: {
         path: 'rol',
         select: 'nombre',
       },
-  });
+    });
+
+    return await (session ? query.session(session) : query);
   };

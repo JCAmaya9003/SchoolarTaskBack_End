@@ -5,7 +5,7 @@ import { sendPasswordResetEmail } from './email.service.js';
 import { config } from '../config/config.js';
 import crypto from 'crypto';
 import logger from '../config/logger.js';
-import { ValidationError, InvalidCredentialsError, NotFoundError, UserAlreadyExistsError } from '../errors/errors.js';
+import { ValidationError, InvalidCredentialsError, NotFoundError, UserAlreadyExistsError, ConflictError } from '../errors/errors.js';
 
 // Bloqueo de cuenta por fuerza bruta, independiente de la IP. El rate limiter por IP no
 // alcanza contra un atacante distribuido que rota de IP contra la misma cuenta.
@@ -30,6 +30,14 @@ export const loginUser = async( {email, password} ) => {
     // Si no, un atacante podría confirmar que el email existe y que ya lo está atacando.
     if (user.lockUntil && user.lockUntil > now) {
       logger.warn(`[AUTH] Intento de login sobre cuenta bloqueada: ${email}`);
+      throw new InvalidCredentialsError();
+    }
+
+    // Cuenta sin contraseña local (ej. registrada solo por Google): responde el mismo error
+    // genérico (nunca revela el motivo) en vez de que bcrypt.compare(password, undefined) tire
+    // una excepción no controlada (500).
+    if (!user.password) {
+      logger.warn(`[AUTH] Login local sobre cuenta sin contraseña: ${email}`);
       throw new InvalidCredentialsError();
     }
 
@@ -65,7 +73,7 @@ export const loginUser = async( {email, password} ) => {
     throw new InvalidCredentialsError();
 };
 
-export const registerUser = async ( {nombre, apellido, email, password, fecha_nacimiento, rolNombre, genero, domicilio, nacionalidad}) => {
+export const registerUser = async ( {nombre, apellido, email, password, fecha_nacimiento, rolNombre, genero, domicilio, nacionalidad}, session) => {
 
     const userExists = await findUserByEmail(email);
 
@@ -86,7 +94,7 @@ export const registerUser = async ( {nombre, apellido, email, password, fecha_na
           genero,
           domicilio,
           nacionalidad,
-        });
+        }, session);
         logger.info(`[AUTH] Usuario registrado: ${email}, rol: ${rolNombre}`);
         return newUser;
       }else{
@@ -101,12 +109,27 @@ export const editUser = async (email, nombre, apellido, password, fecha_nacimien
   const user = await findUserByEmailWithPassword(email);
 
   if(user){
+    // Cambiar el rol acá dejaba el User y su perfil desincronizados: el perfil viejo
+    // (Student/Teacher/Parent) sobrevivía intacto, así que un usuario con rol student seguía
+    // apareciendo en GET /teachers. La migración del perfil no puede ser automática porque los
+    // perfiles no comparten campos obligatorios (un Teacher exige telefono y especialidad, que
+    // un Student no tiene), así que el cambio de rol vive en su propio endpoint, que sí los pide.
+    if (rolNombre !== user.rol?.nombre) {
+      throw new ConflictError('No se puede cambiar el rol desde esta operación. Usá PATCH /api/users/change-role, que además migra el perfil.');
+    }
+
     const rol = await roleService.searchRoleByName(rolNombre);
 
     if(rol){
-      // Solo re-hashear si el password cambió
-      const isSamePassword = await verifyPassword(password, user.password);
-      const finalPassword = isSamePassword ? user.password : await hashPassword(password);
+      // La contraseña solo se toca si el admin manda una nueva. Si no viene, se conserva la
+      // que ya tenía la cuenta: antes se reescribía siempre, así que corregir cualquier dato
+      // (un domicilio) obligaba a re-enviar la contraseña y, si no coincidía con la vieja,
+      // se la cambiaba en silencio. Si viene y ya es la misma, no se re-hashea al pedo.
+      let finalPassword = user.password;
+      if (password) {
+        const isSamePassword = user.password ? await verifyPassword(password, user.password) : false;
+        finalPassword = isSamePassword ? user.password : await hashPassword(password);
+      }
 
       const updatedUser = await updateUserById(user._id, {email, nombre, apellido, password: finalPassword, fecha_nacimiento, rol, genero, domicilio, nacionalidad });
       logger.info(`[ADMIN] Usuario editado: ${email}, nuevo rol: ${rolNombre}`);
@@ -144,11 +167,40 @@ export const getUsers = async (page, limit) =>{
   return await findAllusers(page, limit);
 };
 
+// ¿Sigue existiendo el perfil de este usuario? Los borrados por rol lo eliminan en duro, así que
+// un usuario desactivado por esa vía ya no tiene perfil. Se consulta el repositorio directamente
+// (no el service) porque searchUserByEmail excluye a los desactivados y acá el user está borrado.
+const perfilSigueExistiendo = async (rolNombre, userId) => {
+  if (rolNombre === 'student') {
+    const repo = await import('../repositories/student.repository.js');
+    return Boolean(await repo.findStudentByUserId(userId));
+  }
+  if (rolNombre === 'teacher') {
+    const repo = await import('../repositories/teacher.repository.js');
+    return Boolean(await repo.findTeacherByUserId(userId));
+  }
+  if (rolNombre === 'parent') {
+    const repo = await import('../repositories/parent.repository.js');
+    return Boolean(await repo.findParentByUserId(userId));
+  }
+  return true; // admin no tiene perfil asociado
+};
+
 export const restoreUser = async (email) => {
   const deletedUser = await findDeletedUserByEmail(email);
 
   if(!deletedUser){
     return null;
+  }
+
+  // Solo se restaura si el resultado es coherente. DELETE /users desactiva y deja el perfil
+  // intacto: restore lo revive perfecto. Los borrados por rol (DELETE /students|teachers|parents)
+  // borran el perfil en duro; revivir solo el User dejaría una cuenta con rol pero sin perfil (un
+  // fantasma que entra al sistema pero rompe con 404 en todo lo que dependa del perfil). En ese
+  // caso restore se niega: hay que volver a dar de alta a la persona desde su endpoint de creación.
+  const rolNombre = deletedUser.rol?.nombre;
+  if (!(await perfilSigueExistiendo(rolNombre, deletedUser._id))) {
+    throw new ConflictError('No se puede restaurar: el perfil de este usuario fue eliminado. Volvé a darlo de alta desde su endpoint de creación.');
   }
 
   const restoredUser = await restoreUserById(deletedUser._id);

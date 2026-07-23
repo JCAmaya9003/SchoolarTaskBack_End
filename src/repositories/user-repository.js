@@ -35,27 +35,37 @@ export const findAllusers = async (page, limit) => {
   };
 }
 
-export const createUser = async (userData) => {
-  const user = new User(userData);
-  return await (await user.save()).populate('rol', 'nombre');
+// IDs de los usuarios activos (el plugin de soft-delete excluye a los desactivados). Se usa para
+// filtrar los perfiles Student/Teacher/Parent a nivel de query en vez de en memoria, así la
+// paginación no cuenta a los desactivados (antes una página de 20 podía traer menos).
+// Se usa find().select() y no distinct('_id'): distinct NO dispara el pre('find') del plugin de
+// soft-delete, así que devolvería también los usuarios desactivados.
+export const findActiveUserIds = async () => {
+  const users = await User.find().select('_id');
+  return users.map((u) => u._id);
 };
 
-export const updateUserById = async (id, updates) => {
-  return await User.findByIdAndUpdate(id, updates, { new: true, runValidators: true }).populate('rol');
+export const createUser = async (userData, session) => {
+  const user = new User(userData);
+  const guardado = await user.save(session ? { session } : undefined);
+  return await guardado.populate('rol', 'nombre');
+};
+
+export const updateUserById = async (id, updates, session) => {
+  const query = User.findByIdAndUpdate(id, updates, { new: true, runValidators: true }).populate('rol');
+  return await (session ? query.session(session) : query);
 };
 	
-export const deleteUserById = async (id) => {
-  return await User.softDeleteById(id);
+export const deleteUserById = async (id, session) => {
+  return await User.softDeleteById(id, session);
 };
 
 export const restoreUserById = async (id) => {
   return await User.restoreById(id);
 };
 
-// Hard delete para rollback en transacciones compensatorias
-export const hardDeleteUserById = async (id) => {
-  return await User.findByIdAndDelete(id).setOptions({ includeDeleted: true });
-};
+// hardDeleteUserById se eliminó: existía solo para el rollback manual de los creates, que ahora
+// corren dentro de una transacción y se deshacen solos.
 
 export const findDeletedUserByEmail = async (email) => {
   return await User.findOneWithDeleted({ email, deletedAt: { $ne: null } }).populate('rol', 'nombre');

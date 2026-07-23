@@ -57,6 +57,19 @@ Además:
 - El proveedor suele inyectar el puerto por la variable `PORT`; la app ya la respeta.
 - Si usás login con Google, actualizá en Google Cloud Console la *redirect URI* a `https://tu-backend/oauth`.
 
+### Índices heredados
+
+Mongoose **crea** los índices que declara el schema, pero nunca **borra** los que dejaron de estar declarados. Si venís de una base que ya existía, un índice viejo sigue vigente aunque el modelo ya no lo pida.
+
+Hoy aplica a uno solo: `parents.telefono` dejó de ser único (dos padres de la misma familia comparten el teléfono de casa). En una base nueva no hay nada que hacer; en una que ya corrió con el schema anterior hay que borrarlo una vez:
+
+```js
+// mongosh contra tu base
+db.parents.dropIndex('telefono_1')
+```
+
+Si no lo hacés, el alta del segundo padre con un teléfono repetido sigue respondiendo `409`.
+
 ## Health check
 
 `GET /health` (público, sin auth ni rate limit) responde `200` con `{ status, db, uptime }` cuando la conexión a MongoDB está activa, o `503` si la base no está disponible. Lo usan el healthcheck de Docker y puede usarlo cualquier balanceador u orquestador.

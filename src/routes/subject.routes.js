@@ -34,6 +34,8 @@ router.delete('/',
     checkRole(['admin']),
     [
       body('nombre').isString().withMessage('Nombre Invalido!').custom(rejectHtml),
+      // Borrado en dos pasos: sin esto, si la materia está en uso responde 409 con el impacto
+      body('confirmar').optional().isBoolean().withMessage('Confirmar debe ser true o false.'),
     ],
     subjectController.deleteSubject
   );

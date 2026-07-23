@@ -5,6 +5,8 @@ import * as teacherService from '../services/teacher.service.js'
 import * as studentService from '../services/student.service.js'
 import * as parentService from '../services/parent.service.js'
 import * as roleService from '../services/role-service.js'
+import * as roleChangeService from '../services/role-change.service.js'
+import * as teacherVisibilityService from '../services/teacher-visibility.service.js'
 import { sendSuccess } from '../utils/apiResponse.js';
 
 const LOGIN_COOKIE_MAX_AGE = 60 * 60 * 1000; // 1 hora, igual que la cookie de OAuth
@@ -52,36 +54,28 @@ export const getMe = (req, res) => {
   return sendSuccess(res, 200, 'Usuario autenticado obtenido con éxito', { email: req.user.email });
 };
 
-export const register = async (req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-
-  const { nombre, apellido, email, password, fecha_nacimiento, rolNombre, genero, domicilio, nacionalidad } = req.body;
-  try {
-    // Defensa en profundidad: registerUser también la usan los flujos admin-only, que sí
-    // pueden asignar cualquier rol, así que esta restricción no puede vivir en el service.
-    // No hay que depender solo del validador de la ruta para el único punto público.
-    const rolesAutoRegistrables = ['student', 'parent'];
-    if (!rolesAutoRegistrables.includes(rolNombre)) {
-      return res.status(400).json({ message: 'El auto-registro solo permite los roles student o parent.' });
-    }
-
-    const generosPermitidos = ['Masculino', 'Femenino'];
-      if (!generosPermitidos.includes(genero)) {
-          return res.status(400).json({
-              message: 'El género proporcionado no es válido.',
-              error: `Los valores permitidos son: ${generosPermitidos.join(', ')}.`,
-          });
-      }
-
-    const newUser = await userService.registerUser({nombre, apellido, email, password, fecha_nacimiento, rolNombre, genero, domicilio, nacionalidad});
-    return sendSuccess(res, 201, 'Usuario creado con éxito', formatUserResponse(newUser));
-  } catch (error) {
-    next(error);
-  }
+// Cierra la sesión borrando la cookie httpOnly del token. El JWT es stateless, así que no se
+// invalida server-side (para eso haría falta una denylist); limpiar la cookie es el logout
+// estándar. No requiere token válido: cerrar sesión debe poder hacerse siempre, incluso con la
+// sesión ya expirada. Se limpia con los mismos atributos con que se seteó, para que el navegador
+// la matchee y la borre.
+export const logout = (req, res) => {
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  });
+  return sendSuccess(res, 200, 'Sesión cerrada con éxito');
 };
+
+// El auto-registro público (POST /users/register) se eliminó. En un colegio la matrícula es un
+// acto administrativo: los usuarios los crea el admin desde POST /students, /teachers y /parents,
+// que además crean el perfil correspondiente. El registro público solo creaba el User, sin perfil,
+// así que producía cuentas que entraban al sistema y pasaban checkRole pero rompían con 404 en
+// todo lo que dependiera del perfil. Peor: como el email es único y el borrado de usuarios es
+// soft, un desconocido podía registrarse con el email institucional de un alumno y dejarlo
+// inutilizable para siempre (el admin recibía 409 al matricularlo, incluso tras desactivarlo).
+// userService.registerUser sigue existiendo: la usan los flujos de creación del admin.
 
 export const updateUser = async (req, res, next)=>{
   const errors = validationResult(req);
@@ -166,7 +160,7 @@ export const getUserRole = async (req, res, next) => {
 const ROLE_INFO_HANDLERS = {
   student: async (email) => {
     const user = await studentService.getStudentByUserIdAndEmail(email);
-    if (!user) return null;
+    if (!user || !user.usuario) return null; // usuario desactivado (populate -> null): se oculta (404)
     return {
       nombre: user.usuario.nombre,
       apellido: user.usuario.apellido,
@@ -185,7 +179,7 @@ const ROLE_INFO_HANDLERS = {
   },
   parent: async (email) => {
     const user = await parentService.getParentByUserIdAndEmail(email);
-    if (!user) return null;
+    if (!user || !user.usuario) return null; // usuario desactivado (populate -> null): se oculta (404)
     return {
       nombre: user.usuario.nombre,
       apellido: user.usuario.apellido,
@@ -203,7 +197,7 @@ const ROLE_INFO_HANDLERS = {
   },
   teacher: async (email) => {
     const user = await teacherService.getTeacherByUserIdAndEmail(email);
-    if (!user) return null;
+    if (!user || !user.usuario) return null; // usuario desactivado (populate -> null): se oculta (404)
     return {
       nombre: user.usuario.nombre,
       apellido: user.usuario.apellido,
@@ -222,6 +216,52 @@ const ROLE_NOT_FOUND_MESSAGE = {
   student: 'Estudiante no encontrado',
   parent: 'Padre no encontrado',
   teacher: 'Profesor no encontrado',
+};
+
+// Entre profesores, el perfil funciona como directorio de contacto: quién es, cómo ubicarlo y
+// qué dicta. Los datos personales (domicilio, fecha de nacimiento, género, nacionalidad) no
+// hacen falta para contactar a un colega, así que no se exponen.
+const CAMPOS_CONTACTO_ENTRE_PROFESORES = ['nombre', 'apellido', 'email', 'telefono', 'especialidad', 'grado_encargado'];
+
+const soloDatosDeContacto = (info) =>
+  Object.fromEntries(CAMPOS_CONTACTO_ENTRE_PROFESORES.filter((campo) => campo in info).map((campo) => [campo, info[campo]]));
+
+// El perfil de un alumno trae a su padre anidado y completo, incluidos sus datos laborales
+// (telefono_trabajo, lugar_trabajo, profesion) y personales (fecha de nacimiento, género,
+// nacionalidad). Un hijo no necesita nada de eso: para el propio alumno el padre se reduce a
+// cómo contactarlo. Se conserva la forma anidada, solo se recortan campos, para no cambiarle
+// las rutas de acceso a quien ya consume la respuesta. Admin, profesor y el propio padre
+// siguen viendo el registro completo.
+const recortarPadreParaElAlumno = (info) => {
+  if (!info.padre) {
+    return info;
+  }
+
+  return {
+    ...info,
+    padre: {
+      usuario: {
+        nombre: info.padre.usuario?.nombre,
+        apellido: info.padre.usuario?.apellido,
+        email: info.padre.usuario?.email,
+        domicilio: info.padre.usuario?.domicilio,
+      },
+      telefono: info.padre.telefono,
+    },
+  };
+};
+
+// El alcance de un profesor es su clase, no el colegio: solo puede consultar a sus alumnos y
+// a los padres de esos alumnos. Sobre otro profesor no hay restricción de acceso, pero la
+// respuesta se recorta a los datos de contacto.
+const teacherPuedeVer = async (teacherEmail, rolDestino, emailDestino) => {
+  if (rolDestino === 'student') {
+    return await teacherVisibilityService.canViewStudent(teacherEmail, emailDestino);
+  }
+  if (rolDestino === 'parent') {
+    return await teacherVisibilityService.canViewParent(teacherEmail, emailDestino);
+  }
+  return true;
 };
 
 export const getUserInfo = async(req, res, next) => {
@@ -247,7 +287,41 @@ export const getUserInfo = async(req, res, next) => {
       return res.status(404).json({ message: ROLE_NOT_FOUND_MESSAGE[rol.nombre] });
     }
 
+    // Un teacher consultando a otra persona: acotado a su clase. Sobre sí mismo no aplica,
+    // y el admin no pasa por acá.
+    const esTeacherConsultandoAOtro = req.user?.role === 'teacher' && req.user?.email !== email;
+    if (esTeacherConsultandoAOtro) {
+      if (!(await teacherPuedeVer(req.user.email, rol.nombre, email))) {
+        return res.status(403).json({ message: 'No tienes permiso para ver los datos de esta persona' });
+      }
+      if (rol.nombre === 'teacher') {
+        return sendSuccess(res, 200, 'Datos obtenidos con éxito', soloDatosDeContacto(info));
+      }
+    }
+
+    // Un alumno solo llega a su propio perfil (verifyOwnResource), y ahí su padre viene anidado
+    if (req.user?.role === 'student') {
+      return sendSuccess(res, 200, 'Datos obtenidos con éxito', recortarPadreParaElAlumno(info));
+    }
+
     return sendSuccess(res, 200, 'Datos obtenidos con éxito', info);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const changeUserRole = async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ message: "Error al intentar cambiar el rol del usuario!", errors: errors.array() });
+  }
+  try {
+    const { email, nuevoRol, ...datosPerfil } = req.body;
+
+    await roleChangeService.changeUserRole(email, nuevoRol, datosPerfil);
+
+    const updatedUser = await userService.searchUserByEmail(email);
+    return sendSuccess(res, 200, 'Rol del usuario cambiado con éxito', formatUserResponse(updatedUser));
   } catch (error) {
     next(error);
   }

@@ -1,4 +1,5 @@
 import * as gradeSectionService from '../services/gradeSection.service.js';
+import * as catalogDeletionService from '../services/catalog-deletion.service.js';
 import { validationResult } from 'express-validator';
 import { sendSuccess } from '../utils/apiResponse.js';
 
@@ -54,10 +55,15 @@ export const deleteGradeAndSection = async (req, res, next) => {
         return res.status(400).json({ errors: errors.array() });
     }
 
-    const { grado, seccion } = req.body;
+    const { grado, seccion, confirmar } = req.body;
     try {
-        const deletedGradeSection = await gradeSectionService.eraseGradeAndSectionById(grado, seccion);
-        return sendSuccess(res, 200, 'Grado y sección eliminado con éxito', formatGradeSectionResponse(deletedGradeSection));
+        // Borrado en dos pasos, igual que el de materias. Además, si la clase tiene estudiantes
+        // matriculados el service bloquea siempre, ni siquiera con confirmar.
+        const { eliminada, impacto } = await catalogDeletionService.deleteGradeSectionCascade(grado, seccion, confirmar === true);
+        return sendSuccess(res, 200, 'Grado y sección eliminado con éxito', {
+            ...formatGradeSectionResponse(eliminada),
+            impacto,
+        });
     } catch (error) {
         next(error);
     }

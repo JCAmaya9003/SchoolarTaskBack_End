@@ -6,10 +6,12 @@ const ParentSchema = new mongoose.Schema({
       ref: 'User',
       required: true,
     },
+    // Sin unique: un teléfono no identifica a una persona, y dos padres de la misma familia
+    // comparten el de casa. La identidad la da el email del User. Era el único perfil con esta
+    // restricción (Teacher.telefono nunca la tuvo), así que rechazaba altas legítimas.
     telefono: {
       type: String,
       required: true,
-      unique: true,
       trim: true,
       match: /^\+?[1-9]\d{1,14}$/,
     },

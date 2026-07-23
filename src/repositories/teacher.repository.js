@@ -1,5 +1,6 @@
 import Teacher from "../models/teacher-model.js";
 import { getPaginationParams, getPaginationMeta } from "../utils/pagination-helper.js";
+import { findActiveUserIds } from "./user-repository.js";
 
 /**
  * Buscar un profesor por el ID de usuario.
@@ -22,7 +23,7 @@ export const findTeacherByUserId = async (userId) => {
             select: 'nombre',
         },
         {
-            path: 'grado_encargado.grado_secciones',
+            path: 'grado_encargado.grado_seccion',
             select: 'grado seccion',
         },
     ]);
@@ -37,8 +38,13 @@ export const findTeacherByUserId = async (userId) => {
 export const findAllTeachers = async (page, limit) => {
     const { skip, limit: validLimit, page: validPage } = getPaginationParams(page, limit);
 
+    // Se excluye a los profesores con usuario desactivado a nivel de query, no en memoria, para
+    // que el total de paginación coincida con lo devuelto.
+    const activeUserIds = await findActiveUserIds();
+    const filtro = { usuario: { $in: activeUserIds } };
+
     const [teachers, total] = await Promise.all([
-        Teacher.find()
+        Teacher.find(filtro)
             .skip(skip)
             .limit(validLimit)
             .populate({
@@ -54,10 +60,10 @@ export const findAllTeachers = async (page, limit) => {
                 select: 'nombre',
             })
             .populate({
-                path: 'grado_encargado.grado_secciones',
+                path: 'grado_encargado.grado_seccion',
                 select: 'grado seccion',
             }),
-        Teacher.countDocuments(),
+        Teacher.countDocuments(filtro),
     ]);
 
     return {
@@ -71,10 +77,13 @@ export const findAllTeachers = async (page, limit) => {
  * @param {Object} teacherData - Datos del profesor a crear.
  * @returns {Promise<Object>} - Profesor creado.
  */
-export const createTeacher = async (teacherData) => {
+export const createTeacher = async (teacherData, session) => {
     const teacher = new Teacher(teacherData);
-    const savedTeacher = await teacher.save();
-    return await Teacher.findById(savedTeacher._id)
+    const savedTeacher = await teacher.save(session ? { session } : undefined);
+
+    // El findById tiene que ir en la misma sesión: si no, no vería el documento recién insertado
+    // dentro de la transacción (todavía no commiteada) y devolvería null.
+    const query = Teacher.findById(savedTeacher._id)
         .populate({
             path: 'usuario',
             select: 'nombre apellido email genero domicilio nacionalidad rol',
@@ -88,9 +97,11 @@ export const createTeacher = async (teacherData) => {
             select: 'nombre',
         })
         .populate({
-            path: 'grado_encargado.grado_secciones',
+            path: 'grado_encargado.grado_seccion',
             select: 'grado seccion',
         });
+
+    return await (session ? query.session(session) : query);
 };
 
 /**
@@ -114,7 +125,7 @@ export const updateTeacherByUserId = async (id, updates) => {
             select: 'nombre',
         })
         .populate({
-            path: 'grado_encargado.grado_secciones',
+            path: 'grado_encargado.grado_seccion',
             select: 'grado seccion',
         });
 };
@@ -124,8 +135,29 @@ export const updateTeacherByUserId = async (id, updates) => {
  * @param {String} id - ID del profesor.
  * @returns {Promise<Object|null>} - Profesor eliminado o null.
  */
-export const deleteTeacherById = async (id) => {
-    return await Teacher.findByIdAndDelete(id)
+// Las cuatro de abajo sostienen el borrado en cascada de catálogos. Sin ellas, al borrar una
+// materia o una clase, los ObjectId quedaban guardados dentro de grado_encargado apuntando a
+// documentos inexistentes: el populate no los traía (se veían como []) pero la base quedaba sucia.
+export const findTeachersBySubject = async (subjectId) => {
+    return await Teacher.find({ 'grado_encargado.materias': subjectId });
+};
+
+export const findTeachersByGradeSection = async (gradeSectionId) => {
+    return await Teacher.find({ 'grado_encargado.grado_seccion': gradeSectionId });
+};
+
+// $[] recorre todas las asignaciones del profesor y saca la materia de cada una
+export const pullSubjectFromAllAssignments = async (subjectId) => {
+    return await Teacher.updateMany({}, { $pull: { 'grado_encargado.$[].materias': subjectId } });
+};
+
+// Acá se saca la asignación entera, porque una asignación sin su grado/sección no tiene sentido
+export const pullGradeSectionFromAllAssignments = async (gradeSectionId) => {
+    return await Teacher.updateMany({}, { $pull: { grado_encargado: { grado_seccion: gradeSectionId } } });
+};
+
+export const deleteTeacherById = async (id, session) => {
+    const query = Teacher.findByIdAndDelete(id)
         .populate({
             path: 'usuario',
             select: 'nombre apellido email genero domicilio nacionalidad rol',
@@ -139,8 +171,10 @@ export const deleteTeacherById = async (id) => {
             select: 'nombre',
         })
         .populate({
-            path: 'grado_encargado.grado_secciones',
+            path: 'grado_encargado.grado_seccion',
             select: 'grado seccion',
         });
+
+    return await (session ? query.session(session) : query);
 };
 

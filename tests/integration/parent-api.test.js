@@ -176,31 +176,41 @@ describe('DELETE /api/parents, admin', () => {
   });
 });
 
-describe('DELETE /api/parents/id, admin', () => {
-  it('debe eliminar un padre por id - 200', async () => {
+describe('DELETE /api/parents, borrado por email', () => {
+  it('ya no existe la ruta por id, que borraba el perfil sin desactivar el usuario - 404', async () => {
     const cookie = await loginAsAdmin();
     const createRes = await request
       .post('/api/parents')
       .set('Cookie', cookie)
       .send(buildParent('padre6@test.com'));
-    const parentId = createRes.body.data.id;
 
     const res = await request
       .delete('/api/parents/id')
       .set('Cookie', cookie)
-      .send({ id: parentId });
-
-    expect(res.status).toBe(200);
-  });
-
-  it('debe fallar si el id no existe - 404', async () => {
-    const cookie = await loginAsAdmin();
-
-    const res = await request
-      .delete('/api/parents/id')
-      .set('Cookie', cookie)
-      .send({ id: '507f1f77bcf86cd799439011' });
+      .send({ id: createRes.body.data.id });
 
     expect(res.status).toBe(404);
+  });
+});
+
+describe('POST /api/parents, teléfono compartido', () => {
+  it('dos padres de la misma familia pueden compartir el teléfono de casa - 201', async () => {
+    const cookie = await loginAsAdmin();
+    const telefonoDeCasa = '+50344443333';
+
+    const madre = await request
+      .post('/api/parents')
+      .set('Cookie', cookie)
+      .send({ ...buildParent('madre-familia@test.com'), telefono: telefonoDeCasa });
+
+    // Antes esto daba 409: telefono tenía un índice único, así que el segundo no entraba
+    const padre = await request
+      .post('/api/parents')
+      .set('Cookie', cookie)
+      .send({ ...buildParent('padre-familia@test.com'), telefono: telefonoDeCasa });
+
+    expect(madre.status).toBe(201);
+    expect(padre.status).toBe(201);
+    expect(padre.body.data.telefono).toBe(telefonoDeCasa);
   });
 });

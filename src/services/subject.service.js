@@ -24,14 +24,8 @@ export const updateSubject= async (nombre, nuevoNombre) =>{
     }
 };
 
-export const eraseSubject = async (nombre)=>{
-    const subjectExists = await subjectRepository.findSubjectByName(nombre);
-    if(subjectExists){
-        return await subjectRepository.deleteSubjectById(subjectExists.id);
-    }else{
-        throw new NotFoundError("La materia no existe");
-    }
-};
+// El borrado de materias vive en catalog-deletion.service: arrastra evaluaciones, notas,
+// pensums y asignaciones, y exige confirmación previa.
 
 export const searchSubjectByName = async (nombre) =>{
     return await subjectRepository.findSubjectByName(nombre);

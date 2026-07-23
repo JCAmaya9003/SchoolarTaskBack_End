@@ -50,8 +50,9 @@ const buildTeacher = (email, materia) => ({
   nacionalidad: 'Venezolana',
   asignaciones: [
     {
+      grado: gradeSectionData.grado,
+      seccion: gradeSectionData.seccion,
       materias: [materia],
-      grado_secciones: [{ grado: gradeSectionData.grado, seccion: gradeSectionData.seccion }],
     },
   ],
   telefono: '+50312345678',
@@ -109,10 +110,10 @@ beforeAll(async () => {
   });
 
   await request.post('/api/evaluations').set('Cookie', adminCookie).send({
-    nombre: 'Parcial Mate', nombreMateria: 'Matematicas', descripcion: 'desc', fecha: '2026-08-01', peso: 0.3,
+    nombre: 'Parcial Mate', nombreMateria: 'Matematicas', grado: gradeSectionData.grado, seccion: gradeSectionData.seccion, descripcion: 'desc', fecha: '2026-08-01', peso: 0.3,
   });
   await request.post('/api/evaluations').set('Cookie', adminCookie).send({
-    nombre: 'Parcial Historia', nombreMateria: 'Historia', descripcion: 'desc', fecha: '2026-08-01', peso: 0.3,
+    nombre: 'Parcial Historia', nombreMateria: 'Historia', grado: gradeSectionData.grado, seccion: gradeSectionData.seccion, descripcion: 'desc', fecha: '2026-08-01', peso: 0.3,
   });
 });
 
@@ -237,6 +238,21 @@ describe('GET /api/evaluation_grades/all', () => {
     expect(evaluaciones).toContain('Parcial Mate');
     expect(evaluaciones).not.toContain('Parcial Historia');
   });
+
+  it('enrichUserContext falla cerrado: un usuario desactivado con token válido es rechazado - 401', async () => {
+    const adminCookie = await loginAsAdmin();
+    // Un teacher propio, para no afectar al resto de la suite
+    await request.post('/api/teachers').set('Cookie', adminCookie).send(buildTeacher('prof-desactivado@test.com', 'Matematicas'));
+    const cookie = await loginAs('prof-desactivado@test.com', 'password123');
+
+    // Token válido en mano, se desactiva su usuario
+    await request.delete('/api/teachers').set('Cookie', adminCookie).send({ email: 'prof-desactivado@test.com' });
+
+    // La ruta pasa por enrichUserContext: antes seguía con el rol sin resolver, ahora rechaza
+    const res = await request.get('/api/evaluation_grades/all').set('Cookie', cookie).query({ limit: 50 });
+
+    expect(res.status).toBe(401);
+  });
 });
 
 describe('GET /api/evaluation_grades/by-evaluation', () => {
@@ -246,7 +262,7 @@ describe('GET /api/evaluation_grades/by-evaluation', () => {
     const res = await request
       .get('/api/evaluation_grades/by-evaluation')
       .set('Cookie', cookie)
-      .query({ nombre: 'Parcial Historia', nombreMateria: 'Historia' });
+      .query({ nombre: 'Parcial Historia', nombreMateria: 'Historia', grado: gradeSectionData.grado, seccion: gradeSectionData.seccion });
 
     expect(res.status).toBe(403);
   });
@@ -257,10 +273,34 @@ describe('GET /api/evaluation_grades/by-evaluation', () => {
     const res = await request
       .get('/api/evaluation_grades/by-evaluation')
       .set('Cookie', cookie)
-      .query({ nombre: 'Parcial Mate', nombreMateria: 'Matematicas' });
+      .query({ nombre: 'Parcial Mate', nombreMateria: 'Matematicas', grado: gradeSectionData.grado, seccion: gradeSectionData.seccion });
 
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body.data)).toBe(true);
+  });
+});
+
+describe('GET /api/evaluation_grades/by-student', () => {
+  it('un teacher solo ve las notas del alumno en sus propias materias - 200', async () => {
+    const cookie = await loginAs('prof-mate-grade@test.com', 'password123');
+
+    const res = await request.get('/api/evaluation_grades/by-student').set('Cookie', cookie).query({ email: studentEmail });
+
+    expect(res.status).toBe(200);
+    const evaluaciones = res.body.data.map((g) => g.evaluacion.nombre);
+    expect(evaluaciones).toContain('Parcial Mate');        // su materia
+    expect(evaluaciones).not.toContain('Parcial Historia'); // materia de otro profesor
+  });
+
+  it('el admin ve todas las notas del alumno - 200', async () => {
+    const cookie = await loginAsAdmin();
+
+    const res = await request.get('/api/evaluation_grades/by-student').set('Cookie', cookie).query({ email: studentEmail });
+
+    expect(res.status).toBe(200);
+    const evaluaciones = res.body.data.map((g) => g.evaluacion.nombre);
+    expect(evaluaciones).toContain('Parcial Mate');
+    expect(evaluaciones).toContain('Parcial Historia');
   });
 });
 
@@ -321,5 +361,57 @@ describe('DELETE /api/evaluation_grades', () => {
       .send({ email: studentEmail, nombreMateria: 'Historia', nombreEvaluacion: 'Parcial Historia' });
 
     expect(res.status).toBe(404);
+  });
+});
+
+describe('DELETE /api/evaluations, cascada de notas', () => {
+  it('borra sus notas en cascada y la vista de notas del alumno no se cae - 200', async () => {
+    const cookie = await loginAsAdmin();
+
+    // Nueva evaluación + nota para el estudiante
+    await request.post('/api/evaluations').set('Cookie', cookie).send({
+      nombre: 'Parcial Cascada', nombreMateria: 'Matematicas', grado: gradeSectionData.grado, seccion: gradeSectionData.seccion, descripcion: 'd', fecha: '2026-09-01', peso: 0.2,
+    });
+    await request.post('/api/evaluation_grades').set('Cookie', cookie).send({
+      email: studentEmail, nombreMateria: 'Matematicas', nombreEvaluacion: 'Parcial Cascada', calificacion: 6,
+    });
+
+    // La nota existe antes de borrar la evaluación
+    const before = await request.get('/api/evaluation_grades/by-student').set('Cookie', cookie).query({ email: studentEmail });
+    expect(before.status).toBe(200);
+    expect(before.body.data.some((g) => g.evaluacion.nombre === 'Parcial Cascada')).toBe(true);
+
+    // El teacher/admin borra la evaluación
+    const del = await request.delete('/api/evaluations').set('Cookie', cookie).send({ nombre: 'Parcial Cascada', nombreMateria: 'Matematicas', grado: gradeSectionData.grado, seccion: gradeSectionData.seccion });
+    expect(del.status).toBe(200);
+
+    // La nota se fue en cascada y la vista no se cae (antes daba 500 por nota huérfana)
+    const after = await request.get('/api/evaluation_grades/by-student').set('Cookie', cookie).query({ email: studentEmail });
+    expect(after.status).toBe(200);
+    expect(after.body.data.some((g) => g.evaluacion.nombre === 'Parcial Cascada')).toBe(false);
+
+    // La vista agregada del alumno (get-all) también responde 200
+    const gradesInfo = await request.post('/api/students/get-all').set('Cookie', cookie).send({ email: studentEmail });
+    expect(gradesInfo.status).toBe(200);
+  });
+});
+
+describe('GET /api/students/get-students-filterWithParent, padre', () => {
+  it('el padre ve a su hijo; si el hijo se desactiva, la vista no se cae y lo oculta - 200', async () => {
+    const padreCookie = await loginAs(parentUser.email, parentUser.password);
+
+    // El padre ve a su hijo antes de desactivar
+    const before = await request.get('/api/students/get-students-filterWithParent').set('Cookie', padreCookie);
+    expect(before.status).toBe(200);
+    expect(before.body.data.some((r) => r.estudiante.email === studentEmail)).toBe(true);
+
+    // El admin desactiva al usuario del hijo
+    const adminCookie = await loginAsAdmin();
+    await request.delete('/api/users').set('Cookie', adminCookie).send({ email: studentEmail });
+
+    // La vista del padre no se cae (antes daba 500 por usuario=null) y el hijo desactivado ya no figura
+    const after = await request.get('/api/students/get-students-filterWithParent').set('Cookie', padreCookie);
+    expect(after.status).toBe(200);
+    expect(after.body.data.some((r) => r.estudiante.email === studentEmail)).toBe(false);
   });
 });

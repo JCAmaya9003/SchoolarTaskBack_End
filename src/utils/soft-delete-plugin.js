@@ -20,13 +20,16 @@ const softDeletePlugin = (schema) => {
   schema.pre('countDocuments', addNotDeletedFilter);
   schema.pre('findOneAndUpdate', addNotDeletedFilter);
 
-  // Soft delete por ID
-  schema.statics.softDeleteById = async function (id) {
-    return this.findByIdAndUpdate(
+  // Soft delete por ID. Acepta una sesión para poder participar de una transacción, cuando el
+  // soft-delete va junto con otras escrituras (ej. borrar el perfil y desactivar el usuario).
+  schema.statics.softDeleteById = async function (id, session) {
+    const query = this.findByIdAndUpdate(
       id,
       { deletedAt: new Date() },
       { new: true }
     ).setOptions({ includeDeleted: true });
+
+    return session ? query.session(session) : query;
   };
 
   // Restaurar por ID

@@ -1,19 +1,20 @@
 import * as parentService from '../services/parent.service.js'
-import * as userService from '../services/user-service.js'
 import { validationResult } from 'express-validator';
 import { sendSuccess } from '../utils/apiResponse.js';
 
-// Forma consistente para exponer un padre en las respuestas
+// Forma consistente para exponer un padre en las respuestas.
+// Optional chaining sobre `usuario` como defensa por si fue desactivado (populate -> null);
+// los listados igual filtran esos casos antes de mapear (ver getAllParents).
 const formatParentResponse = (parent) => ({
     id: parent._id,
-    nombre: parent.usuario.nombre,
-    apellido: parent.usuario.apellido,
-    email: parent.usuario.email,
-    genero: parent.usuario.genero,
-    domicilio: parent.usuario.domicilio,
-    nacionalidad: parent.usuario.nacionalidad,
-    fecha_nacimiento: parent.usuario.fecha_nacimiento,
-    rol: parent.usuario.rol,
+    nombre: parent.usuario?.nombre,
+    apellido: parent.usuario?.apellido,
+    email: parent.usuario?.email,
+    genero: parent.usuario?.genero,
+    domicilio: parent.usuario?.domicilio,
+    nacionalidad: parent.usuario?.nacionalidad,
+    fecha_nacimiento: parent.usuario?.fecha_nacimiento,
+    rol: parent.usuario?.rol,
     telefono: parent.telefono,
     telefono_trabajo: parent.telefono_trabajo,
     lugar_trabajo: parent.lugar_trabajo,
@@ -28,7 +29,9 @@ export const getAllParents = async (req, res, next) =>{
     try {
         const { page, limit } = req.query;
         const { data, pagination } = await parentService.getParents(page, limit);
-        return sendSuccess(res, 200, 'Padres obtenidos con éxito', { items: data.map(formatParentResponse), pagination });
+        // Oculta del listado a los padres cuyo usuario fue desactivado (soft-delete).
+        const items = data.filter((parent) => parent.usuario).map(formatParentResponse);
+        return sendSuccess(res, 200, 'Padres obtenidos con éxito', { items, pagination });
     } catch (e) {
         next(e);
     }
@@ -45,7 +48,8 @@ export const createParent = async (req, res, next) =>{
 
     try {
         const newParent = await parentService.createParent({
-            nombre, apellido, email, password, fecha_nacimiento, rolNombre,
+            // El rol se fuerza según el endpoint, no se toma del body.
+            nombre, apellido, email, password, fecha_nacimiento, rolNombre: 'parent',
             genero, domicilio, nacionalidad,
             telefono, telefono_trabajo, lugar_trabajo, profesion
         });
@@ -63,8 +67,8 @@ export const deleteParent = async (req, res, next) =>{
     }
     const { email } = req.body;
     try {
+        // El service borra el perfil y desactiva el usuario en una sola transacción
         const parentDeleted = await parentService.deleteParent(email);
-        await userService.eraseUser(email);
 
         return sendSuccess(res, 200, 'Padre eliminado con éxito', formatParentResponse(parentDeleted));
     }catch (error) {
@@ -94,17 +98,3 @@ export const updateParent = async (req, res, next) =>{
     }
 };
 
-export const deleteById= async(req, res, next) =>{
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-    }
-    const { id } = req.body;
-
-    try {
-        const deleted = await parentService.deleteWithId({ id });
-        return sendSuccess(res, 200, 'Padre eliminado con éxito', formatParentResponse(deleted));
-    }catch (error) {
-        next(error);
-    }
-}

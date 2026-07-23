@@ -1,19 +1,21 @@
 import { validationResult } from 'express-validator';
 import * as studentService from '../services/student.service.js';
-import * as userService from '../services/user-service.js';
 import { sendSuccess } from '../utils/apiResponse.js';
 
-// Forma consistente para exponer un estudiante en las respuestas
+// Forma consistente para exponer un estudiante en las respuestas.
+// Se usa optional chaining sobre `usuario` como defensa: si el usuario fue desactivado
+// (soft-delete), el populate lo trae null. Los listados igual filtran esos casos antes de
+// mapear (ver getAllStudents), esto es solo para no romper nunca.
 const formatStudentResponse = (student) => ({
     id: student._id,
-    nombre: student.usuario.nombre,
-    apellido: student.usuario.apellido,
-    email: student.usuario.email,
-    genero: student.usuario.genero,
-    domicilio: student.usuario.domicilio,
-    nacionalidad: student.usuario.nacionalidad,
-    fecha_nacimiento: student.usuario.fecha_nacimiento,
-    rol: student.usuario.rol,
+    nombre: student.usuario?.nombre,
+    apellido: student.usuario?.apellido,
+    email: student.usuario?.email,
+    genero: student.usuario?.genero,
+    domicilio: student.usuario?.domicilio,
+    nacionalidad: student.usuario?.nacionalidad,
+    fecha_nacimiento: student.usuario?.fecha_nacimiento,
+    rol: student.usuario?.rol,
     padre: student.padre,
     grado_seccion: student.grado_seccion,
     alergias: student.alergias,
@@ -29,7 +31,10 @@ export const getAllStudents = async (req, res, next) =>{
     try {
         const { page, limit } = req.query;
         const { data, pagination } = await studentService.getStudents(page, limit);
-        return sendSuccess(res, 200, 'Estudiantes obtenidos con éxito', { items: data.map(formatStudentResponse), pagination });
+        // Oculta del listado a los estudiantes cuyo usuario fue desactivado (soft-delete):
+        // el populate lo trae null, así que no debe figurar en el roster activo.
+        const items = data.filter((student) => student.usuario).map(formatStudentResponse);
+        return sendSuccess(res, 200, 'Estudiantes obtenidos con éxito', { items, pagination });
     } catch (e) {
         next(e);
     }
@@ -48,7 +53,9 @@ export const createStudent = async (req, res, next) =>{
 
     try {
         const newStudent = await studentService.createStudent({
-            nombre, apellido, email, password, fecha_nacimiento, rolNombre,
+            // El rol se fuerza según el endpoint, no se toma del body: este endpoint solo crea
+            // estudiantes, así no se puede ligar un perfil de estudiante a un user con otro rol.
+            nombre, apellido, email, password, fecha_nacimiento, rolNombre: 'student',
             genero, domicilio, nacionalidad,
             email_padre,
             grado, seccion,
@@ -68,8 +75,8 @@ export const deleteStudent = async (req, res, next) =>{
     }
     const { email } = req.body;
     try {
+        // El service borra el perfil y desactiva el usuario en una sola transacción
         const studentDeleted = await studentService.deleteStudent(email);
-        await userService.eraseUser(email);
 
         return sendSuccess(res, 200, 'Estudiante eliminado con éxito', formatStudentResponse(studentDeleted));
     }catch (error) {
@@ -98,21 +105,6 @@ export const updateStudent = async (req, res, next) =>{
     }
 }
 
-export const deleteById = async (req, res, next) =>{
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-    }
-    const { id } = req.body;
-
-    try {
-        const deleted = await studentService.deleteWithId({ id });
-        return sendSuccess(res, 200, 'Estudiante eliminado con éxito', formatStudentResponse(deleted));
-    }catch (error) {
-        next(error);
-    }
-}
-
 export const getStudentGradesInfoParent = async (req, res, next) => {
     try {
         const { email } = req.user;
@@ -124,6 +116,13 @@ export const getStudentGradesInfoParent = async (req, res, next) => {
         const response = [];
 
         for (const student of students) {
+            // Oculta a los hijos cuyo usuario fue desactivado (populate -> null): el estado
+            // activo/inactivo vive solo en User, y sin este chequeo student.usuario.email
+            // rompería la vista del padre con un 500.
+            if (!student.usuario) {
+                continue;
+            }
+
             // Obtener notas y evaluaciones por estudiante
             const gradesInfo = await studentService.getStudentGradesInfo(student.usuario.email);
 
@@ -153,8 +152,9 @@ export const getStudentGradesInfo = async (req, res, next) => {
     try {
         const { email } = req.body;
 
-        // Obtener estudiante
-        const response =  await studentService.getStudentGradesInfo(email);
+        // req.user va enriquecido con el rol: un teacher solo ve las materias que dicta en la
+        // clase de este alumno, igual que en /evaluation_grades/by-student.
+        const response =  await studentService.getStudentGradesInfo(email, req.user);
 
         return sendSuccess(res, 200, 'Notas del estudiante obtenidas con éxito', response);
     } catch (error) {

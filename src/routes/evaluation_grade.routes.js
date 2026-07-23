@@ -4,6 +4,7 @@ import * as evaluation_gradeController from '../controllers/evaluation_grade.con
 import { validateToken, checkRole } from '../middlewares/auth-middleware.js';
 import { verifyTeacherSubject, verifyOwnResource, enrichUserContext } from '../middlewares/authorization-middleware.js';
 import { rejectHtml } from '../utils/xss-guard.js';
+import { GRADOS_VALIDOS } from '../models/gradeSection-model.js';
 
 const router = express.Router();
 
@@ -48,6 +49,8 @@ router.get(
     [
         query('nombre').isString().withMessage('El nombre de la evaluación debe ser una cadena válida.').custom(rejectHtml),
         query('nombreMateria').isString().withMessage('El nombre de la materia debe ser una cadena válida.').custom(rejectHtml),
+        query('grado').isIn(GRADOS_VALIDOS).withMessage('Grado inválido. Debe ser un número del 1 al 12.'),
+        query('seccion').isString().isLength({ min: 1, max: 1 }).matches(/^[A-Za-z]$/).withMessage('Sección inválida.'),
     ],
     evaluation_gradeController.getEvaluationGradesByEvaluation
 );

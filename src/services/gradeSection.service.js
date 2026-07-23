@@ -79,20 +79,8 @@ export const updateGradeAndSectionById = async (grado, seccion, nuevoGrado, nuev
     }
 };
 
-/**
- * Eliminar un grado y sección por grado y sección.
- * @param {String} grado - Grado a eliminar.
- * @param {String} seccion - Sección a eliminar.
- * @returns {Promise<Object>} - Grado y sección eliminados.
- */
-export const eraseGradeAndSectionById = async (grado, seccion) => {
-    const GradeSectionExists = await gradeSectionRepository.findGradeAndSection(grado, seccion);
-    if (GradeSectionExists) {
-        return await gradeSectionRepository.deleteGradeAndSectionById(GradeSectionExists.id);
-    } else {
-        throw new NotFoundError("El grado y sección no existe");
-    }
-};
+// El borrado de grados y secciones vive en catalog-deletion.service: arrastra evaluaciones,
+// notas y asignaciones, exige confirmación previa, y bloquea si hay estudiantes matriculados.
 
 /**
  * Obtener un grado y sección específicos.
