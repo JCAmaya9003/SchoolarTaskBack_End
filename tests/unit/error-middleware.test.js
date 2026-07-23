@@ -22,6 +22,27 @@ function buildApp() {
     throw new ValidationError('La fecha de fin debe ser posterior a la de inicio');
   });
 
+  // Errores crudos de librerías que el handler traduce a un AppError equivalente
+  app.get('/cast', () => {
+    const err = new Error('Cast failed');
+    err.name = 'CastError';
+    err.value = 'no-es-un-id';
+    throw err;
+  });
+
+  app.get('/duplicado', () => {
+    const err = new Error('E11000 duplicate key');
+    err.code = 11000;
+    err.keyValue = { email: 'repetido@test.com' };
+    throw err;
+  });
+
+  app.get('/token-expirado', () => {
+    const err = new Error('jwt expired');
+    err.name = 'TokenExpiredError';
+    throw err;
+  });
+
   app.use(errorHandler);
   return supertest(app);
 }
@@ -51,5 +72,32 @@ describe('errorHandler, fuga del mensaje interno', () => {
 
     expect(res.status).toBe(400);
     expect(res.body.message).toContain('posterior');
+  });
+});
+
+describe('errorHandler, traducción de errores de librerías', () => {
+  const request = buildApp();
+
+  it('un CastError de Mongoose se traduce a 404 con mensaje propio', async () => {
+    const res = await request.get('/cast');
+
+    expect(res.status).toBe(404);
+    expect(res.body.message).toContain('ID inválido');
+    expect(res.body.message).not.toContain('Cast failed');
+  });
+
+  it('una clave duplicada de Mongo se traduce a 409 nombrando el campo', async () => {
+    const res = await request.get('/duplicado');
+
+    expect(res.status).toBe(409);
+    expect(res.body.message).toContain('email');
+    expect(res.body.message).toContain('repetido@test.com');
+  });
+
+  it('un token expirado se traduce a 401', async () => {
+    const res = await request.get('/token-expirado');
+
+    expect(res.status).toBe(401);
+    expect(res.body.message).toContain('expirado');
   });
 });
