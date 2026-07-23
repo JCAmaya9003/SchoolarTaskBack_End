@@ -151,8 +151,8 @@ export const pullGradeSectionFromAllAssignments = async (gradeSectionId) => {
     return await Teacher.updateMany({}, { $pull: { grado_encargado: { grado_seccion: gradeSectionId } } });
 };
 
-export const deleteTeacherById = async (id) => {
-    return await Teacher.findByIdAndDelete(id)
+export const deleteTeacherById = async (id, session) => {
+    const query = Teacher.findByIdAndDelete(id)
         .populate({
             path: 'usuario',
             select: 'nombre apellido email genero domicilio nacionalidad rol',
@@ -169,5 +169,7 @@ export const deleteTeacherById = async (id) => {
             path: 'grado_encargado.grado_seccion',
             select: 'grado seccion',
         });
+
+    return await (session ? query.session(session) : query);
 };
 

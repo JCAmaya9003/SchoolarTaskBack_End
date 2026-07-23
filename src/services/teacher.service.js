@@ -2,7 +2,8 @@ import * as teacherRepository from '../repositories/teacher.repository.js';
 import * as gradeSectionService from '../services/gradeSection.service.js';
 import * as subjectService from '../services/subject.service.js';
 import * as userService from '../services/user-service.js';
-import { hardDeleteUserById } from '../repositories/user-repository.js';
+import { hardDeleteUserById, deleteUserById } from '../repositories/user-repository.js';
+import { runInTransaction } from '../utils/transaction.js';
 import logger from '../config/logger.js';
 import { NotFoundError, ConflictError } from '../errors/errors.js';
 
@@ -130,19 +131,36 @@ export const updateTeacher = async ({ email, asignaciones, telefono, especialida
  * @param {String} email - Correo electrónico del usuario asociado.
  * @returns {Promise<Object|null>} - Profesor eliminado o error si no existe.
  */
-export const deleteTeacher = async (email) => {
+// Borra SOLO el perfil de profesor, sin tocar el usuario. Lo usa el cambio de rol, donde la
+// persona sigue existiendo y únicamente cambia de perfil.
+export const deleteTeacherProfile = async (email, session) => {
     const teacherUser = await userService.searchUserByEmail(email);
-    if (teacherUser) {
-        const teacherExists = await teacherRepository.findTeacherByUserId(teacherUser.id);
-
-        if (teacherExists) {
-            return await teacherRepository.deleteTeacherById(teacherExists.id);
-        } else {
-            throw new NotFoundError("No existe el profesor");
-        }
-    } else {
+    if (!teacherUser) {
         throw new NotFoundError("No existe el usuario");
     }
+
+    const teacherExists = await teacherRepository.findTeacherByUserId(teacherUser.id);
+    if (!teacherExists) {
+        throw new NotFoundError("No existe el profesor");
+    }
+
+    return await teacherRepository.deleteTeacherById(teacherExists.id, session);
+};
+
+// Da de baja a un profesor: borra su perfil y desactiva su usuario, en una transacción, para que
+// no pueda quedar un perfil borrado con el usuario vivo (antes el eraseUser lo hacía el controller).
+export const deleteTeacher = async (email) => {
+    const teacherUser = await userService.searchUserByEmail(email);
+    if (!teacherUser) {
+        throw new NotFoundError("No existe el usuario");
+    }
+
+    return await runInTransaction(async (session) => {
+        const borrado = await deleteTeacherProfile(email, session);
+        await deleteUserById(teacherUser.id, session);
+        logger.info(`[ADMIN] Profesor dado de baja (perfil borrado + usuario desactivado): ${email}`);
+        return borrado;
+    });
 };
 
 /**

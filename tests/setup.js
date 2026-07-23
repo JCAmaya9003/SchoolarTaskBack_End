@@ -1,11 +1,14 @@
-import { MongoMemoryServer } from 'mongodb-memory-server';
+import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
 import * as userService from '../src/services/user-service.js';
 
 let mongoServer;
 
+// Replica-set de un solo nodo en vez de una instancia standalone: las transacciones de MongoDB
+// solo funcionan sobre replica-set (o sharded), y varias operaciones multi-entidad las usan.
+// En producción (Atlas) la base ya es un replica-set, así que esto acerca el test a la realidad.
 export async function setupTestDB() {
-  mongoServer = await MongoMemoryServer.create();
+  mongoServer = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
   const uri = mongoServer.getUri();
   await mongoose.connect(uri);
 }

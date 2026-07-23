@@ -54,8 +54,8 @@ export const updateUserById = async (id, updates) => {
   return await User.findByIdAndUpdate(id, updates, { new: true, runValidators: true }).populate('rol');
 };
 	
-export const deleteUserById = async (id) => {
-  return await User.softDeleteById(id);
+export const deleteUserById = async (id, session) => {
+  return await User.softDeleteById(id, session);
 };
 
 export const restoreUserById = async (id) => {

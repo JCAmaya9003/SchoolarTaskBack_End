@@ -161,8 +161,8 @@ export const findStudentByUserId = async (userId) => {
     ]);
     };
         
-    export const deleteStudentByUserId = async (id) => {
-      return await Student.findByIdAndDelete(id).populate([
+    export const deleteStudentByUserId = async (id, session) => {
+      const query = Student.findByIdAndDelete(id).populate([
         {
             path: 'usuario', 
             select: 'nombre apellido email genero domicilio nacionalidad fecha_nacimiento rol', 
@@ -192,7 +192,10 @@ export const findStudentByUserId = async (userId) => {
             }
         },
     ]);
+
+      return await (session ? query.session(session) : query);
     };
+
     export const findStudentsByParentId = async (parentId) => {
         return await Student.find({ padre: parentId }).populate([
             {

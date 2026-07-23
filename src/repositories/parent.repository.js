@@ -67,13 +67,15 @@ export const findParentByUserId = async (userId) => {
     });
   };
 
-  export const deleteParentByUserId = async (id) => {
-    return await Parent.findByIdAndDelete(id).populate({
+  export const deleteParentByUserId = async (id, session) => {
+    const query = Parent.findByIdAndDelete(id).populate({
       path: 'usuario',
       select: 'nombre apellido email genero domicilio nacionalidad fecha_nacimiento rol',
       populate: {
         path: 'rol',
         select: 'nombre',
       },
-  });
+    });
+
+    return await (session ? query.session(session) : query);
   };

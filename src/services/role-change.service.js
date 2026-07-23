@@ -12,19 +12,21 @@ import { NotFoundError, ConflictError } from '../errors/errors.js';
 // actual, cómo borrarlo y cómo crear el nuevo. `admin` no tiene perfil asociado, por eso sus
 // tres operaciones son no-ops.
 const PROFILE_HANDLERS = {
+    // `remove` borra SOLO el perfil, no da de baja a la persona: acá el usuario sigue vivo y
+    // únicamente cambia de rol. Usar la baja completa lo dejaría desactivado.
     student: {
         find: (email) => studentService.getStudentByUserIdAndEmail(email),
-        remove: (email) => studentService.deleteStudent(email),
+        remove: (email) => studentService.deleteStudentProfile(email),
         create: (user, datos) => studentService.createStudentProfileForUser(user, datos),
     },
     teacher: {
         find: (email) => teacherService.getTeacherByUserIdAndEmail(email),
-        remove: (email) => teacherService.deleteTeacher(email),
+        remove: (email) => teacherService.deleteTeacherProfile(email),
         create: (user, datos) => teacherService.createTeacherProfileForUser(user, datos),
     },
     parent: {
         find: (email) => parentService.getParentByUserIdAndEmail(email),
-        remove: (email) => parentService.deleteParent(email),
+        remove: (email) => parentService.deleteParentProfile(email),
         create: (user, datos) => parentService.createParentProfileForUser(user, datos),
     },
     admin: {

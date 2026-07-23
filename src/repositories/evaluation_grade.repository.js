@@ -46,8 +46,9 @@ export const deleteEvaluationGradesByEvaluationIds = async (evaluationIds) => {
 
 // Borra en bloque todas las notas de un estudiante. Usado al eliminar un estudiante en cascada:
 // una nota sin su estudiante queda huérfana, igual que una nota sin su evaluación.
-export const deleteEvaluationGradesByStudentId = async (studentId) => {
-    return await EvaluationGrade.deleteMany({ estudiante: studentId });
+export const deleteEvaluationGradesByStudentId = async (studentId, session) => {
+    const query = EvaluationGrade.deleteMany({ estudiante: studentId });
+    return await (session ? query.session(session) : query);
 };
 
 // Todas las notas de un conjunto de evaluaciones, en una sola consulta. La usa el reporte del

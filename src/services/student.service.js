@@ -5,7 +5,8 @@ import * as gradeSectionService from '../services/gradeSection.service.js'
 import * as evaluationGradeService from '../services/evaluation_grade.service.js';
 import * as evaluationService from '../services/evaluation.service.js';
 import * as teacherService from '../services/teacher.service.js';
-import { hardDeleteUserById } from '../repositories/user-repository.js';
+import { hardDeleteUserById, deleteUserById } from '../repositories/user-repository.js';
+import { runInTransaction } from '../utils/transaction.js';
 import logger from '../config/logger.js';
 import { NotFoundError, ConflictError, ForbiddenError } from '../errors/errors.js';
 
@@ -121,24 +122,41 @@ export const updateStudent = async ({email, grado, seccion, alergias, condicione
     }
 };
 
-export const deleteStudent = async (email) =>{
+// Borra SOLO el perfil de estudiante y sus notas, sin tocar el usuario. Lo usa el cambio de rol,
+// donde la persona sigue existiendo y únicamente cambia de perfil.
+export const deleteStudentProfile = async (email, session) => {
     const studentUser = await userService.searchUserByEmail(email);
-    if(studentUser){
-        const studentExists = await studentRepository.findStudentByUserId(studentUser.id);
-
-        if(studentExists){
-            // Cascada: se borran primero las notas del estudiante y después el perfil, para no
-            // dejarlas huérfanas apuntando a un estudiante inexistente (mismo criterio que al
-            // borrar una evaluación, que borra sus notas).
-            const evaluationGradeRepository = await import('../repositories/evaluation_grade.repository.js');
-            await evaluationGradeRepository.deleteEvaluationGradesByStudentId(studentExists.id);
-            return await studentRepository.deleteStudentByUserId(studentExists.id);
-        }else{
-            throw new NotFoundError("El Estudiante no existe!");
-        }
-    }else{
+    if(!studentUser){
         throw new NotFoundError("Usuario inexistente");
     }
+
+    const studentExists = await studentRepository.findStudentByUserId(studentUser.id);
+    if(!studentExists){
+        throw new NotFoundError("El Estudiante no existe!");
+    }
+
+    // Primero las notas, después el perfil, para no dejarlas huérfanas apuntando a un estudiante
+    // inexistente (mismo criterio que al borrar una evaluación).
+    const evaluationGradeRepository = await import('../repositories/evaluation_grade.repository.js');
+    await evaluationGradeRepository.deleteEvaluationGradesByStudentId(studentExists.id, session);
+    return await studentRepository.deleteStudentByUserId(studentExists.id, session);
+};
+
+// Da de baja a un estudiante: borra sus notas, borra su perfil y desactiva su usuario. Las tres
+// escrituras van en una transacción, así no puede quedar un perfil borrado con el usuario vivo
+// (antes el eraseUser lo hacía el controller, como una segunda escritura suelta).
+export const deleteStudent = async (email) =>{
+    const studentUser = await userService.searchUserByEmail(email);
+    if(!studentUser){
+        throw new NotFoundError("Usuario inexistente");
+    }
+
+    return await runInTransaction(async (session) => {
+        const borrado = await deleteStudentProfile(email, session);
+        await deleteUserById(studentUser.id, session);
+        logger.info(`[ADMIN] Estudiante dado de baja (perfil borrado + usuario desactivado): ${email}`);
+        return borrado;
+    });
 };
 
 // Devuelve null si el usuario no existe o si no tiene perfil de student,

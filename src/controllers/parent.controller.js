@@ -1,5 +1,4 @@
 import * as parentService from '../services/parent.service.js'
-import * as userService from '../services/user-service.js'
 import { validationResult } from 'express-validator';
 import { sendSuccess } from '../utils/apiResponse.js';
 
@@ -68,8 +67,8 @@ export const deleteParent = async (req, res, next) =>{
     }
     const { email } = req.body;
     try {
+        // El service borra el perfil y desactiva el usuario en una sola transacción
         const parentDeleted = await parentService.deleteParent(email);
-        await userService.eraseUser(email);
 
         return sendSuccess(res, 200, 'Padre eliminado con éxito', formatParentResponse(parentDeleted));
     }catch (error) {

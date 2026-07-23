@@ -1,6 +1,5 @@
 import { validationResult } from 'express-validator';
 import * as studentService from '../services/student.service.js';
-import * as userService from '../services/user-service.js';
 import { sendSuccess } from '../utils/apiResponse.js';
 
 // Forma consistente para exponer un estudiante en las respuestas.
@@ -76,8 +75,8 @@ export const deleteStudent = async (req, res, next) =>{
     }
     const { email } = req.body;
     try {
+        // El service borra el perfil y desactiva el usuario en una sola transacción
         const studentDeleted = await studentService.deleteStudent(email);
-        await userService.eraseUser(email);
 
         return sendSuccess(res, 200, 'Estudiante eliminado con éxito', formatStudentResponse(studentDeleted));
     }catch (error) {

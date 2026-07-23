@@ -1,4 +1,3 @@
-import * as userService from '../services/user-service.js';
 import * as teacherService from '../services/teacher.service.js';
 import { validationResult } from 'express-validator';
 import { sendSuccess } from '../utils/apiResponse.js';
@@ -112,12 +111,9 @@ export const deleteTeacher = async (req, res, next) => {
     const { email } = req.body;
 
     try {
+        // El service borra el perfil y desactiva el usuario en una sola transacción, así que ya
+        // no hace falta chequear a mano si la segunda escritura falló.
         const deletedTeacher = await teacherService.deleteTeacher(email);
-        const deletedUser = await userService.eraseUser(email);
-
-        if (!deletedUser) {
-            return res.status(500).json({ message: 'No se pudo eliminar el usuario asociado al profesor' });
-        }
 
         return sendSuccess(res, 200, 'Profesor eliminado con éxito', formatTeacherResponse(deletedTeacher));
     } catch (error) {
