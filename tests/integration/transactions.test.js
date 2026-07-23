@@ -7,6 +7,7 @@ import Teacher from '../../src/models/teacher-model.js';
 import User from '../../src/models/user-model.js';
 import EvaluationGrade from '../../src/models/evaluation_grade.model.js';
 import * as userRepository from '../../src/repositories/user-repository.js';
+import * as studentRepository from '../../src/repositories/student.repository.js';
 
 let app;
 let request;
@@ -103,6 +104,39 @@ describe('Atomicidad de la baja de una persona', () => {
 
     const loginRes = await request.post('/api/users/login').send({ email: ALUMNO, password: 'password123' });
     expect(loginRes.status).toBe(200);
+  });
+});
+
+describe('Atomicidad del alta de una persona', () => {
+  const NUEVO = 'alta-tx@test.com';
+
+  it('si falla la creación del perfil, no queda el usuario huérfano', async () => {
+    // Se rompe la SEGUNDA escritura: la que crea el perfil de estudiante
+    vi.spyOn(studentRepository, 'createStudent').mockRejectedValueOnce(new Error('fallo simulado de la BD'));
+
+    const res = await request.post('/api/students').set('Cookie', adminCookie).send({
+      nombre: 'Nuevo', apellido: 'Alumno', fecha_nacimiento: '2011-01-01', email: NUEVO,
+      password: 'password123', rolNombre: 'student', genero: 'Masculino', domicilio: 'C9',
+      nacionalidad: 'Venezolana', email_padre: PADRE, grado: '6', seccion: 'T',
+      alergias: 'x', condiciones_medicas: 'x',
+      contacto_emergencia: { nombre: 'X', telefono: '+50399887766' },
+    });
+
+    expect(res.status).toBe(500);
+
+    // El usuario no quedó creado: antes se creaba y se intentaba borrar a mano con un rollback
+    // que, si fallaba, dejaba una cuenta huérfana y encima ocupaba el email para siempre.
+    expect(await User.findOneWithDeleted({ email: NUEVO })).toBeNull();
+
+    // Y el email sigue libre: se puede volver a dar de alta a la persona
+    const reintento = await request.post('/api/students').set('Cookie', adminCookie).send({
+      nombre: 'Nuevo', apellido: 'Alumno', fecha_nacimiento: '2011-01-01', email: NUEVO,
+      password: 'password123', rolNombre: 'student', genero: 'Masculino', domicilio: 'C9',
+      nacionalidad: 'Venezolana', email_padre: PADRE, grado: '6', seccion: 'T',
+      alergias: 'x', condiciones_medicas: 'x',
+      contacto_emergencia: { nombre: 'X', telefono: '+50399887766' },
+    });
+    expect(reintento.status).toBe(201);
   });
 });
 

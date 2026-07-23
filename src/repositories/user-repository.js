@@ -45,9 +45,10 @@ export const findActiveUserIds = async () => {
   return users.map((u) => u._id);
 };
 
-export const createUser = async (userData) => {
+export const createUser = async (userData, session) => {
   const user = new User(userData);
-  return await (await user.save()).populate('rol', 'nombre');
+  const guardado = await user.save(session ? { session } : undefined);
+  return await guardado.populate('rol', 'nombre');
 };
 
 export const updateUserById = async (id, updates, session) => {
@@ -63,10 +64,8 @@ export const restoreUserById = async (id) => {
   return await User.restoreById(id);
 };
 
-// Hard delete para rollback en transacciones compensatorias
-export const hardDeleteUserById = async (id) => {
-  return await User.findByIdAndDelete(id).setOptions({ includeDeleted: true });
-};
+// hardDeleteUserById se eliminó: existía solo para el rollback manual de los creates, que ahora
+// corren dentro de una transacción y se deshacen solos.
 
 export const findDeletedUserByEmail = async (email) => {
   return await User.findOneWithDeleted({ email, deletedAt: { $ne: null } }).populate('rol', 'nombre');

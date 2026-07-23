@@ -5,7 +5,7 @@ import * as gradeSectionService from '../services/gradeSection.service.js'
 import * as evaluationGradeService from '../services/evaluation_grade.service.js';
 import * as evaluationService from '../services/evaluation.service.js';
 import * as teacherService from '../services/teacher.service.js';
-import { hardDeleteUserById, deleteUserById } from '../repositories/user-repository.js';
+import { deleteUserById } from '../repositories/user-repository.js';
 import { runInTransaction } from '../utils/transaction.js';
 import logger from '../config/logger.js';
 import { NotFoundError, ConflictError, ForbiddenError } from '../errors/errors.js';
@@ -18,58 +18,48 @@ export const createStudent = async ({nombre, apellido, email, password, fecha_na
     email_padre, grado, seccion, alergias, condiciones_medicas, contacto_emergencia}) => {
 
     const parentExists = await parentService.getParentByUserIdAndEmail(email_padre);
-
-    if (parentExists) {
-        const gradeSectionExists = await gradeSectionService.getGradeAndSection(grado, seccion);
-
-        if (gradeSectionExists) {
-                const userExists = await userService.searchUserByEmail(email);
-                if (!userExists) {
-                    const user = await userService.registerUser({
-                        nombre,
-                        apellido,
-                        email,
-                        password,
-                        fecha_nacimiento,
-                        rolNombre,
-                        genero,
-                        domicilio,
-                        nacionalidad
-                    });
-
-                    try {
-                        const studentExists = await studentRepository.findStudentByUserId(user.id);
-
-                        if (!studentExists) {
-                            return await studentRepository.createStudent({
-                                usuario: user,
-                                padre: parentExists,
-                                grado_seccion: gradeSectionExists,
-                                alergias,
-                                condiciones_medicas,
-                                contacto_emergencia: {
-                                    nombre: contacto_emergencia.nombre,
-                                    telefono: contacto_emergencia.telefono,
-                                },
-                            });
-                        } else {
-                            throw new ConflictError("El estudiante ya existe");
-                        }
-                    } catch (error) {
-                        // Rollback: eliminar el usuario creado si falla la creación del estudiante
-                        await hardDeleteUserById(user._id);
-                        logger.warn(`Rollback: Usuario ${email} eliminado tras fallo en creación de estudiante`);
-                        throw error;
-                    }
-                } else {
-                    throw new ConflictError("El usuario ya existe");
-                }
-        } else {
-            throw new NotFoundError("El grado y sección no existe");
-        }
-    } else {
+    if (!parentExists) {
         throw new NotFoundError("El padre no existe");
     }
+
+    const gradeSectionExists = await gradeSectionService.getGradeAndSection(grado, seccion);
+    if (!gradeSectionExists) {
+        throw new NotFoundError("El grado y sección no existe");
+    }
+
+    const userExists = await userService.searchUserByEmail(email);
+    if (userExists) {
+        throw new ConflictError("El usuario ya existe");
+    }
+
+    // El usuario y su perfil se crean en una transacción. Antes se creaba el usuario y, si la
+    // creación del perfil fallaba, se intentaba deshacerlo a mano con hardDeleteUserById: si ese
+    // rollback también fallaba, se perdía el error original y quedaba un usuario huérfano.
+    return await runInTransaction(async (session) => {
+        const user = await userService.registerUser({
+            nombre,
+            apellido,
+            email,
+            password,
+            fecha_nacimiento,
+            rolNombre,
+            genero,
+            domicilio,
+            nacionalidad
+        }, session);
+
+        return await studentRepository.createStudent({
+            usuario: user,
+            padre: parentExists,
+            grado_seccion: gradeSectionExists,
+            alergias,
+            condiciones_medicas,
+            contacto_emergencia: {
+                nombre: contacto_emergencia.nombre,
+                telefono: contacto_emergencia.telefono,
+            },
+        }, session);
+    });
 };
 
 

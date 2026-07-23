@@ -73,7 +73,7 @@ export const loginUser = async( {email, password} ) => {
     throw new InvalidCredentialsError();
 };
 
-export const registerUser = async ( {nombre, apellido, email, password, fecha_nacimiento, rolNombre, genero, domicilio, nacionalidad}) => {
+export const registerUser = async ( {nombre, apellido, email, password, fecha_nacimiento, rolNombre, genero, domicilio, nacionalidad}, session) => {
 
     const userExists = await findUserByEmail(email);
 
@@ -94,7 +94,7 @@ export const registerUser = async ( {nombre, apellido, email, password, fecha_na
           genero,
           domicilio,
           nacionalidad,
-        });
+        }, session);
         logger.info(`[AUTH] Usuario registrado: ${email}, rol: ${rolNombre}`);
         return newUser;
       }else{

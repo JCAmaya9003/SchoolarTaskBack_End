@@ -1,6 +1,6 @@
 import * as parentRepository from '../repositories/parent.repository.js'
 import * as userService from '../services/user-service.js'
-import { hardDeleteUserById, deleteUserById } from '../repositories/user-repository.js';
+import { deleteUserById } from '../repositories/user-repository.js';
 import { runInTransaction } from '../utils/transaction.js';
 import logger from '../config/logger.js';
 import { NotFoundError, ConflictError } from '../errors/errors.js';
@@ -12,8 +12,13 @@ export const getParents = async (page, limit) =>{
 export const createParent = async ({nombre, apellido, email, password, fecha_nacimiento, rolNombre,genero, domicilio, nacionalidad, telefono, telefono_trabajo, lugar_trabajo, profesion}) =>{
 
     const userExists = await userService.searchUserByEmail(email);
+    if (userExists) {
+        throw new ConflictError("Usuario ya existente");
+    }
 
-    if (!userExists) {
+    // El usuario y su perfil se crean en una transacción, en vez del rollback manual con
+    // hardDeleteUserById que se perdía si el propio rollback fallaba.
+    return await runInTransaction(async (session) => {
         const user = await userService.registerUser({
             nombre,
             apellido,
@@ -24,29 +29,16 @@ export const createParent = async ({nombre, apellido, email, password, fecha_nac
             genero,
             domicilio,
             nacionalidad
-        });
+        }, session);
 
-        try {
-            const parentExists = await parentRepository.findParentByUserId(user.id);
-            if(!parentExists){
-                return await parentRepository.createParent({
-                    usuario: user,
-                    telefono,
-                    telefono_trabajo,
-                    lugar_trabajo,
-                    profesion,
-                });
-            }else{
-                throw new ConflictError("Padre ya existente");
-            }
-        } catch (error) {
-            await hardDeleteUserById(user._id);
-            logger.warn(`Rollback: Usuario ${email} eliminado tras fallo en creación de padre`);
-            throw error;
-        }
-    }else{
-        throw new ConflictError("Usuario ya existente");
-    }
+        return await parentRepository.createParent({
+            usuario: user,
+            telefono,
+            telefono_trabajo,
+            lugar_trabajo,
+            profesion,
+        }, session);
+    });
 };
 
 // Crea el perfil de padre sobre un usuario que YA existe. Lo usa el cambio de rol, donde

@@ -2,7 +2,7 @@ import * as teacherRepository from '../repositories/teacher.repository.js';
 import * as gradeSectionService from '../services/gradeSection.service.js';
 import * as subjectService from '../services/subject.service.js';
 import * as userService from '../services/user-service.js';
-import { hardDeleteUserById, deleteUserById } from '../repositories/user-repository.js';
+import { deleteUserById } from '../repositories/user-repository.js';
 import { runInTransaction } from '../utils/transaction.js';
 import logger from '../config/logger.js';
 import { NotFoundError, ConflictError } from '../errors/errors.js';
@@ -52,8 +52,13 @@ export const createTeacher = async ({ nombre, apellido, email, password, fecha_n
         const validAssignments = await buildValidAssignments(asignaciones);
 
         const userExists = await userService.searchUserByEmail(email);
+        if (userExists) {
+            throw new ConflictError("Usuario ya existente!");
+        }
 
-        if (!userExists) {
+        // El usuario y su perfil se crean en una transacción, en vez del rollback manual con
+        // hardDeleteUserById que se perdía si el propio rollback fallaba.
+        return await runInTransaction(async (session) => {
             const user = await userService.registerUser({
                 nombre,
                 apellido,
@@ -64,22 +69,15 @@ export const createTeacher = async ({ nombre, apellido, email, password, fecha_n
                 genero,
                 domicilio,
                 nacionalidad
-            });
-            try {
-                return await teacherRepository.createTeacher({
-                    usuario: user,
-                    grado_encargado: validAssignments,
-                    telefono,
-                    especialidad,
-                });
-            } catch (error) {
-                await hardDeleteUserById(user._id);
-                logger.warn(`Rollback: Usuario ${email} eliminado tras fallo en creación de profesor`);
-                throw error;
-            }
-        } else {
-            throw new ConflictError("Usuario ya existente!");
-        };
+            }, session);
+
+            return await teacherRepository.createTeacher({
+                usuario: user,
+                grado_encargado: validAssignments,
+                telefono,
+                especialidad,
+            }, session);
+        });
     };
 
 
